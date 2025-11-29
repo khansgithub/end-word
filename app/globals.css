@@ -19,6 +19,10 @@
   }
 }
 
+@utility all-unset {
+  all: unset;
+}
+
 body {
   /* background: var(--background);
   color: var(--foreground); */

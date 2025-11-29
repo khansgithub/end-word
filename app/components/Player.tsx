@@ -1,4 +1,4 @@
-import { Player as PlayerClass } from "./classes";
+import { Player as PlayerClass } from "../classes";
 
 interface props {
     player: PlayerClass

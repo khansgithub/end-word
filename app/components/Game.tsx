@@ -1,14 +1,15 @@
 'use client';
 
 import { ChangeEvent, InputEvent, ReactEventHandler, useEffect, useRef, useState } from "react";
-import { Player as PlayerClass } from "./classes";
 import Player from "./Player";
 import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
+import {Player as PlayerClass} from "@/app/classes";
+import InputBox from "./InputBox";
 export default function Game() {
 
     const [turn, setTurn] = useState(0);
     const [inputValue, setInputValue] = useState("");
-    const [matchLetter, setMatchLetter] = useState<{ block: string, steps: Set<string>, value: string }>();
+    const [matchLetter, setMatchLetter] = useState<{ block: string, steps: Set<string>, value: string }>({ block: "", steps: new Set(), value: "" });
 
     const buttonDom = useRef<HTMLButtonElement>(null);
     const inputDom = useRef<HTMLInputElement>(null);
@@ -19,8 +20,6 @@ export default function Game() {
     // const ko_pattern = /./;
     const max_players = 5;
     const players: PlayerClass[] = Array.from({ length: max_players }, (x, i) => { return new PlayerClass(`${i}`) });
-
-    const inputFieldClass = "w-full h-full px-3 col-start-1 row-start-1 rounded-md text-5xl no-underline"
 
     var connected_players = 5;
 
@@ -42,11 +41,12 @@ export default function Game() {
     function inputOnChange(e: React.FormEvent<HTMLInputElement>) {
         const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
         const text = (event.target as HTMLInputElement).value.trim();
-        
+
         console.log("text", text);
 
         if (matchLetter?.steps.has(text)) {
-            setMatchLetter(x => x ? { ...x, value: text } : x);
+            console.log("matchLetter?.steps.has(text)");
+            setMatchLetter(x => { return { ...x, value: text } });
         } else setMatchLetter(x => x ? { ...x, value: x.block } : x);
 
         if (text.length == 1 && text != matchLetter?.block) {
@@ -95,7 +95,7 @@ export default function Game() {
 
     }
 
-    function updateMatchLetter(block: string){
+    function updateMatchLetter(block: string) {
         const steps = new Set(buildSyllableSteps(block));
         setMatchLetter({
             block: block,
@@ -114,27 +114,9 @@ export default function Game() {
 
             <div className="text-5xl">Match: <span className="text-red-500">{matchLetter?.block}</span></div>
 
-            <div className="inputFields w-1/4 h-20 grid grid-cols-1 grid-rows-1 rounded-md border-2 border-amber-100">
-                {/* <input id="foo" type="text" className="col-start-1 row-start-1 text-pink-300 pointer-events-none"/>
-                <input id="bar" type="text" className="col-start-1 row-start-1"/> */}
-
-                <input
-                    ref={inputDomHighlight}
-                    type="text"
-                    disabled={true}
-                    value={matchLetter?.value ?? ""}
-                    className={`${inputFieldClass} font-bold pointer-events-none select-none z-10 text-red-500`}
-                />
-                <input
-                    ref={inputDom}
-                    type="text"
-                    lang="ko"
-                    onChange={inputOnChange}
-                    onKeyDown={triggerButton}
-                    className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                />
-
-            </div>
+            {/* <InputBox></InputBox> */}
+            <InputBox inputDomHighlight={inputDomHighlight} inputDom={inputDom} matchLetter={matchLetter} inputOnChange={inputOnChange} triggerButton={triggerButton}
+            ></InputBox>
 
             <button ref={buttonDom} onClick={buttonOnSubmit} className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
             <div className="h-10"></div>
