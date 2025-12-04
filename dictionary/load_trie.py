@@ -1,0 +1,44 @@
+# api/trie_loader.py
+import marisa_trie
+import orjson
+
+TRIE_PATH = "data/dict.marisa"
+META_PATH = "data/metadata.jsonl"
+
+
+class Dictionary:
+    def __init__(self):
+        self.trie = marisa_trie.Trie()
+        self.trie.load(TRIE_PATH)
+
+        # Load metadata into a list indexed by trie ID
+        self.metadata = []
+        with open(META_PATH, "r", encoding="utf8") as f:
+            for line in f:
+                self.metadata.append(orjson.loads(line))
+
+    def lookup(self, word: str):
+        agent = self.trie.get(word)
+        if agent is None:
+            return None
+
+        # marisa-trie stores index directly
+        return self.metadata[agent]
+
+    def prefix_search(self, prefix: str, limit=20):
+        results = []
+        import ipdb; ipdb.set_trace()
+        for key, id_ in zip(
+            self.trie.keys(prefix),
+            self.trie.values(prefix)
+        ):
+            results.append({
+                "lemma": key,
+                "entry": self.metadata[id_]
+            })
+            if len(results) >= limit:
+                break
+        return results
+
+
+dictionary = Dictionary()
