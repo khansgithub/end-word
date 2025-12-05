@@ -18,12 +18,12 @@ class Dictionary:
                 self.metadata.append(orjson.loads(line))
 
     def lookup(self, word: str):
-        agent = self.trie.get(word)
-        if agent is None:
+        index = self.trie.get(word)
+        if index is None:
             return None
 
         # marisa-trie stores index directly
-        return self.metadata[agent]
+        return self.metadata[index]
 
     def prefix_search(self, prefix: str, limit=20):
         results = []
