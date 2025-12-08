@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import next from 'next';
 import http from 'http';
-import { createIOServer } from "@/src/server/ws"
+import { createIOServer } from "./ws";
 
 const app = next({
     dev: true,
