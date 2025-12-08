@@ -6,18 +6,19 @@ import xml.etree.ElementTree as ET
 from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, TypedDict
+from typing import Any, Callable, TypedDict, cast
 from xml.dom.minidom import Element
 
 import marisa_trie
 
-class Entry(TypedDict):
-    key: str
-    data: list['EntryDefinition']
-
-class EntryDefinition(TypedDict):
+# TODO: Generate pydantic types for this, or even venture into using cue for making schemas
+class EntryDataEng(TypedDict):
     word: str
     definition: str
+
+class Entry(TypedDict):
+    key: str
+    data: list[EntryDataEng]
 
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -43,7 +44,7 @@ def parse_entries() -> list:
 
             lemma = lemma_node.attrib["val"]
 
-            senses: list[EntryDefinition] = []
+            senses: list[EntryDataEng] = []
             for sense in entry.findall("./Sense"):
                 def_node = sense.find("./feat[@att='definition']")
 
@@ -56,7 +57,7 @@ def parse_entries() -> list:
                 if (eng_lemma is None): continue
                 if (eng_def is None): continue
 
-                english_definition = EntryDefinition({
+                english_definition = EntryDataEng({
                     "word": eng_lemma.attrib.get("val") or "None",
                     "definition": eng_def.attrib.get("val") or "Error"
                 })
@@ -95,7 +96,7 @@ def build():
     print("Trie and metadata built successfully.")
 
 
-def rebuild_entries(trie: marisa_trie.Trie, enteries: list[Entry]) -> list:
+def rebuild_entries(trie: marisa_trie.Trie, enteries: list[Entry]) -> list[Entry]:
     '''
     Rebuild the metadata, in the order that the marisa-trie ordered them. The `sort` used by marisa-trie internally is not the same as the python `sort`.
     
@@ -103,14 +104,23 @@ def rebuild_entries(trie: marisa_trie.Trie, enteries: list[Entry]) -> list:
     :type trie: marisa-trie
     :param enteries: metadata
     :type enteries: list
-    :return: new metadata list in the same order as the trie
-    :rtype: list[Any]
+    :return: new metadata list in the same order as the keys in the trie
+    :rtype: list[Entry]
     '''
 
     # TODO: Implment some in-place sorting algorithm here
-    import ipdb; ipdb.set_trace()
-    enteries[0]["key"]
-    return []
+    # import ipdb; ipdb.set_trace()
+    sorted_entries: list[Entry | None] = [None] * len(enteries)
+    for e in enteries:
+        key = e["key"]
+        new_index = trie.get(key)
+        try:
+            sorted_entries[new_index] = e
+        except IndexError as e:
+            print(f"Unexpected Index {new_index=}- out of bounds {len(enteries)=}")
+            raise e
+
+    return cast(list[Entry], sorted_entries)
 
 if __name__ == "__main__":
     build()
