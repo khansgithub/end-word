@@ -3,13 +3,23 @@
 import { ChangeEvent, InputEvent, ReactEventHandler, useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
-import {Player as PlayerClass} from "@/app/classes";
+import { Player as PlayerClass } from "@/app/classes";
 import InputBox from "./InputBox";
 export default function Game() {
 
+    type MatchLetter = {
+        block: string
+        steps: Set<string>
+        value: string
+    }
+
     const [turn, setTurn] = useState(0);
     const [inputValue, setInputValue] = useState("");
-    const [matchLetter, setMatchLetter] = useState<{ block: string, steps: Set<string>, value: string }>({ block: "", steps: new Set(), value: "" });
+    const [matchLetter, setMatchLetter] = useState<MatchLetter>({
+        block: "",
+        steps: new Set(),
+        value: ""
+    });
 
     const buttonDom = useRef<HTMLButtonElement>(null);
     const inputDom = useRef<HTMLInputElement>(null);
@@ -25,7 +35,7 @@ export default function Game() {
 
     useEffect((() => {
         const blocks = "가";
-        const steps = new Set(buildSyllableSteps(blocks));
+        const steps = new Set(decomposeWord(blocks));
         console.log(blocks, steps);
         setMatchLetter({
             block: blocks,
@@ -35,29 +45,56 @@ export default function Game() {
     }), []);
 
     useEffect((() => {
-        console.log(matchLetter)
+        // console.log(matchLetter)
     }), [matchLetter]);
 
     function inputOnChange(e: React.FormEvent<HTMLInputElement>) {
         const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
         const text = (event.target as HTMLInputElement).value.trim();
+        const letter: string | null = event.data;
+        var isCorrectInput = false;
 
-        console.log("text", text);
+        console.clear();
+        console.log(`letter: ${event.data}, text: ${text}, steps: ${Array.from(matchLetter.steps)}`);
 
-        if (matchLetter?.steps.has(text)) {
-            console.log("matchLetter?.steps.has(text)");
-            setMatchLetter(x => { return { ...x, value: text } });
-        } else setMatchLetter(x => x ? { ...x, value: x.block } : x);
+        if (text.length < matchLetter.block.length) {
+            console.log("text.length < matchLetter.block.length");
+            setMatchLetter(x => { return { ...x, steps: new Set(decomposeWord(matchLetter.block)) } });
+        };
 
-        if (text.length == 1 && text != matchLetter?.block) {
-            console.log("A", text, matchLetter?.block);
+        if (matchLetter.steps.has(text)) {
+            console.log("1: matchLetter.steps.has(text)");
+            isCorrectInput = true;
+
+            const steps = Array.from(matchLetter.steps);
+            const nextLetterI = steps.indexOf(letter) + 1;
+            if (nextLetterI > matchLetter.steps.size - 1) {
+                console.error("last letter?");
+                throw new Error("Last letter?");
+            }
+            const nextLetter = steps[nextLetterI];
+            matchLetter.steps.delete(letter)
+            console.log(matchLetter.steps);
+
+            setMatchLetter(x => { return { ...x, value: text + nextLetter } });
+        } else {
+            isCorrectInput = false;
+            setMatchLetter(x => x ? { ...x, value: x.block } : x)
+        };
+
+        if (text.length == 1 && !isCorrectInput && text != matchLetter.block) {
+            console.log("2: text.length == 1 && text != matchLetter.block");
             // matchLetter is 가 and input is anything not 가
             updateInputValue(inputValue);
             return
         } else if (text.length == 0) {
-            console.log("B")
+            console.log("3: text.length == 0")
             // empty input; backspace
             updateInputValue(text);
+            return
+        } else if (text.length > 1 && text[0] !== matchLetter.block) {
+            console.log("4: text.length > 1")
+            updateInputValue(inputValue);
             return
         }
 
@@ -70,19 +107,28 @@ export default function Game() {
             inputDom.current.value = updatedValue;
     }
 
-    function inputIsValid(input: string): boolean {
-        return (input.length > 0);
+    async function inputIsValid(input: string): Promise<boolean> {
+        const res = await fetch(`${process.env.SERVER}/${input}`);
+        if (res.ok) {
+            const data = await res.json();
+            console.log(data);
+            // return (input.length > 0);
+            return true;
+        } else {
+            throw new Error("Request failed")
+        }
+
     }
 
-    function triggerButton(e: React.KeyboardEvent) {
+    async function triggerButton(e: React.KeyboardEvent) {
         if (e.key != "Enter") return
-        if (!inputIsValid(inputValue)) return
+        if (!(await inputIsValid(inputValue))) return
         buttonDom.current?.click();
     }
 
-    function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
+    async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
-        const valid_input = inputIsValid(inputValue);
+        const valid_input = await inputIsValid(inputValue);
         if (valid_input) {
             nextTurn();
             playerLastValue.current = inputValue;
@@ -112,7 +158,7 @@ export default function Game() {
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
 
-            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter?.block}</span></div>
+            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter.block}</span></div>
 
             {/* <InputBox></InputBox> */}
             <InputBox inputDomHighlight={inputDomHighlight} inputDom={inputDom} matchLetter={matchLetter} inputOnChange={inputOnChange} triggerButton={triggerButton}

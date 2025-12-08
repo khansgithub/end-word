@@ -23,12 +23,12 @@ export default function InputBox({
                 ref={inputDomHighlight}
                 type="text"
                 disabled={true}
-                // value={matchLetter?.value ?? ""}
+                value={matchLetter?.value ?? ""}
                 className={`${inputFieldClass} pointer-events-none select-none text-red-500`}
             />
             <input
                 ref={inputDom}
-                placeholder={matchLetter.block}
+                // placeholder={matchLetter.block}
                 type="text"
                 lang="ko"
                 onChange={inputOnChange}
