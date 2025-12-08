@@ -3,7 +3,7 @@
 import { ChangeEvent, InputEvent, ReactEventHandler, useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
-import { Player as PlayerClass } from "@/app/classes";
+import { Player as PlayerClass } from "../classes";
 import InputBox from "./InputBox";
 export default function Game() {
 
