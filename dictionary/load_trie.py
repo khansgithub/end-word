@@ -25,20 +25,39 @@ class Dictionary:
         # marisa-trie stores index directly
         return self.metadata[index]
 
-    def prefix_search(self, prefix: str, limit=20):
-        results = []
-        import ipdb; ipdb.set_trace()
-        for key, id_ in zip(
-            self.trie.keys(prefix),
-            self.trie.values(prefix)
-        ):
-            results.append({
-                "lemma": key,
-                "entry": self.metadata[id_]
-            })
-            if len(results) >= limit:
-                break
-        return results
+    # def prefix_search(self, prefix: str, limit=20):
+    #     results = []
+    #     import ipdb; ipdb.set_trace()
+    #     for key, id_ in zip(
+    #         self.trie.keys(prefix),
+    #         self.trie.values(prefix)
+    #     ):
+    #         results.append({
+    #             "lemma": key,
+    #             "entry": self.metadata[id_]
+    #         })
+    #         if len(results) >= limit:
+    #             break
+    #     return results
 
 
 dictionary = Dictionary()
+
+def p():
+    prefix = "-가"
+    t = dictionary.trie
+    p = t.keys(prefix)
+    p = t.get(prefix)
+    print(p)
+    import ipdb; ipdb.set_trace()
+    # results = zip(p, [dictionary.metadata[t.get(p_)] for p_ in p])
+    # print(list(results))
+
+def q():
+    t = dictionary.trie
+    r = t.keys()[0]
+    r = t.get(r)
+    import ipdb; ipdb.set_trace()
+    print(r)
+
+q()

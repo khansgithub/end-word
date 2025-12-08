@@ -9,14 +9,14 @@ app = FastAPI(title="Korean Dictionary API (MARISA-backed)")
 @app.get("/lookup/{word}")
 def lookup(word: str):
     result = dictionary.lookup(word)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Word not found")
-    return result
+    # if result is None:
+    #     raise HTTPException(status_code=404, detail="Word not found")
+    return result or {}
 
 
-@app.get("/prefix/{prefix}")
-def prefix_search(prefix: str, limit: int = 20):
-    return dictionary.prefix_search(prefix, limit=limit)
+# @app.get("/prefix/{prefix}")
+# def prefix_search(prefix: str, limit: int = 20):
+#     return dictionary.prefix_search(prefix, limit=limit)
 
 
 @app.get("/health")
