@@ -107,17 +107,21 @@ export default function Game() {
             inputDom.current.value = updatedValue;
     }
 
+    // TODO: Add debounce to this
     async function inputIsValid(input: string): Promise<boolean> {
-        const res = await fetch(`${process.env.SERVER}/${input}`);
+        if (!(input.length > 0)) return false;
+
+        // TODO: move url to constants or something
+        const res = await fetch("/dictionary/word/" + input);
         if (res.ok) {
             const data = await res.json();
-            console.log(data);
-            // return (input.length > 0);
+            if (Object.keys(data).length == 0){
+                return false;
+            }
             return true;
         } else {
-            throw new Error("Request failed")
+            return false;
         }
-
     }
 
     async function triggerButton(e: React.KeyboardEvent) {
