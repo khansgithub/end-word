@@ -16,7 +16,7 @@ export default function Game() {
 
     function initMatchLetter(): MatchLetter {
         const block = "가";
-        const arr = decomposeWord(block);
+        const arr = buildSyllableSteps(block);
         return {
             block: block,
             steps: [...arr, block],
@@ -46,6 +46,11 @@ export default function Game() {
 
     var connected_players = 5;
 
+    useEffect(() => {
+        inputDomHighlight.current.value = decomposeWord(matchLetter.current.block)[matchLetter.current.next];
+    });
+
+
     // useEffect((() => {
     //     console.log("effect:", Array.from(matchLetter.steps));
     //     // if (!inputDomHighlight.current) return;
@@ -57,112 +62,141 @@ export default function Game() {
     //     // }
     // }), [matchLetter]);
 
-    function inputTextHandler(text?: string, letter?: string, del = false): { block: boolean } {
-        /*
-            this function needs a way to tell the event handler that the that the value input should blocked.
-        */
-        const preventDefault = { block: true };
-        const nextLetter = matchLetter.current.steps[matchLetter.current.next];
+    function onBeforeInput() { }
+    function onInput() { }
+    function onInputKeyDown() { }
+    function buttonOnSubmit() { }
 
-        // console.clear();
-        console.log("-------------");
-        console.log(`letter: ${letter}, text: ${text}, nextLetter: ${nextLetter}`);
-        console.log(`matchLetter: ${JSON.stringify(matchLetter)}`);
-        console.log("-------------");
+    // Track whether IME is actively composing Hangul
+    const isComposing = useRef(false);
 
-
-        // if (letter) {
-        //     if (letter == nextLetter || letter == matchLetter.current.block) {
-        //         console.log("letter == nextLetter");
-        //         console.log(letter, "==", nextLetter);
-        //         matchLetter.current.next++;
-        //     } else {
-        //         return preventDefault;
-        //     }
-        // }
-
-        return { block: false }
+    // ------------------------------------------
+    // IME HANDLERS (never touch logic here)
+    // ------------------------------------------
+    function onCompositionStart() {
+        isComposing.current = true;
     }
 
-    function onBeforeInput(e: React.FormEvent<HTMLInputElement>) {
-        // console.log("onBeforeInput");
-        // const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
-        // const text = (event.target as HTMLInputElement).value.trim();
-        // const letter: string | null = event.data;
-
-        // if (inputTextHandler(text, letter).block){
-        //     e.preventDefault();
-        // }
-
+    function onCompositionUpdate() {
+        // still composing — ignore
     }
 
-    function onInput(e: React.FormEvent<HTMLInputElement>) {
-        // const key = (e.nativeEvent as any as InputEvent).data;
-        // if (key !== null) return
-        // // backspace or delete
-        // console.log("onInput - delete");
-        // const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
-        // const text = (event.target as HTMLInputElement).value.trim();
-        // const letter: string | null = event.data;
-        // inputTextHandler(text, letter, true);
+    function onCompositionEnd(e: React.CompositionEvent<HTMLInputElement>) {
+        isComposing.current = false;
+
+        const text = e.currentTarget.value.trim();
+        processText(text, null); // no letter detail from IME
     }
 
-    function onInputKeyDown(){}
-    function buttonOnSubmit(){}
+    // ------------------------------------------
+    // onChange — called AFTER each non-composition event
+    // ------------------------------------------
+    function onChange(e: React.ChangeEvent<HTMLInputElement>) {
 
-    function onChange(e: React.FormEvent<HTMLInputElement>) {
-        console.log("onChange");
-        const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
-        const text = (event.target as HTMLInputElement).value.trim();
-        const letter: string | null = event.data;
-        const del = letter == null;
-        const nextLetter = matchLetter.current.steps[matchLetter.current.next];
-        // inputDom.current.value = "";
-
-        console.clear();
-        console.log("-------------");
-        console.log(`letter: ${letter}, text: ${text}, nextLetter: ${nextLetter}`);
-        console.log(`matchLetter: ${JSON.stringify(matchLetter)}`);
-        console.log("-------------");
-
-        inputKeyDisplay.current.innerText = letter;
-
-        // conditios for when the first block is correctly typed
-        if (text[0] == matchLetter.current.block){
-            // the first block has be correctly typed?
+        if (isComposing.current) {
+            // IME in progress → DO NOT process yet
             return;
         }
 
-        if (letter) {
-            if (letter == nextLetter) {
-                console.log("letter == nextLetter");
-                console.log(letter, "==", nextLetter);
-                matchLetter.current.next++;
-                inputDomText.current = text;
-            } else if (letter == matchLetter.current.block) {
+        const event = e.nativeEvent as any as InputEvent;
+        const letter = event.data; // can be null for delete
+        const text = e.currentTarget.value.trim();
 
-            } else {
-                console.log("block input");
-                inputDom.current.value = inputDomText.current;
-            }
+        processText(text, letter);
+    }
+
+    // ------------------------------------------------------------
+    // CLEAN MAIN LOGIC (replace everything inside with your logic)
+    // ------------------------------------------------------------
+    function processText(text: string, letter: string | null) {
+
+        const ml = matchLetter.current; // shorthand
+        const steps = ml.steps;
+        const nextIndex = ml.next;
+        const nextLetter = steps[nextIndex];
+
+        const isDelete = (letter == null);
+
+        console.log("--------------");
+        console.log("text:", text, "letter:", letter);
+        console.log("matchLetter:", ml);
+        console.log("--------------");
+
+        inputKeyDisplay.current.innerText = letter ?? "";
+
+        // --------------------------------------------------------
+        // 1. First-block correctly typed → reset highlight
+        // --------------------------------------------------------
+        if (text[0] === ml.block) {
+            inputDomHighlight.current.value = "";
+            return;
         }
 
-        if (del){
-            if (text == null){
-                matchLetter.current.next = 0;
-            } else {
-                // forgot why but chnge from decomposeSyllable to buildSyllableSteps
+        // --------------------------------------------------------
+        // 2. INSERTION LOGIC
+        // --------------------------------------------------------
+        if (!isDelete && letter) {
+
+            // Case A — user typed the completed block directly
+            if (letter === ml.block) {
+                setCurrentInput(letter);
+                inputDomHighlight.current.value = "";
+                return;
             }
+
+            // Case B — user typed the next Hangul step correctly
+            if (letter === nextLetter) {
+                ml.next++; // advance step
+                setCurrentInput(letter);
+                updateHighlight(ml.block, ml.next);
+                return;
+            }
+
+            // Case C — user typed previous step (ㄱ → 가 → backspace → type ㄱ)
+            if (text === steps[nextIndex - 1]) {
+                updateHighlight(ml.block, nextIndex);
+                return;
+            }
+
+            // Fallback — block incorrect input
+            restorePreviousInput();
+            return;
+        }
+
+        // --------------------------------------------------------
+        // 3. DELETION LOGIC (backspace)
+        // --------------------------------------------------------
+        if (isDelete) {
+
+            if (text.length === 0) {
+                ml.next = 0;
+                inputDomHighlight.current.value = steps[0];
+            }
+            else if (text === steps[nextIndex - 1]) {
+                // valid step regression
+                // (can add logic if needed)
+            }
+
             inputDomText.current = text;
         }
     }
 
-    /*
-        Use beforeInput to process the key press and validate it.
+    // ------------------------------------------------------------
+    // HELPERS — abstracts repetitive DOM behavior
+    // ------------------------------------------------------------
+    function setCurrentInput(letter: string) {
+        inputDomText.current = letter;
+        inputDom.current.value = letter;
+    }
 
-        Use onInput where if data == null => text being deleted
+    function restorePreviousInput() {
+        inputDom.current.value = inputDomText.current;
+    }
 
-    */
+    function updateHighlight(block: string, stepIndex: number) {
+        const decomposed = decomposeWord(block);
+        inputDomHighlight.current.value = decomposed[stepIndex - 1] + decomposed[stepIndex];
+    }
 
 
     return (
