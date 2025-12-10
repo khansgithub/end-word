@@ -25,12 +25,16 @@ export default function Game() {
         };
     }
 
+    const [refresh, setRefresh] = useState(false);
     const [turn, setTurn] = useState(0);
     // const [inputValue, setInputValue] = useState("");
-    const [matchLetter, setMatchLetter] = useState<MatchLetter>(initMatchLetter());
+    // const [matchLetter, setMatchLetter] = useState<MatchLetter>(initMatchLetter());
+    const matchLetter = useRef<MatchLetter>(initMatchLetter());
 
     const buttonDom = useRef<HTMLButtonElement>(null);
     const inputDom = useRef<HTMLInputElement>(null);
+    const inputDomText = useRef("");
+    const inputKeyDisplay = useRef<HTMLDivElement>(null);
     const inputDomHighlight = useRef<HTMLInputElement>(null);
     const playerLastValue = useRef<string>("");
     const inputKey = useRef("");
@@ -53,28 +57,103 @@ export default function Game() {
     //     // }
     // }), [matchLetter]);
 
-    function onBeforeInput(e: React.FormEvent<HTMLInputElement>) {
-        const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
-        const text = (event.target as HTMLInputElement).value.trim();
-        const letter: string | null = event.data;
-        const nextLetter = matchLetter.steps[matchLetter.next];
+    function inputTextHandler(text?: string, letter?: string, del = false): { block: boolean } {
+        /*
+            this function needs a way to tell the event handler that the that the value input should blocked.
+        */
+        const preventDefault = { block: true };
+        const nextLetter = matchLetter.current.steps[matchLetter.current.next];
 
         // console.clear();
-        console.log(`letter: ${event.data}, text: ${text}, nextLetter: ${nextLetter}`);
+        console.log("-------------");
+        console.log(`letter: ${letter}, text: ${text}, nextLetter: ${nextLetter}`);
         console.log(`matchLetter: ${JSON.stringify(matchLetter)}`);
+        console.log("-------------");
 
 
-        if (letter == nextLetter) {
-            console.log("letter == nextLetter");
-            console.log(letter, "==", nextLetter);
-            e.preventDefault();
-        }
+        // if (letter) {
+        //     if (letter == nextLetter || letter == matchLetter.current.block) {
+        //         console.log("letter == nextLetter");
+        //         console.log(letter, "==", nextLetter);
+        //         matchLetter.current.next++;
+        //     } else {
+        //         return preventDefault;
+        //     }
+        // }
+
+        return { block: false }
+    }
+
+    function onBeforeInput(e: React.FormEvent<HTMLInputElement>) {
+        // console.log("onBeforeInput");
+        // const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
+        // const text = (event.target as HTMLInputElement).value.trim();
+        // const letter: string | null = event.data;
+
+        // if (inputTextHandler(text, letter).block){
+        //     e.preventDefault();
+        // }
+
     }
 
     function onInput(e: React.FormEvent<HTMLInputElement>) {
-        const foo = (e.nativeEvent as any as InputEvent).data;
-        if (foo == null){
-            console.log("onInput > ", inputKey.current);
+        // const key = (e.nativeEvent as any as InputEvent).data;
+        // if (key !== null) return
+        // // backspace or delete
+        // console.log("onInput - delete");
+        // const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
+        // const text = (event.target as HTMLInputElement).value.trim();
+        // const letter: string | null = event.data;
+        // inputTextHandler(text, letter, true);
+    }
+
+    function onInputKeyDown(){}
+    function buttonOnSubmit(){}
+
+    function onChange(e: React.FormEvent<HTMLInputElement>) {
+        console.log("onChange");
+        const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
+        const text = (event.target as HTMLInputElement).value.trim();
+        const letter: string | null = event.data;
+        const del = letter == null;
+        const nextLetter = matchLetter.current.steps[matchLetter.current.next];
+        // inputDom.current.value = "";
+
+        console.clear();
+        console.log("-------------");
+        console.log(`letter: ${letter}, text: ${text}, nextLetter: ${nextLetter}`);
+        console.log(`matchLetter: ${JSON.stringify(matchLetter)}`);
+        console.log("-------------");
+
+        inputKeyDisplay.current.innerText = letter;
+
+        // conditios for when the first block is correctly typed
+        if (text[0] == matchLetter.current.block){
+            // the first block has be correctly typed?
+            return;
+        }
+
+        if (letter) {
+            if (letter == nextLetter) {
+                console.log("letter == nextLetter");
+                console.log(letter, "==", nextLetter);
+                matchLetter.current.next++;
+                inputDomText.current = text;
+            } else if (letter == matchLetter.current.block) {
+
+            } else {
+                console.log("block input");
+                inputDom.current.value = inputDomText.current;
+            }
+        }
+
+        if (del){
+            if (text == null){
+                matchLetter.current.next = 0;
+            } else {
+                // forgot why but chnge from decomposeSyllable to buildSyllableSteps
+            }
+            inputDomText.current = text;
         }
     }
 
@@ -86,146 +165,17 @@ export default function Game() {
     */
 
 
-    function inputOnChange(e: React.FormEvent<HTMLInputElement>) {
-        // const event = e.nativeEvent as any as InputEvent<HTMLInputElement>;
-        // const text = (event.target as HTMLInputElement).value.trim();
-        // const letter: string | null = event.data;
-
-        // // console.clear();
-        // console.log(`letter: ${event.data}, text: ${text}`);
-        // console.log(`matchLetter: ${JSON.stringify(matchLetter.steps)}`);
-
-        // const nextLetter = matchLetter.block[matchLetter.next];
-
-        // if (letter == nextLetter){
-        //     console.log("letter == nextLetter");
-        //     console.log(letter, "==", nextLetter);            
-        // }
-
-        // inputDom.current.value = text;
-
-
-        // var isCorrectInput = false;
-
-
-        // if (text.length < matchLetter.block.length) {
-        //     console.log("text.length < matchLetter.block.length");
-        //     steps = new Set(decomposeWord(matchLetter.block));
-        //     setMatchLetter(x => { return { ...x, steps: steps } });
-        // };
-
-        // if (steps.has(text)) {
-        //     console.log("1: matchLetter.steps.has(text)");
-        //     isCorrectInput = true;
-
-        //     const stepsArray = Array.from(matchLetter.steps);
-        //     const nextLetterI = stepsArray.indexOf(letter) + 1;
-        //     if (nextLetterI > steps.size - 1) {
-        //         console.error("last letter?");
-        //         throw new Error("Last letter?");
-        //     }
-        //     const nextLetter = stepsArray[nextLetterI];
-        //     steps.delete(letter);
-        //     console.log(matchLetter.steps);
-
-        //     setMatchLetter(x => { return { ...x, value: text + nextLetter, steps: steps } });
-        // } else {
-        //     console.log("1 X: matchLetter.steps.has(text)");
-        //     console.log("1 X: Steps = ", Array.from(steps));
-        //     isCorrectInput = false;
-        //     setMatchLetter(x => x ? { ...x, value: x.block } : x)
-        // };
-
-        // if (text.length == 1 && !isCorrectInput && text != matchLetter.block) {
-        //     console.log("2: text.length == 1 && text != matchLetter.block");
-        //     // matchLetter is 가 and input is anything not 가
-        //     updateInputValue(inputValue);
-        //     return
-        // } else if (text.length == 0) {
-        //     console.log("3: text.length == 0")
-        //     // empty input; backspace
-        //     updateInputValue(text);
-        //     return
-        // } else if (text.length > 1 && text[0] !== matchLetter.block) {
-        //     console.log("4: text.length > 1")
-        //     updateInputValue(inputValue);
-        //     return
-        // }
-
-        // updateInputValue(ko_pattern.test(text) ? text : inputValue);
-    }
-
-    async function onInputKeyDown(e: React.KeyboardEvent) {
-        // e.preventDefault();
-        if (e.repeat) return;
-        inputKey.current = e.key;
-        if (e.key == "Enter") {
-            if (!(await inputIsValid(inputValue))) return
-            buttonDom.current?.click();
-            return
-        }
-    }
-
-    function updateInputValue(updatedValue: string) {
-        setInputValue(updatedValue);
-        if (inputDom.current)
-            inputDom.current.value = updatedValue;
-    }
-
-    async function inputIsValid(input: string): Promise<boolean> {
-        // TODO: Add debounce to this
-        if (!(input.length > 0)) return false;
-
-        // TODO: move url to constants or something
-        const res = await fetch("/dictionary/word/" + input);
-        if (res.ok) {
-            const data = await res.json();
-            if (Object.keys(data).length == 0) {
-                return false;
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
-        e.preventDefault();
-        const valid_input = await inputIsValid(inputValue);
-        if (valid_input) {
-            nextTurn();
-            playerLastValue.current = inputValue;
-            updateInputValue("");
-            inputDom.current?.focus();
-            updateMatchLetter(inputValue.split("").pop()!);
-        } else {
-            inputDom.current?.classList.add("invalid");
-        }
-
-    }
-
-    function updateMatchLetter(block: string) {
-        throw new Error("look at this later")
-        // const steps = new Set(buildSyllableSteps(block));
-        // setMatchLetter({
-        //     block: block,
-        //     steps: steps,
-        //     value: block
-        // });
-    }
-
-    function nextTurn() {
-        setTurn(t => (t + 1) % connected_players);
-    }
-
-
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
 
-            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter.block}</span></div>
+            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter.current.block}</span></div>
 
             {/* <InputBox></InputBox> */}
-            <InputBox inputDomHighlight={inputDomHighlight} inputDom={inputDom} onBeforeInput={onBeforeInput} onInput={onInput} onInputKeyDown={onInputKeyDown} />
+
+            <div className="flex flex-row w-full justify-center items-center">
+                <div ref={inputKeyDisplay} className="w-15 m-2 -ml-15 aspect-square text-5xl text-center border-2 border-white"> </div>
+                <InputBox inputDomHighlight={inputDomHighlight} inputDom={inputDom} onBeforeInput={onBeforeInput} onInput={onInput} onInputKeyDown={onInputKeyDown} onChange={onChange} refresh={refresh} />
+            </div>
 
             <button ref={buttonDom} onClick={buttonOnSubmit} className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
             <div className="h-10"></div>
