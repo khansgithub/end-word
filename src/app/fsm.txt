@@ -1,0 +1,35 @@
+#states
+S0
+S_ㄱ
+S_가
+S_가*
+
+#initial
+S0
+
+#accepting
+S_가
+
+#alphabet
+ㄱ
+ㅏ
+가
+가*
+other
+del_text=null
+del_text=ㅏ
+del_text=other
+
+#transitions
+S0:*>S0
+S0:ㄱ>S_ㄱ
+S0:가>S_가
+S0:가*>S_가*
+
+S_ㄱ:ㅏ>S_가
+S_ㄱ:other>S_ㄱ
+
+S_가: 가* > S_가*
+S_가:del_text=ㅏ > S_ㄱ
+
+S_가*: 가* > S_가*
