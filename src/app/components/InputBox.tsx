@@ -5,14 +5,19 @@ import { FormEvent, memo, ReactEventHandler, RefObject, useRef } from "react";
 interface props {
     inputDomHighlight: RefObject<HTMLInputElement | null>;
     inputDom: RefObject<HTMLInputElement | null>;
-    // inputOnChange: (e: FormEvent<HTMLInputElement>) => void
     onChange: (e: FormEvent<HTMLInputElement>) => void;
+    onCompositionStart: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
 };
 
 function InputBox({
     inputDomHighlight,
     inputDom,
-    onChange
+    onChange,
+    onCompositionStart,
+    onCompositionUpdate,
+    onCompositionEnd,
 }: props) {
     const inputFieldClass = "w-full h-full px-3 col-start-1 row-start-1 rounded-md text-5xl no-underline"
     const inputFeildWrapper = useRef<HTMLDivElement>(null); // use ref to avoid rerenders
@@ -54,6 +59,10 @@ function InputBox({
                 type="text"
                 lang="ko"
                 onChange={onChange}
+                onCompositionStart={onCompositionStart}
+                onCompositionUpdate={onCompositionUpdate}
+                onCompositionEnd={onCompositionEnd}
+
                 className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
 

@@ -52,7 +52,11 @@ export default function Game() {
 
     var connected_players = 5;
 
-    const { onChange, onCompositionStart, onCompositionUpdate, onCompositionEnd } = inputHandlers(inputHandlersRefs);
+    const { onChange, onCompositionUpdate, onCompositionEnd } = inputHandlers(inputHandlersRefs);
+
+    function onCompositionStart(){
+        console.log("on composition start");
+    }
 
     function nextTurn() {
         setTurn(t => (t + 1) % connected_players);
@@ -104,6 +108,9 @@ export default function Game() {
                     inputDomHighlight={ihr.inputDomHighlight}
                     inputDom={ihr.inputDom}
                     onChange={onChange}
+                    onCompositionStart={onCompositionStart}
+                    onCompositionUpdate={onCompositionUpdate}
+                    onCompositionEnd={onCompositionEnd}
                 />
             </div>
 

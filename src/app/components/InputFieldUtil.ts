@@ -53,6 +53,7 @@ export function inputHandlers({
     // IME HANDLERS (never touch logic here)
     // ------------------------------------------
     function onCompositionStart() {
+        console.log("compositionStart")
         isComposing.current = true;
     }
 
@@ -71,17 +72,46 @@ export function inputHandlers({
     // onChange — called AFTER each non-composition event
     // ------------------------------------------
     function onChange(e: React.ChangeEvent<HTMLInputElement>) {
-
-        if (isComposing.current) {
-            // IME in progress → DO NOT process yet
-            return;
-        }
-
         const event = e.nativeEvent as any as InputEvent;
         const letter = event.data; // can be null for delete
-        const text = e.currentTarget.value.trim();
+        const input = e.currentTarget.value.trim();
 
-        processText(text, letter);
+        const block = matchLetter.current.block;
+        const next_i = matchLetter.current.next;
+
+
+        const blockInput = ()=>inputDom.current.value = inputDomText.current;
+
+        if (inputDomText.current.length == 0){
+            if (input.length == 0) return;
+        };
+
+        // if (inputDomText.current == matchLetter.current.steps[0]){
+        if (inputDomText.current == "ㄱ"){
+            // if (input == decomposeWord(block)[matchLetter.current.next]){
+            if (input == "가"){
+                return;
+            } else {
+                blockInput();
+            }
+        // } else if (inputDomText.current == block) {
+        } else if (inputDomText.current == "가") {
+            if (input == "ㄱ"){
+                return;
+            } else if (input.startsWith("가")){
+                return
+            } else {
+                blockInput();
+            }
+        } else if (inputDomText.current.startsWith("가")) {
+            if (input.startsWith("가")){
+                return
+            } else {
+                blockInput();
+            }
+        }
+
+        // processText(text, letter);
     }
 
     // ------------------------------------------------------------
@@ -96,7 +126,7 @@ export function inputHandlers({
 
         const isDelete = (letter == null);
 
-        console.clear();
+        // console.clear();
         console.log("--------------");
         console.log("text:", text, "letter:", letter);
         console.log("matchLetter:", ml);
@@ -107,10 +137,11 @@ export function inputHandlers({
         }
 
         inputKeyDisplay.current.innerText = letter ?? "";
-        if (stopTrackingInput.current && !isDelete){
-            console.log("stop");
-            return;
-        }
+
+        // if (stopTrackingInput.current && !isDelete){
+        //     console.log("stop");
+        //     return;
+        // }
 
         // --------------------------------------------------------
         // 1. First-block correctly typed → reset highlight
