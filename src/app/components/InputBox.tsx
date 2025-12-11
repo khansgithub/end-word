@@ -6,19 +6,12 @@ interface props {
     inputDomHighlight: RefObject<HTMLInputElement | null>;
     inputDom: RefObject<HTMLInputElement | null>;
     // inputOnChange: (e: FormEvent<HTMLInputElement>) => void
-    onInput: (e: FormEvent<HTMLInputElement>) => void;
-    onBeforeInput: (e: FormEvent<HTMLInputElement>) => void;
     onChange: (e: FormEvent<HTMLInputElement>) => void;
-    onInputKeyDown: (e: React.KeyboardEvent) => void;
-    refresh: boolean
 };
 
 function InputBox({
     inputDomHighlight,
     inputDom,
-    onInput,
-    onBeforeInput,
-    onInputKeyDown,
     onChange
 }: props) {
     const inputFieldClass = "w-full h-full px-3 col-start-1 row-start-1 rounded-md text-5xl no-underline"
@@ -60,10 +53,7 @@ function InputBox({
                 // placeholder={matchLetter.block}
                 type="text"
                 lang="ko"
-                onInput={ onInput }
-                onBeforeInput={onBeforeInput}
                 onChange={onChange}
-                onKeyDown={onInputKeyDown}
                 className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
 
