@@ -1,6 +1,6 @@
 
 import { RefObject } from "react";
-import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
+import { buildSyllableSteps, decomposeSyllable, decomposeWord } from "../hangul-decomposer";
 
 export type MatchLetter = {
     block: string
@@ -57,11 +57,15 @@ export function inputHandlers({
         isComposing.current = true;
     }
 
-    function onCompositionUpdate() {
+    function onCompositionUpdate(e: React.CompositionEvent) {
+        console.log("composition update");
+        e.preventDefault();
         // still composing — ignore
     }
 
     function onCompositionEnd(e: React.CompositionEvent<HTMLInputElement>) {
+        console.log("composition end");
+
         isComposing.current = false;
 
         // const text = e.currentTarget.value.trim();
@@ -90,11 +94,12 @@ export function inputHandlers({
         console.log("prev input:", inputDomText.current);
         console.log("matchLetter:", JSON.stringify(matchLetter));
         console.log("--------------");
-
+        inputKeyDisplay.current.textContent = letter;
         //
         // === State S0 ===
         //
         if (prev === "") {
+            console.log("state: empty");
             if (input.length == 0) return clearInput();         // S0:empty → S0
             if (input === "ㄱ") return continueInput();         // S0:ㄱ → S_ㄱ
             if (input === "가") return continueInput();         // S0:가 → S_가
@@ -106,7 +111,8 @@ export function inputHandlers({
         // === State S_ㄱ ===
         //
         if (prev === "ㄱ") {
-            if (input.length == 0) return continueInput();      // S_ㄱ:empty → S0
+            console.log("state: ㄱ");
+            if (input.length == 0) return clearInput();      // S_ㄱ:empty → S0
             if (input === "가") return continueInput();         // S_ㄱ:가 → S_가
             return blockInput();                                // S_ㄱ:other → reject
         }
@@ -115,9 +121,20 @@ export function inputHandlers({
         // === State S_가 ===
         //
         if (prev === "가") {
-            if (input.length == 0) return continueInput();      // S_가:empty → S0
+            // debugger;
+            console.log("state: 가");
+            if (input.length == 0) return clearInput();      // S_가:empty → S0
             if (input === "ㄱ") return continueInput();         // S_가:ㄱ → S_ㄱ
             if (input.startsWith("가")) return continueInput(); // S_가:가* → S_가*
+            if (
+                input.length == 1 &&
+                decomposeSyllable(input).length == decomposeSyllable(block).length + 1
+            ) return continueInput();
+
+            if (
+                input.length == 1 &&
+                decomposeSyllable(input).length == decomposeSyllable(block).length + 2
+            ) return continueInput();
             return continueInput();                             // S_가:* → S_가
         }
 
@@ -125,131 +142,68 @@ export function inputHandlers({
         // === State S_가* (anything starting with "가", length ≥ 2) ===
         //
         if (prev.startsWith("가")) {
-            if (input.length == 0) return continueInput();           // S_가*:empty → S0
+            console.log("state: S_가");
+            if (input.length == 0) return clearInput();           // S_가*:empty → S0
             if (input === "ㄱ") return continueInput();          // S_가*:ㄱ → S_ㄱ
             if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
+            if (
+                input.length == 1 &&
+                decomposeSyllable(input).length == decomposeSyllable(block).length + 2
+            ) return continueInput();
             return blockInput();                               // all else → reject
+        }
+
+        //
+        // === State S_강 (anything with the correct first 2 letters and 1 other letter) ===
+        //
+        if (decomposeSyllable(prev).slice(-1).join("") == decomposeSyllable(block).join("")) {
+            console.log("state: S_강");
+            if (input.length == 0) return clearInput();           // empty → S0
+            if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
+        }
+
+        //
+        // === State S_값 (anything with the correct first 2 letters and 2 other letters) ===
+        //
+        if (decomposeSyllable(prev).slice(-2).join("") == decomposeSyllable(block).join("")) {
+            console.log("state: S_값");
+            if (input.length == 0) return clearInput();           // empty → S0
+            if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
+            if (
+                input.length == 1 &&
+                decomposeSyllable(input).length == decomposeSyllable(block).length + 1
+            ) return continueInput();
         }
 
         //
         // unreachable fallback
         //
-        return blockInput();
+        return clearInput();
         // processText(text, letter);
     }
 
-    // ------------------------------------------------------------
-    // CLEAN MAIN LOGIC (replace everything inside with your logic)
-    // ------------------------------------------------------------
-    function processText(text: string, letter: string | null) {
-
-        const ml = matchLetter.current; // shorthand
-        const steps = ml.steps;
-        const nextIndex = ml.next;
-        const nextLetter = steps[nextIndex];
-
-        const isDelete = (letter == null);
-
-        // console.clear();
-        console.log("--------------");
-        console.log("text:", text, "letter:", letter);
-        console.log("matchLetter:", ml);
-        console.log("--------------");
-
-        if (text == "가" || isDelete) {
-            // debugger;
-        }
-
-        inputKeyDisplay.current.innerText = letter ?? "";
-
-        // if (stopTrackingInput.current && !isDelete){
-        //     console.log("stop");
-        //     return;
+    function onKeyDown(e: React.KeyboardEvent | React.FormEventHandler<HTMLInputElement>) {
+        // console.log("-------------- key down");
+        // console.log(e.key, inputKeyDisplay.current, inputKeyDisplay.current.textContent);
+        // if(e.key && inputKeyDisplay.current)
+        //     if(e.key.match(/^[a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ]$/))
+        //         inputKeyDisplay.current.textContent = e.key;
+        // else{
+        //     inputKeyDisplay.current.textContent = e.data;
         // }
-
-        // --------------------------------------------------------
-        // 1. First-block correctly typed → reset highlight
-        // --------------------------------------------------------
-        if (text[0] === ml.block) {
-            inputDomHighlight.current.value = "";
-            stopTrackingInput.current = true;
-            return;
-        }
-
-        // --------------------------------------------------------
-        // 2. INSERTION LOGIC
-        // --------------------------------------------------------
-        if (!isDelete && letter) {
-
-            // Case A — user typed the completed block directly
-            if (letter === ml.block) {
-                console.log("Case A — user typed the completed block directly");
-                setCurrentInput(letter);
-                inputDomHighlight.current.value = "";
-                return;
-            }
-
-            // Case B — user typed the next Hangul step correctly
-            if (letter === nextLetter) {
-                ml.next++; // advance step
-                setCurrentInput(letter);
-                updateHighlight(ml.block, ml.next);
-                return;
-            }
-
-            // FIXME
-            // Case C — user typed previous step (ㄱ → 가 → backspace → type ㄱ)
-            if (text === steps[nextIndex - 1]) {
-                updateHighlight(ml.block, nextIndex);
-                return;
-            }
-
-            // Fallback — block incorrect input
-            restorePreviousInput();
-            return;
-        }
-
-        // --------------------------------------------------------
-        // 3. DELETION LOGIC (backspace)
-        // --------------------------------------------------------
-        if (isDelete) {
-
-            if (text.length === 0) {
-                ml.next = 0;
-                inputDomHighlight.current.value = steps[0];
-                stopTrackingInput.current = false;
-            }
-            else if (text === steps[nextIndex - 1]) {
-                // valid step regression
-                // (can add logic if needed)
-            }
-
-            inputDomText.current = text;
-        }
     }
 
-    // ------------------------------------------------------------
-    // HELPERS — abstracts repetitive DOM behavior
-    // ------------------------------------------------------------
-    function setCurrentInput(letter: string) {
-        inputDomText.current = letter;
-        inputDom.current.value = letter;
-    }
-
-    function restorePreviousInput() {
-        inputDom.current.value = inputDomText.current;
-    }
-
-    function updateHighlight(block: string, stepIndex: number) {
-        const decomposed = decomposeWord(block);
-        inputDomHighlight.current.value = decomposed[stepIndex - 1] + decomposed[stepIndex];
+    function onBeforeInput(e: React.FormEvent<HTMLInputElement>) {
+        console.log("before input: ", e.data);
     }
 
     return {
         onChange,
         onCompositionStart,
         onCompositionUpdate,
-        onCompositionEnd
+        onCompositionEnd,
+        onBeforeInput,
+        onKeyDown,
     }
 
 

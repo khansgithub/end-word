@@ -52,7 +52,7 @@ export default function Game() {
 
     var connected_players = 5;
 
-    const { onChange, onCompositionUpdate, onCompositionEnd } = inputHandlers(inputHandlersRefs);
+    const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
 
     function onCompositionStart(){
         console.log("on composition start");
@@ -103,7 +103,7 @@ export default function Game() {
             {/* <InputBox></InputBox> */}
 
             <div className="flex flex-row w-full justify-center items-center">
-                <div ref={ihr.inputKeyDisplay} className="w-15 m-2 -ml-15 aspect-square text-5xl text-center border-2 border-white"> </div>
+                <div ref={ihr.inputKeyDisplay} className="w-15 m-2 -ml-15 flex justify-center place-items-center aspect-square text-4xl overflow-hidden border-2 border-white"> </div>
                 <InputBox
                     inputDomHighlight={ihr.inputDomHighlight}
                     inputDom={ihr.inputDom}
@@ -111,6 +111,8 @@ export default function Game() {
                     onCompositionStart={onCompositionStart}
                     onCompositionUpdate={onCompositionUpdate}
                     onCompositionEnd={onCompositionEnd}
+                    onBeforeInput={onBeforeInput}
+                    onKeyDown={onKeyDown}
                 />
             </div>
 

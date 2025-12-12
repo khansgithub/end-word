@@ -6,9 +6,11 @@ interface props {
     inputDomHighlight: RefObject<HTMLInputElement | null>;
     inputDom: RefObject<HTMLInputElement | null>;
     onChange: (e: FormEvent<HTMLInputElement>) => void;
+    onBeforeInput: (e: FormEvent<HTMLInputElement>) => void;
     onCompositionStart: (e: React.CompositionEvent<HTMLInputElement>) => void;
     onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => void;
     onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
 };
 
 function InputBox({
@@ -18,6 +20,8 @@ function InputBox({
     onCompositionStart,
     onCompositionUpdate,
     onCompositionEnd,
+    onBeforeInput,
+    onKeyDown,
 }: props) {
     const inputFieldClass = "w-full h-full px-3 col-start-1 row-start-1 rounded-md text-5xl no-underline"
     const inputFeildWrapper = useRef<HTMLDivElement>(null); // use ref to avoid rerenders
@@ -44,7 +48,7 @@ function InputBox({
     // border-amber-100
     return (
         <div ref={inputFeildWrapper} className={`inputFields w-1/4 h-20 grid grid-cols-1 grid-rows-1 rounded-md transition-colors duration-300 ease-out border-2 border-b-amber-100`}>
-            <p suppressHydrationWarning={true} className={"border-2 border-white"}>inputbox {count.current}</p>
+            {/* <p suppressHydrationWarning={true} className={"border-2 border-white"}>inputbox {count.current}</p> */}
             {/* <button onClick={onClickFoo}> click me </button> */}
             <input
                 ref={inputDomHighlight}
@@ -62,6 +66,9 @@ function InputBox({
                 onCompositionStart={onCompositionStart}
                 onCompositionUpdate={onCompositionUpdate}
                 onCompositionEnd={onCompositionEnd}
+                onBeforeInput={onBeforeInput}
+                onKeyDown={onKeyDown}
+                onInput={onKeyDown}
                 className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
 
