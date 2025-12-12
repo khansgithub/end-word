@@ -153,19 +153,23 @@ export function inputHandlers({
             return blockInput();                               // all else → reject
         }
 
+        const blockLetters = decomposeSyllable(prev);
+        console.log(blockLetters);
+
         //
         // === State S_강 (anything with the correct first 2 letters and 1 other letter) ===
         //
-        if (decomposeSyllable(prev).slice(-1).join("") == decomposeSyllable(block).join("")) {
+        if (blockLetters.slice(0, -1).join("") == decomposeSyllable(block).join("")) {
             console.log("state: S_강");
             if (input.length == 0) return clearInput();           // empty → S0
             if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
+            if (decomposeSyllable(input).slice(0, -1).join("") == decomposeSyllable(block).join("")) return continueInput();
         }
 
         //
         // === State S_값 (anything with the correct first 2 letters and 2 other letters) ===
         //
-        if (decomposeSyllable(prev).slice(-2).join("") == decomposeSyllable(block).join("")) {
+        if (blockLetters.slice(0, -2).join("") == decomposeSyllable(block).join("")) {
             console.log("state: S_값");
             if (input.length == 0) return clearInput();           // empty → S0
             if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
@@ -178,6 +182,7 @@ export function inputHandlers({
         //
         // unreachable fallback
         //
+        console.log("no state");
         return clearInput();
         // processText(text, letter);
     }
