@@ -2,6 +2,8 @@
 S0
 S_ㄱ
 S_가
+S_강
+S_값
 S_가*
 
 #initial
@@ -15,10 +17,8 @@ S_가
 ㅏ
 가
 가*
-other
-del_text=null
-del_text=ㅏ
-del_text=other
+empty
+*
 
 #transitions
 S0:*>S0
@@ -26,10 +26,22 @@ S0:ㄱ>S_ㄱ
 S0:가>S_가
 S0:가*>S_가*
 
-S_ㄱ:ㅏ>S_가
-S_ㄱ:other>S_ㄱ
+S_ㄱ:가>S_가
+S_ㄱ:*>S_ㄱ
+S_ㄱ:empty>S0
 
+S_가: * > S_가
+S_가: ㄱ > S_ㄱ
+S_가: empty>S0
 S_가: 가* > S_가*
-S_가:del_text=ㅏ > S_ㄱ
+
+S_가: * > S_강
+S_가: * > S_값
 
 S_가*: 가* > S_가*
+S_가*: ㄱ > S_ㄱ
+S_가*: empty>S0
+
+
+S_강: 가* > S_가*
+S_값: 가* > S_가*

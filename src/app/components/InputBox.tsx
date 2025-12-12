@@ -62,7 +62,6 @@ function InputBox({
                 onCompositionStart={onCompositionStart}
                 onCompositionUpdate={onCompositionUpdate}
                 onCompositionEnd={onCompositionEnd}
-
                 className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
 

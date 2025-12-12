@@ -64,8 +64,8 @@ export function inputHandlers({
     function onCompositionEnd(e: React.CompositionEvent<HTMLInputElement>) {
         isComposing.current = false;
 
-        const text = e.currentTarget.value.trim();
-        processText(text, null); // no letter detail from IME
+        // const text = e.currentTarget.value.trim();
+        // processText(text, null); // no letter detail from IME
     }
 
     // ------------------------------------------
@@ -74,43 +74,67 @@ export function inputHandlers({
     function onChange(e: React.ChangeEvent<HTMLInputElement>) {
         const event = e.nativeEvent as any as InputEvent;
         const letter = event.data; // can be null for delete
-        const input = e.currentTarget.value.trim();
+        const input = e.currentTarget.value;
+        const prev = inputDomText.current;
 
         const block = matchLetter.current.block;
         const next_i = matchLetter.current.next;
 
+        const blockInput = () => inputDom.current.value = inputDomText.current;
+        const continueInput = () => inputDomText.current = inputDom.current.value;
+        const clearInput = () => inputDom.current.value = inputDomText.current = "";
 
-        const blockInput = ()=>inputDom.current.value = inputDomText.current;
+        console.clear();
+        console.log("--------------");
+        console.log("input:", input, "letter:", letter);
+        console.log("prev input:", inputDomText.current);
+        console.log("matchLetter:", JSON.stringify(matchLetter));
+        console.log("--------------");
 
-        if (inputDomText.current.length == 0){
-            if (input.length == 0) return;
-        };
-
-        // if (inputDomText.current == matchLetter.current.steps[0]){
-        if (inputDomText.current == "ㄱ"){
-            // if (input == decomposeWord(block)[matchLetter.current.next]){
-            if (input == "가"){
-                return;
-            } else {
-                blockInput();
-            }
-        // } else if (inputDomText.current == block) {
-        } else if (inputDomText.current == "가") {
-            if (input == "ㄱ"){
-                return;
-            } else if (input.startsWith("가")){
-                return
-            } else {
-                blockInput();
-            }
-        } else if (inputDomText.current.startsWith("가")) {
-            if (input.startsWith("가")){
-                return
-            } else {
-                blockInput();
-            }
+        //
+        // === State S0 ===
+        //
+        if (prev === "") {
+            if (input.length == 0) return clearInput();         // S0:empty → S0
+            if (input === "ㄱ") return continueInput();         // S0:ㄱ → S_ㄱ
+            if (input === "가") return continueInput();         // S0:가 → S_가
+            if (input.startsWith("가")) return continueInput(); // S0:가* → S_가*
+            return blockInput();                                // all other → reject
         }
 
+        //
+        // === State S_ㄱ ===
+        //
+        if (prev === "ㄱ") {
+            if (input.length == 0) return continueInput();      // S_ㄱ:empty → S0
+            if (input === "가") return continueInput();         // S_ㄱ:가 → S_가
+            return blockInput();                                // S_ㄱ:other → reject
+        }
+
+        //
+        // === State S_가 ===
+        //
+        if (prev === "가") {
+            if (input.length == 0) return continueInput();      // S_가:empty → S0
+            if (input === "ㄱ") return continueInput();         // S_가:ㄱ → S_ㄱ
+            if (input.startsWith("가")) return continueInput(); // S_가:가* → S_가*
+            return continueInput();                             // S_가:* → S_가
+        }
+
+        //
+        // === State S_가* (anything starting with "가", length ≥ 2) ===
+        //
+        if (prev.startsWith("가")) {
+            if (input.length == 0) return continueInput();           // S_가*:empty → S0
+            if (input === "ㄱ") return continueInput();          // S_가*:ㄱ → S_ㄱ
+            if (input.startsWith("가")) return continueInput();  // S_가*:가* → S_가*
+            return blockInput();                               // all else → reject
+        }
+
+        //
+        // unreachable fallback
+        //
+        return blockInput();
         // processText(text, letter);
     }
 
@@ -132,7 +156,7 @@ export function inputHandlers({
         console.log("matchLetter:", ml);
         console.log("--------------");
 
-        if (text == "가" || isDelete){
+        if (text == "가" || isDelete) {
             // debugger;
         }
 
