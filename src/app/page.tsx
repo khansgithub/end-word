@@ -2,39 +2,50 @@
 
 import Image from "next/image";
 import Game from "./components/Game";
-import { Dispatch, memo, useRef, useState } from "react";
+import { Dispatch, memo, RefObject, useEffect, useRef, useState } from "react";
+import { foobar } from "./util";
 
 export default function Home() {
-    const [data, setData] = useState(0);
-    // foo(setData).catch( reason => {setData(`failed: ${reason}`)});
+    const [data, setData] = useState(null);
+    // const foobar2 = foobar(data);
+    const onChange = foobar(data);
+
+    useEffect(() => {
+        const block = "abc";
+        setData({
+            block: block,
+            steps: block.split(""),
+            value: block,
+            next: 0
+        });
+    }, []);
+
+    function onClick() {
+        // e => setData(x => x+1)
+        const block = data.block;
+        setData({
+            block: block.split("").reverse().join(""),
+            steps: block.split("").reverse(),
+            value: block,
+            next: 0
+        });
+    }
+
     return (
-        <>
-            <Game></Game>
-            {/* <Foo foo={data}></Foo>
-            count : {data}
-            <button className="m-3 p-4 border-2 border-amber-700" onClick={e => setData(x => x+1)}> button </button> */}
-        </>
+        <Game></Game>
+        // <div className="w-3/12 h-full flex flex-col justify-center items-center">
+        //     {/* <Foo onChange={onChange}></Foo> */}
+        //     {/* count : {JSON.stringify(data)} */}
+        //     {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={onClick}> button </button> */}
+        //     {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={foo.onClick}> button2 </button> */}
+        //     {/* <p>{foobar2()}</p> */}
+        // </div>
     );
 }
 
-const Foo = memo(function Foo({foo}:{foo?: number}){
-    const count = useRef(0);
-    count.current = count.current + 1;
+
+const Foo = memo(function ({onChange}) {
     return (
-        <>
-            <p className={"border-2 border-white"}>foo {count.current}</p>
-            <Bar></Bar>
-        </>
-    );
+        <input className="border-2 border-white" onChange={onChange}/>
+    )
 });
-
-function Bar(){
-    const count = useRef(0);
-    count.current = count.current + 1;
-
-    return (
-        <>
-            <p className={"border-2 border-green-400"}>bar {count.current}</p>
-        </>
-    );
-}

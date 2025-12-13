@@ -1,25 +1,35 @@
 'use client';
 
-import { ChangeEvent, InputEvent, ReactEventHandler, useEffect, useRef, useState } from "react";
+import { ChangeEvent, InputEvent, ReactEventHandler, useCallback, useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
 import { Player as PlayerClass } from "../classes";
 import InputBox from "./InputBox";
-import { initMatchLetter, inputHandlers, MatchLetter } from "./InputFieldUtil";
+import { inputHandlers, MatchLetter } from "./InputFieldUtil";
+import Foo from "./Foo";
 export default function Game() {
-    // Current turn number in the game (increments after successful submit)
-    const [turn, setTurn] = useState(0);
 
+    const [turn, setTurn] = useState(0); // Current turn number in the game (increments after successful submit)
+
+    // Tracks the expected Hangul block + its decomposition steps + current step index
+    // Example:
+    //   block: "각"
+    //   steps: ["ㄱ", "가", "각"]
+    //   next: 1 (next step the user must type)
+    // const matchLetter = useRef<MatchLetter>(setMatchLetter("가"))
+    const [matchLetter, setMatchLetter] = useState<MatchLetter>(null);
+
+    // Reference to the submit button
+    const buttonDom = useRef<HTMLButtonElement>(null);
+    
+    // Stores the last successfully submitted word
+    const playerLastValue = useRef<string>("");
+    
     const inputHandlersRefs = {
-        // Tracks the expected Hangul block + its decomposition steps + current step index
-        // Example:
-        //   block: "각"
-        //   steps: ["ㄱ", "가", "각"]
-        //   next: 1 (next step the user must type)
-        matchLetter: useRef<MatchLetter>(initMatchLetter()),
-
-        // Reference to the submit button
-        buttonDom: useRef<HTMLButtonElement>(null),
+        matchLetter: matchLetter,
+        buttonDom: buttonDom,
+        stopTrackingInput: useRef(false),
+        playerLastValue: playerLastValue,
 
         // Reference to the user's input element (the actual visible input box)
         inputDom: useRef<HTMLInputElement>(null),
@@ -35,27 +45,28 @@ export default function Game() {
         // For example highlighting a jamo in progress.
         inputDomHighlight: useRef<HTMLInputElement>(null),
 
-        stopTrackingInput: useRef(false),
-
-        // Stores the last successfully submitted word
-        playerLastValue: useRef<string>(""),
-
         // Track whether IME is actively composing Hangul
         isComposing: useRef(false),
     };
-
     const ihr = inputHandlersRefs;
-
     const max_players = 5;
-
-    const players: PlayerClass[] = Array.from({ length: max_players }, (x, i) => { return new PlayerClass(`${i}`) });
-
+    const players: PlayerClass[] = Array.from({ length: max_players }, (x, i) => {
+        const [lastWord, setLastWord] = useState("");
+        return new PlayerClass(`${i}`, lastWord, setLastWord);
+    });
+    const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
+    
     var connected_players = 5;
 
-    const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
-
-    function onCompositionStart(){
-        console.log("on composition start");
+    function buildMatchLetter(block: string): MatchLetter {
+        if (block.length > 1) throw new Error("Must be 1 syllable");
+        const arr = buildSyllableSteps(block);
+        return {
+            block: block,
+            steps: [...arr],
+            value: block,
+            next: 0
+        };
     }
 
     function nextTurn() {
@@ -63,8 +74,14 @@ export default function Game() {
     }
 
     useEffect(() => {
-        ihr.inputDomHighlight.current.value = decomposeWord(ihr.matchLetter.current.block)[ihr.matchLetter.current.next];
-    });
+        setMatchLetter(buildMatchLetter("가"));
+    }, []);
+
+    useEffect(() => {
+        ihr.inputDomHighlight.current.value = matchLetter?.steps[0] || "";
+        console.log("update");
+    }, [matchLetter]);
+
 
     async function inputIsValid(input: string): Promise<boolean> {
         // TODO: Add debounce to this
@@ -85,11 +102,17 @@ export default function Game() {
 
     async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
-        const valid_input = await inputIsValid(ihr.inputDomText.current);
+        const submittedWord = ihr.inputDomText.current;
+        // const valid_input = await inputIsValid(submittedWord);
+        const valid_input = true;
         if (valid_input) {
-            nextTurn();
-            ihr.playerLastValue.current = ihr.inputDomText.current;
+            setMatchLetter(buildMatchLetter(submittedWord.slice(-1)));
+            players[turn].setLastWord(ihr.inputDomText.current);
+            // playerLastValue.current = ihr.inputDomText.current;
             ihr.inputDom.current?.focus();
+            ihr.inputDom.current.value = "";
+            ihr.inputDomText.current = "";
+            nextTurn();
         } else {
             ihr.inputDom.current?.classList.add("invalid");
         }
@@ -97,9 +120,8 @@ export default function Game() {
 
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
-
-            <div className="text-5xl">Match: <span className="text-red-500">{ihr.matchLetter.current.block}</span></div>
-
+            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter?.block}</span></div>
+            {/* <Foo onChange={barfoo}></Foo> */}
             {/* <InputBox></InputBox> */}
 
             <div className="flex flex-row w-full justify-center items-center">
@@ -108,7 +130,7 @@ export default function Game() {
                     inputDomHighlight={ihr.inputDomHighlight}
                     inputDom={ihr.inputDom}
                     onChange={onChange}
-                    onCompositionStart={onCompositionStart}
+                    onCompositionStart={()=>{}}
                     onCompositionUpdate={onCompositionUpdate}
                     onCompositionEnd={onCompositionEnd}
                     onBeforeInput={onBeforeInput}
@@ -123,7 +145,7 @@ export default function Game() {
             <div className="h-10"></div>
             <div className="flex flex-row gap-2 justify-center items-center" id="players">
                 {players.map((p, i) =>
-                    <Player key={i} player={p} turn={i == turn} lastWord={i == turn ? ihr.playerLastValue.current : undefined}></Player>)
+                    <Player key={i} player={p} turn={i == turn} lastWord={p.lastWord}></Player>)
                 }
             </div>
         </div>

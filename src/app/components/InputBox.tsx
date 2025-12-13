@@ -60,15 +60,17 @@ function InputBox({
             <input
                 ref={inputDom}
                 // placeholder={matchLetter.block}
+                maxLength={7}
+                minLength={2}
                 type="text"
                 lang="ko"
                 onChange={onChange}
-                onCompositionStart={onCompositionStart}
-                onCompositionUpdate={onCompositionUpdate}
-                onCompositionEnd={onCompositionEnd}
-                onBeforeInput={onBeforeInput}
+                // onCompositionStart={onCompositionStart}
+                // onCompositionUpdate={onCompositionUpdate}
+                // onCompositionEnd={onCompositionEnd}
+                // onBeforeInput={onBeforeInput}
                 onKeyDown={onKeyDown}
-                onInput={onKeyDown}
+                // onInput={onKeyDown}
                 className={`${inputFieldClass} focus:outline-none focus:ring-2 focus:ring-blue-400`}
             />
 
@@ -79,7 +81,7 @@ function InputBox({
 export default memo(InputBox, (prevProps: props, nextProps: props): boolean => {
     console.log("prev", prevProps.inputDomHighlight.current.value);
     console.log("next", nextProps.inputDomHighlight.current.value);
-    return true;
+    return false;
 });
 
 // export default memo(InputBox);
