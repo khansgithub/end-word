@@ -1,23 +1,31 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import next from 'next';
-import http from 'http';
-import { createIOServer } from "./ws";
 
-const app = next({
-    dev: true,
-    customServer: true,
-    dir: "src"  
-});
-const handle = app.getRequestHandler();
+import { createServer } from 'node:http';
+import { Server, Socket } from 'socket.io';
+
+import {
+    ClientToServerEvents,
+    ServerToClientEvents,
+    SocketProperties
+} from './api';
+import { EventsMap, StrictEventEmitter } from 'socket.io/dist/typed-events';
+import { createIOServer } from './ws';
+
+const app = next({ dev: true });
 const express_app = express();
-const server = new http.Server(express_app);
-const PORT = process.env.PORT || 4000;
+const server = createServer(express_app);
+
+const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
+createIOServer(server);
 
 app.prepare().then(() => {
     express_app.use(express.json());
-    express_app.all('/{*any}', (req: express.Request, res: express.Response) => handle(req, res));
-    createIOServer(server);
-    server.listen(PORT, () => {
-        console.log(`Server running at http://localhost:${PORT}`);
+    express_app.all(
+        '/{*any}',
+        (req: express.Request, res: express.Response) => app.getRequestHandler()(req, res)
+    );
+    server.listen(port, () => {
+        console.log(`server running at http://localhost:${port}`);
     });
 });

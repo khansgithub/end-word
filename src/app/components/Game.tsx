@@ -1,14 +1,16 @@
 'use client';
 
-import { ChangeEvent, InputEvent, ReactEventHandler, useCallback, useEffect, useRef, useState } from "react";
-import Player from "./Player";
-import { buildSyllableSteps, decomposeWord } from "../hangul-decomposer";
+import { useEffect, useRef, useState } from "react";
 import { Player as PlayerClass } from "../classes";
+import { buildSyllableSteps } from "../hangul-decomposer";
 import InputBox from "./InputBox";
 import { inputHandlers, MatchLetter } from "./InputFieldUtil";
-import Foo from "./Foo";
-export default function Game() {
+import Player from "./Player";
+import { getSocketManager, websocketHanlder, websocketHanlderRefs } from "./Socket";
+import { MAX_PLAYERS } from "../../server/consts";
 
+
+export default function Game() {
     const [turn, setTurn] = useState(0); // Current turn number in the game (increments after successful submit)
 
     // Tracks the expected Hangul block + its decomposition steps + current step index
@@ -49,12 +51,17 @@ export default function Game() {
         isComposing: useRef(false),
     };
     const ihr = inputHandlersRefs;
-    const max_players = 5;
-    const players: PlayerClass[] = Array.from({ length: max_players }, (x, i) => {
+    const players: PlayerClass[] = Array.from({ length: MAX_PLAYERS }, (_, i) => {
         const [lastWord, setLastWord] = useState("");
         return new PlayerClass(`${i}`, lastWord, setLastWord);
     });
     const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
+    
+    const socketHandlersRefs: websocketHanlderRefs = {
+        socket: useRef(getSocketManager()),
+        players: players, // TODO: i'm not sure if this needs to be a ref; unsure about how an array if affected by re-renders
+    };
+    const socketRef = websocketHanlder(socketHandlersRefs);
     
     var connected_players = 5;
 
