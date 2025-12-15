@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Player as PlayerClass } from "../classes";
 import { buildSyllableSteps } from "../hangul-decomposer";
 import InputBox from "./InputBox";
@@ -8,10 +8,14 @@ import { inputHandlers, MatchLetter } from "./InputFieldUtil";
 import Player from "./Player";
 import { getSocketManager, websocketHanlder, websocketHanlderRefs } from "./Socket";
 import { MAX_PLAYERS } from "../../server/consts";
+import { FixedLengthArray } from "../../server/types";
+import { gameStateReducer, initialGameState } from "./GameState";
 
 
 export default function Game() {
-    const [turn, setTurn] = useState(0); // Current turn number in the game (increments after successful submit)
+    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, initialGameState());
+
+    // const [turn, setTurn] = useState(0); // Current turn number in the game (increments after successful submit)
 
     // Tracks the expected Hangul block + its decomposition steps + current step index
     // Example:
@@ -19,7 +23,7 @@ export default function Game() {
     //   steps: ["ㄱ", "가", "각"]
     //   next: 1 (next step the user must type)
     // const matchLetter = useRef<MatchLetter>(setMatchLetter("가"))
-    const [matchLetter, setMatchLetter] = useState<MatchLetter>(null);
+    // const [matchLetter, setMatchLetter] = useState<MatchLetter>(null);
 
     // Reference to the submit button
     const buttonDom = useRef<HTMLButtonElement>(null);
@@ -28,7 +32,7 @@ export default function Game() {
     const playerLastValue = useRef<string>("");
     
     const inputHandlersRefs = {
-        matchLetter: matchLetter,
+        matchLetter: gameState.matchLetter, //TODO: do i need to pass gameStateUpdate here?
         buttonDom: buttonDom,
         stopTrackingInput: useRef(false),
         playerLastValue: playerLastValue,
@@ -51,43 +55,22 @@ export default function Game() {
         isComposing: useRef(false),
     };
     const ihr = inputHandlersRefs;
-    const players: PlayerClass[] = Array.from({ length: MAX_PLAYERS }, (_, i) => {
-        const [lastWord, setLastWord] = useState("");
-        return new PlayerClass(`${i}`, lastWord, setLastWord);
-    });
+    // const players: PlayerClass[] = Array.from({ length: MAX_PLAYERS }, (_, i) => {
+    //     const [lastWord, setLastWord] = useState("");
+    //     return new PlayerClass(`${i}`, lastWord, setLastWord);
+    // });
     const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
     
     const socketHandlersRefs: websocketHanlderRefs = {
         socket: useRef(getSocketManager()),
-        players: players, // TODO: i'm not sure if this needs to be a ref; unsure about how an array if affected by re-renders
+        // players: players, // TODO: i'm not sure if this needs to be a ref; unsure about how an array if affected by re-renders
     };
     const socketRef = websocketHanlder(socketHandlersRefs);
-    
-    var connected_players = 5;
 
-    function buildMatchLetter(block: string): MatchLetter {
-        if (block.length > 1) throw new Error("Must be 1 syllable");
-        const arr = buildSyllableSteps(block);
-        return {
-            block: block,
-            steps: [...arr],
-            value: block,
-            next: 0
-        };
-    }
-
-    function nextTurn() {
-        setTurn(t => (t + 1) % connected_players);
-    }
-
-    useEffect(() => {
-        setMatchLetter(buildMatchLetter("가"));
-    }, []);
-
-    useEffect(() => {
-        ihr.inputDomHighlight.current.value = matchLetter?.steps[0] || "";
-        console.log("update");
-    }, [matchLetter]);
+    // useEffect(() => {
+    //     ihr.inputDomHighlight.current.value = matchLetter?.steps[0] || "";
+    //     console.log("update");
+    // }, [matchLetter]);
 
 
     async function inputIsValid(input: string): Promise<boolean> {
@@ -113,13 +96,17 @@ export default function Game() {
         // const valid_input = await inputIsValid(submittedWord);
         const valid_input = true;
         if (valid_input) {
-            setMatchLetter(buildMatchLetter(submittedWord.slice(-1)));
-            players[turn].setLastWord(ihr.inputDomText.current);
-            // playerLastValue.current = ihr.inputDomText.current;
+            playerLastValue.current = ihr.inputDomText.current;
             ihr.inputDom.current?.focus();
             ihr.inputDom.current.value = "";
             ihr.inputDomText.current = "";
-            nextTurn();
+            // gameStateUpdate({"type": "buildMatchLetter"})
+            gameStateUpdate({type: "progressNextTurn", payload:{
+                "block": "123"
+            }});
+            // setMatchLetter(buildMatchLetter(submittedWord.slice(-1)));
+            // players[turn].setLastWord(ihr.inputDomText.current);
+            // nextTurn();
         } else {
             ihr.inputDom.current?.classList.add("invalid");
         }

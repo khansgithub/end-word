@@ -4,12 +4,11 @@ export class Player {
 
     public name: string
     public lastWord: string
-    public setLastWord: Dispatch<string>
+    // public setLastWord: Dispatch<string>
     
-    constructor(name: string, lastWord:string, setLastWord: typeof this.setLastWord){
+    constructor(name: string, lastWord:string){
         this.name = name;
         this.lastWord = lastWord;
-        this.setLastWord = setLastWord;
     }
 
     // toString(){

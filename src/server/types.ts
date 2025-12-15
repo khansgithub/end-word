@@ -18,5 +18,4 @@ export type SocketProperties = {
 
 export type PlayerSocket = Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketProperties>;
 
-
 export type FixedLengthArray<T, L extends number> = T[] & { length: L };
