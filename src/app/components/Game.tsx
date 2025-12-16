@@ -1,41 +1,24 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useState } from "react";
-import { Player as PlayerClass } from "../classes";
-import { buildSyllableSteps } from "../hangul-decomposer";
-import InputBox from "./InputBox";
-import { inputHandlers, MatchLetter } from "./InputFieldUtil";
-import Player from "./Player";
-import { getSocketManager, websocketHanlder, websocketHanlderRefs } from "./Socket";
-import { MAX_PLAYERS } from "../../server/consts";
-import { FixedLengthArray } from "../../server/types";
+import { useReducer, useRef } from "react";
 import { gameStateReducer, initialGameState } from "./GameState";
+import InputBox from "./InputBox";
+import { inputHandlers } from "./InputFieldUtil";
+import Player from "./Player";
+import { getSocketManager, websocketHanlder, websocketHanlderRefs } from "./socket";
 
 
-export default function Game() {
-    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, initialGameState());
-
-    // const [turn, setTurn] = useState(0); // Current turn number in the game (increments after successful submit)
-
-    // Tracks the expected Hangul block + its decomposition steps + current step index
-    // Example:
-    //   block: "각"
-    //   steps: ["ㄱ", "가", "각"]
-    //   next: 1 (next step the user must type)
-    // const matchLetter = useRef<MatchLetter>(setMatchLetter("가"))
-    // const [matchLetter, setMatchLetter] = useState<MatchLetter>(null);
+export default function Game({playerName, playerI} : {playerName: string, playerI: number}) {
+    console.count("Game");
+    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, initialGameState(playerName, playerI));
 
     // Reference to the submit button
     const buttonDom = useRef<HTMLButtonElement>(null);
-    
-    // Stores the last successfully submitted word
-    const playerLastValue = useRef<string>("");
-    
+
     const inputHandlersRefs = {
         matchLetter: gameState.matchLetter, //TODO: do i need to pass gameStateUpdate here?
         buttonDom: buttonDom,
         stopTrackingInput: useRef(false),
-        playerLastValue: playerLastValue,
 
         // Reference to the user's input element (the actual visible input box)
         inputDom: useRef<HTMLInputElement>(null),
@@ -54,18 +37,18 @@ export default function Game() {
         // Track whether IME is actively composing Hangul
         isComposing: useRef(false),
     };
+
     const ihr = inputHandlersRefs;
-    // const players: PlayerClass[] = Array.from({ length: MAX_PLAYERS }, (_, i) => {
-    //     const [lastWord, setLastWord] = useState("");
-    //     return new PlayerClass(`${i}`, lastWord, setLastWord);
-    // });
     const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
-    
+
     const socketHandlersRefs: websocketHanlderRefs = {
         socket: useRef(getSocketManager()),
+        gameState: gameState,
+        gameStateUpdate: gameStateUpdate
         // players: players, // TODO: i'm not sure if this needs to be a ref; unsure about how an array if affected by re-renders
     };
-    const socketRef = websocketHanlder(socketHandlersRefs);
+
+    websocketHanlder(socketHandlersRefs);
 
     // useEffect(() => {
     //     ihr.inputDomHighlight.current.value = matchLetter?.steps[0] || "";
@@ -96,14 +79,19 @@ export default function Game() {
         // const valid_input = await inputIsValid(submittedWord);
         const valid_input = true;
         if (valid_input) {
-            playerLastValue.current = ihr.inputDomText.current;
+            const playerLastValue = ihr.inputDomText.current;
             ihr.inputDom.current?.focus();
             ihr.inputDom.current.value = "";
             ihr.inputDomText.current = "";
-            // gameStateUpdate({"type": "buildMatchLetter"})
-            gameStateUpdate({type: "progressNextTurn", payload:{
-                "block": "123"
-            }});
+            gameStateUpdate({
+                type: "progressNextTurn",
+                payload: {
+                    block: submittedWord.slice(-1),
+                    currentTurn: gameState.turn,
+                    playerLastWord: playerLastValue,
+                    player: gameState.players[gameState.turn] // FIXME: typing isn't working well - is this is a null, no error is raised
+                }
+            });
             // setMatchLetter(buildMatchLetter(submittedWord.slice(-1)));
             // players[turn].setLastWord(ihr.inputDomText.current);
             // nextTurn();
@@ -114,7 +102,7 @@ export default function Game() {
 
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
-            <div className="text-5xl">Match: <span className="text-red-500">{matchLetter?.block}</span></div>
+            <div className="text-5xl">Match: <span className="text-red-500">{gameState.matchLetter.block}</span></div>
             {/* <Foo onChange={barfoo}></Foo> */}
             {/* <InputBox></InputBox> */}
 
@@ -124,7 +112,7 @@ export default function Game() {
                     inputDomHighlight={ihr.inputDomHighlight}
                     inputDom={ihr.inputDom}
                     onChange={onChange}
-                    onCompositionStart={()=>{}}
+                    onCompositionStart={() => { }}
                     onCompositionUpdate={onCompositionUpdate}
                     onCompositionEnd={onCompositionEnd}
                     onBeforeInput={onBeforeInput}
@@ -138,8 +126,12 @@ export default function Game() {
                 className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
             <div className="h-10"></div>
             <div className="flex flex-row gap-2 justify-center items-center" id="players">
-                {players.map((p, i) =>
-                    <Player key={i} player={p} turn={i == turn} lastWord={p.lastWord}></Player>)
+                {
+                    gameState.players
+                        .filter(p => p !== null)
+                        .map((p, i) =>
+                            <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
+                        )
                 }
             </div>
         </div>

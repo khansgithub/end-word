@@ -1,42 +1,55 @@
-import { Socket, io } from "socket.io-client";
-import { ClientToServerEvents, PlayerProfile, ServerToClientEvents, SocketProperties } from "../../server/types";
-import { RefObject } from "react";
-import { Player } from "../classes";
-
-type PlayerSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
+import { io } from "socket.io-client";
+import { ActionDispatch, Dispatch, RefObject, useState } from "react";
+import { GameState, gameStateReducer } from "./GameState";
+import { PlayerProfile, ClientPlayerSocket as PlayerSocket, ServerToClientEvents} from "../../shared/types";
 
 export type websocketHanlderRefs = {
     socket: RefObject<PlayerSocket>,
-    players: Player[]
+    gameState: GameState,
+    gameStateUpdate:  ActionDispatch<[action: Parameters<typeof gameStateReducer>[1]]>
+    // players: Player[]
 };
 
 export function getSocketManager() : PlayerSocket{
     return io() as PlayerSocket;
 }
 
-export function websocketHanlder(refs: websocketHanlderRefs): (PlayerSocket) => void {
+export function websocketHanlder({socket, gameState, gameStateUpdate}: websocketHanlderRefs) {
+    const socket_ = socket.current;
     function onConnect() { }
     function onEvent() { }
 
     function onPlayerJoin(profile: PlayerProfile){
-        if (profile.playerId < 0 || profile.playerId > refs.players.length){
+        if (profile.playerId < 0 || profile.playerId > gameState.players.length){
             // defensive
             throw new Error("unexpected error") // implment more specific errors
         }
-        const [lastWord, setLastWord] = useState("");
-        refs.players[profile.playerId] = new Player(profile.name, lastWord, setLastWord);
+        gameStateUpdate({
+            type: "playerJoin",
+            payload: {
+                players: gameState.players,
+                profile: profile 
+            }
+        });
+        // const [lastWord, setLastWord] = useState("");
+        // refs.players[profile.playerId] = new Player(profile.name, lastWord, setLastWord);
 
     }
 
+    function onPlayerCount(count: number){
+        
+    }
+
     const events: ServerToClientEvents = {
-        playerJoin: onPlayerJoin
+        playerJoin: onPlayerJoin,
+        playerCount: onPlayerCount
     };
 
     Object.keys(events).forEach( (event: keyof ServerToClientEvents) => {
-        refs.socket.on(event, events[event]);
+        socket_.on(event, events[event]);
     });
 
-    refs.socket.on("connect", () => {
+    socket_.on("connect", () => {
         console.log("WebSocket connected");
         onConnect();
     });
@@ -69,6 +82,4 @@ export function websocketHanlder(refs: websocketHanlderRefs): (PlayerSocket) => 
     // refs.socket.on("text", text => {
     //     console.log("Socket message from server: ", text);
     // });
-
-    return socketEvents
 }

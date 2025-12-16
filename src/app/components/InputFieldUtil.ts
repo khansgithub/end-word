@@ -18,8 +18,6 @@ type inputHandlerRefs = {
 
     buttonDom: RefObject<HTMLButtonElement> | RefObject<null>;
 
-    playerLastValue: RefObject<string>;
-
     isComposing: RefObject<boolean>;
 
     stopTrackingInput: RefObject<boolean>;
@@ -59,7 +57,7 @@ export function inputHandlers({
     // ------------------------------------------
     function onChange(e: React.ChangeEvent<HTMLInputElement>) {
         const event = e.nativeEvent as any as InputEvent;
-        const letter = event.data; // can be null for delete
+        const letter = event.data ?? ""; // can be null for delete
         const input = e.currentTarget.value;
         const prev = inputDomText.current;
 
@@ -67,7 +65,10 @@ export function inputHandlers({
         const block = ml.block;
 
         const blockInput = () => inputDom.current.value = inputDomText.current;
-        const clearInput = () => inputDom.current.value = inputDomHighlight.current.value = inputDomText.current = "";
+        const clearInput = () => {
+            inputDom.current.value = inputDomText.current = "";
+            inputDomHighlight.current.value = matchLetter.steps[0];
+        };
         const continueInput = () => {
             const input = inputDom.current.value;
             const letterIndex = ml.steps.indexOf(input[0]);
@@ -89,7 +90,7 @@ export function inputHandlers({
         console.log("prev input:", inputDomText.current);
         console.log("matchLetter:", JSON.stringify(ml));
         console.log("--------------");
-        inputKeyDisplay.current.textContent = letter;
+        inputKeyDisplay.current.textContent = letter.slice(-1);
 
         if (input.length == 0) return clearInput();
         if ([...ml.steps, ""].includes(prev)) {
@@ -120,6 +121,11 @@ export function inputHandlers({
 
     function onBeforeInput(e: React.FormEvent<HTMLInputElement>) {
         // console.log("before input: ", e.data);
+    }
+
+    // setup - instead of useEffect
+    if(inputDomHighlight.current && inputDomHighlight.current.value.length < 1){
+        inputDomHighlight.current.value = matchLetter.steps[0];
     }
 
     return {

@@ -4,8 +4,9 @@ import Image from "next/image";
 import Game from "./components/Game";
 import { Dispatch, memo, RefObject, useEffect, useRef, useState } from "react";
 import { foobar } from "./util";
+import { Homescreen } from "./components/Homescreen";
 
-export default function Home() {
+export default function() {
     const [data, setData] = useState(null);
     // const foobar2 = foobar(data);
     const onChange = foobar(data);
@@ -32,7 +33,8 @@ export default function Home() {
     }
 
     return (
-        <Game></Game>
+        // <Game></Game>
+        <Homescreen></Homescreen>
         // <div className="w-3/12 h-full flex flex-col justify-center items-center">
         //     {/* <Foo onChange={onChange}></Foo> */}
         //     {/* count : {JSON.stringify(data)} */}

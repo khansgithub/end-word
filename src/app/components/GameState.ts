@@ -1,58 +1,59 @@
-import { MAX_PLAYERS } from "../../server/consts";
-import { FixedLengthArray, PairToObject, PlayerProfile, TupleToObject } from "../../server/types";
-import { Player } from "../classes";
+/***
+Notes from gpt:
+- no mutations / side effects in the reducer
+- Reducers must always return state; implment default for switch/case
+- use simple objects rather than classes (Player type vs Player class)
+***/
+
+import { MAX_PLAYERS } from "../../shared/consts";
+import { Player, PlayerProfile, PlayersArray } from "../../shared/types";
 import { buildSyllableSteps } from "../hangul-decomposer";
 import { MatchLetter } from "./InputFieldUtil";
 
-type GameState = {
+export type GameState = {
+    // Tracks the expected Hangul block + its decomposition steps + current step index
+    // Example:
+    //   block: "각"
+    //   steps: ["ㄱ", "가", "각"]
+    //   next: 1 (next step the user must type)
     matchLetter: MatchLetter,
-    players: FixedLengthArray<Player | null, typeof MAX_PLAYERS>
+    players: PlayersArray
     connectedPlayers: number
     turn: number,
 }
 
-type GameStateActions =
-    | { type: "buildMatchLetter", payload: Parameters<typeof buildMatchLetter> }
-    | { type: "nextTurn", payload: PairToObject<Parameters<typeof nextTurn>> }
-    | { type: "playerJoin", payload: PairToObject<Parameters<typeof playerJoin>> }
-    | { type: "setLastWord", payload: string }
-// | {type: "progressNextTurn", payload: Parameters<typeof buildMatchLetter>
-// TupleToObject<Parameters<typeof buildMatchLetter>>
-// & {lastWord: string}
-// & TupleToObject<Parameters<typeof nextTurn>>
-// }
+export type GameStateActions =
+    | { type: "buildMatchLetter", payload: Parameters<typeof buildMatchLetter>[0] }
+    | { type: "nextTurn", payload: Parameters<typeof nextTurn>[0] }
+    | { type: "playerJoin", payload: Parameters<typeof playerJoin>[0] }
+    | { type: "setPlayerLastWord", payload: Parameters<typeof setPlayerLastWord>[0] }
+
 
 type GameStateActionsBatch =
     {
         type: "progressNextTurn",
-        payload: Extract<GameStateActions, { type: "buildMatchLetter" }>["payload"]
-        // payload: PairToObject<["block", string]>
-    }
+        payload: 
+            & Extract<GameStateActions, { type: "buildMatchLetter" }>["payload"]
+            & Extract<GameStateActions, { type: "setPlayerLastWord" }>["payload"]
+            & Extract<GameStateActions, { type: "nextTurn" }>["payload"]
+        }
 
 function nextTurn({ currentTurn }: { currentTurn: number }): number {
-    return currentTurn++;
+    return currentTurn + 1;
 }
 
 function playerJoin(params: {players: Player[], profile: PlayerProfile}): [number, Player] {
-    const availableI = params.players.findIndex((v, i) => v == null);
-    if (availableI === undefined) {
+    const availableI = params.players.findIndex((v, i) => v === undefined);
+    if (availableI < 0) {
         throw new Error("unexpected error");
     }
-    const newPlayer = new Player(params.profile.name, "");
+    const newPlayer: Player = {name: params.profile.name, lastWord: ""};
     return [availableI, newPlayer];
-    // return {
-    //     players: state.players
-    // }
 }
 
-function setLastWord(params: {state: GameState, lastWord: string}): Player {
-    const [state, lastWord] = [params.state, params.lastWord];
-    const player = state.players[state.turn];
-    state.players[state.turn].lastWord = lastWord;
-    return player
-    // return {
-    //     players: state.players
-    // };
+function setPlayerLastWord(params: {player:Player, playerLastWord: string}): Player {
+    const player: Player = {name: params.player.name, lastWord: params.playerLastWord};
+    return player;
 }
 
 function buildMatchLetter({block}: {block: string}): MatchLetter {
@@ -66,47 +67,70 @@ function buildMatchLetter({block}: {block: string}): MatchLetter {
     };
 }
 
-export function initialGameState(): GameState {
+export function initialGameState(playerName: string, playerI: number): GameState {
+    const players = Array(MAX_PLAYERS).fill(null) as PlayersArray;
+    players[playerI] = {
+        name: playerName,
+        lastWord: ""
+    };
+
     return {
-        matchLetter: buildMatchLetter("가"),
-        players: Array.from({ length: MAX_PLAYERS }, _ => null) as FixedLengthArray<null, typeof MAX_PLAYERS>,
+        matchLetter: buildMatchLetter({block: "가"}),
+        players: players,
         turn: 0,
         connectedPlayers: 0,
     }
 }
 
-export function gameStateReducer(state: GameState, action: Partial<GameStateActions | GameStateActionsBatch>): GameState {
+export function gameStateReducer(state: GameState, action: GameStateActions | GameStateActionsBatch): GameState {
     switch (action.type) {
         case ("buildMatchLetter"):
             return {
                 ...state,
-                matchLetter: buildMatchLetter(action.)
+                matchLetter: buildMatchLetter(action.payload)
             }
         case ("nextTurn"):
             return {
                 ...state,
-                turn: nextTurn(...action.payload)
+                turn: nextTurn(action.payload)
             }
         case ("playerJoin"):
             {
                 const updatedPlayers = [...state.players] as typeof state.players;
-                const [newPlayerI, newPlayer] = playerJoin(...action.payload);
+                const [newPlayerI, newPlayer] = playerJoin(action.payload);
                 updatedPlayers[newPlayerI] = newPlayer;
                 return {
                     ...state,
                     players: updatedPlayers
                 }
             }
-        case ("setLastWord"):
-            {
+        case ("setPlayerLastWord"):
+            {                
+                const updatedPlayer = setPlayerLastWord(action.payload)
                 const updatedPlayers = [...state.players] as typeof state.players;
-                updatedPlayers[state.turn].lastWord = action.payload;
+                updatedPlayers[state.turn] = updatedPlayer;
                 return {
                     ...state,
                     players: updatedPlayers
                 }
             }
+        case ("progressNextTurn"):
+            {
+                const matchLetter = buildMatchLetter({block:action.payload.block});
+                const updatedPlayers = [...state.players] as typeof state.players;
+                const currentPlayer = updatedPlayers[state.turn];
+                updatedPlayers[state.turn] = setPlayerLastWord(
+                    {player:currentPlayer, playerLastWord: action.payload.playerLastWord})
+                const updatedTurn = nextTurn({currentTurn: action.payload.currentTurn});
+                return {
+                    ...state,
+                    matchLetter: matchLetter,
+                    players: updatedPlayers,
+                    turn: updatedTurn
+                }
+            }
         default:
             console.error("GameReducer default");
+            return state
     }
 }

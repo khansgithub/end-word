@@ -2,15 +2,7 @@ import express from 'express';
 import next from 'next';
 
 import { createServer } from 'node:http';
-import { Server, Socket } from 'socket.io';
-
-import {
-    ClientToServerEvents,
-    ServerToClientEvents,
-    SocketProperties
-} from './api';
-import { EventsMap, StrictEventEmitter } from 'socket.io/dist/typed-events';
-import { createIOServer } from './ws';
+import { createIOServer } from './socket';
 
 const app = next({ dev: true });
 const express_app = express();

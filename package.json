@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/server/server.ts",
+    "dev": "cross-env NODE_OPTIONS=--trace-deprecation tsx watch src/server/server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -25,6 +25,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.4",
     "tailwindcss": "^4",

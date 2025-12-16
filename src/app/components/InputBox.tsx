@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, memo, ReactEventHandler, RefObject, useRef } from "react";
+import { FormEvent, memo, ReactEventHandler, RefObject, useEffect, useRef } from "react";
 
 interface props {
     inputDomHighlight: RefObject<HTMLInputElement | null>;
@@ -44,6 +44,10 @@ function InputBox({
     }
     const count = useRef(0);
     count.current = count.current + 1;
+
+    useEffect(() => {
+        inputDom.current.focus();
+    }, []);
 
     // border-amber-100
     return (
