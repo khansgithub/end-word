@@ -4,7 +4,7 @@ import next from 'next';
 import { createServer } from 'node:http';
 import { createIOServer } from './socket';
 
-const app = next({ dev: true });
+const app = next({ dev: true, dir: "src" });
 const express_app = express();
 const server = createServer(express_app);
 

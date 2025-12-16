@@ -29,7 +29,7 @@ export type GameStateActions =
     | { type: "setPlayerLastWord", payload: Parameters<typeof setPlayerLastWord>[0] }
 
 
-type GameStateActionsBatch =
+export type GameStateActionsBatch =
     {
         type: "progressNextTurn",
         payload: 
@@ -67,22 +67,14 @@ function buildMatchLetter({block}: {block: string}): MatchLetter {
     };
 }
 
-export function initialGameState(playerName: string, playerI: number): GameState {
-    const players = Array(MAX_PLAYERS).fill(null) as PlayersArray;
-    players[playerI] = {
-        name: playerName,
-        lastWord: ""
-    };
-
-    return {
-        matchLetter: buildMatchLetter({block: "가"}),
-        players: players,
-        turn: 0,
-        connectedPlayers: 0,
+export function initialGameState(playerName?: string, playerI?: number): GameState {
+    if (playerName ===  undefined && playerI === undefined){
+        return null;
     }
+    return null;
 }
 
-export function gameStateReducer(state: GameState, action: GameStateActions | GameStateActionsBatch): GameState {
+export function gameStateReducer(state: GameState | null, action: GameStateActions | GameStateActionsBatch): GameState | null{
     switch (action.type) {
         case ("buildMatchLetter"):
             return {

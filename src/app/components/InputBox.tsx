@@ -11,6 +11,7 @@ interface props {
     onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => void;
     onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
+    disabled: boolean;
 };
 
 function InputBox({
@@ -22,6 +23,7 @@ function InputBox({
     onCompositionEnd,
     onBeforeInput,
     onKeyDown,
+    disabled,
 }: props) {
     const inputFieldClass = "w-full h-full px-3 col-start-1 row-start-1 rounded-md text-5xl no-underline"
     const inputFeildWrapper = useRef<HTMLDivElement>(null); // use ref to avoid rerenders
@@ -63,6 +65,7 @@ function InputBox({
             />
             <input
                 ref={inputDom}
+                disabled={disabled}
                 // placeholder={matchLetter.block}
                 maxLength={7}
                 minLength={2}

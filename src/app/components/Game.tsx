@@ -1,20 +1,31 @@
 'use client';
 
-import { useReducer, useRef } from "react";
-import { gameStateReducer, initialGameState } from "./GameState";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { GameState, gameStateReducer, initialGameState as buildInitialGameState } from "./GameState";
 import InputBox from "./InputBox";
 import { inputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
 import { getSocketManager, websocketHanlder, websocketHanlderRefs } from "./socket";
+import { useUserStore } from "../store/userStore";
+import { redirect } from 'next/navigation'
 
-
-export default function Game({playerName, playerI} : {playerName: string, playerI: number}) {
+export default function Game() {
     console.count("Game");
-    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, initialGameState(playerName, playerI));
+    const [userIsConnected, setUserIsConnected] = useState(false);
+    const [joiningPlayerInfo, setJoiningPlayerInfo] = useState<{name: string, i: number}>(null);
+    const [playerI, setPlayerI] = useState<number | null>(null);
+    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, buildInitialGameState());
 
-    // Reference to the submit button
+    useEffect(() => {
+        const { playerName } = useUserStore();
+        if (playerName.length < 1){
+            redirect("/");
+        }
+
+    }, []);
+
+
     const buttonDom = useRef<HTMLButtonElement>(null);
-
     const inputHandlersRefs = {
         matchLetter: gameState.matchLetter, //TODO: do i need to pass gameStateUpdate here?
         buttonDom: buttonDom,
@@ -40,21 +51,11 @@ export default function Game({playerName, playerI} : {playerName: string, player
 
     const ihr = inputHandlersRefs;
     const { onChange, onCompositionUpdate, onCompositionEnd, onKeyDown, onBeforeInput } = inputHandlers(inputHandlersRefs);
-
-    const socketHandlersRefs: websocketHanlderRefs = {
+    websocketHanlder({
         socket: useRef(getSocketManager()),
         gameState: gameState,
         gameStateUpdate: gameStateUpdate
-        // players: players, // TODO: i'm not sure if this needs to be a ref; unsure about how an array if affected by re-renders
-    };
-
-    websocketHanlder(socketHandlersRefs);
-
-    // useEffect(() => {
-    //     ihr.inputDomHighlight.current.value = matchLetter?.steps[0] || "";
-    //     console.log("update");
-    // }, [matchLetter]);
-
+    });
 
     async function inputIsValid(input: string): Promise<boolean> {
         // TODO: Add debounce to this
@@ -117,12 +118,14 @@ export default function Game({playerName, playerI} : {playerName: string, player
                     onCompositionEnd={onCompositionEnd}
                     onBeforeInput={onBeforeInput}
                     onKeyDown={onKeyDown}
+                    disabled={!userIsConnected}
                 />
             </div>
 
             <button
                 ref={ihr.buttonDom}
                 onClick={buttonOnSubmit}
+                disabled={!userIsConnected}
                 className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
             <div className="h-10"></div>
             <div className="flex flex-row gap-2 justify-center items-center" id="players">
