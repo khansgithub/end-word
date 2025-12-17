@@ -1,34 +1,33 @@
+import { ActionDispatch, RefObject } from "react";
 import { io } from "socket.io-client";
-import { ActionDispatch, Dispatch, RefObject, useState } from "react";
-import { GameState, gameStateReducer } from "./GameState";
-import { PlayerProfile, ClientPlayerSocket as PlayerSocket, ServerToClientEvents} from "../../shared/types";
+import { GameState, gameStateReducer } from "../../shared/GameState";
+import { Player, ClientPlayerSocket as PlayerSocket, ServerToClientEvents } from "../../shared/types";
 
 export type websocketHanlderRefs = {
     socket: RefObject<PlayerSocket>,
     gameState: GameState,
-    gameStateUpdate:  ActionDispatch<[action: Parameters<typeof gameStateReducer>[1]]>
-    // players: Player[]
+    gameStateUpdate: ActionDispatch<[action: Parameters<typeof gameStateReducer>[1]]>
 };
 
-export function getSocketManager() : PlayerSocket{
+export function getSocketManager(): PlayerSocket {
     return io() as PlayerSocket;
 }
 
-export function websocketHanlder({socket, gameState, gameStateUpdate}: websocketHanlderRefs) {
+export function websocketHanlder({ socket, gameState, gameStateUpdate }: websocketHanlderRefs) {
     const socket_ = socket.current;
     function onConnect() { }
     function onEvent() { }
 
-    function onPlayerJoin(profile: PlayerProfile){
-        if (profile.playerId < 0 || profile.playerId > gameState.players.length){
+    function onPlayerJoin(profile: Player ) {
+        if (profile.playerId && (profile.playerId < 0 || profile.playerId > gameState.players.length)) {
             // defensive
             throw new Error("unexpected error") // implment more specific errors
         }
         gameStateUpdate({
             type: "playerJoin",
             payload: {
-                players: gameState.players,
-                profile: profile 
+                players: gameState.players as Player[],
+                profile: profile
             }
         });
         // const [lastWord, setLastWord] = useState("");
@@ -36,23 +35,31 @@ export function websocketHanlder({socket, gameState, gameStateUpdate}: websocket
 
     }
 
-    function onPlayerCount(count: number){
-        
-    }
+    function onPlayerCount(count: number) {}
 
     const events: ServerToClientEvents = {
         playerJoin: onPlayerJoin,
-        playerCount: onPlayerCount
+        playerCount: onPlayerCount,
+        gameUpdate: ()=>{}
     };
 
-    Object.keys(events).forEach( (event: keyof ServerToClientEvents) => {
-        socket_.on(event, events[event]);
+    Object.keys(events).forEach((event) => {
+        const e = event as keyof ServerToClientEvents;
+        socket_.on(e, events[e]);
     });
 
     socket_.on("connect", () => {
         console.log("WebSocket connected");
         onConnect();
     });
+
+    socket_.on("disconnect", () => {
+        Object.keys(events).forEach((event) => {
+            const e = event as keyof ServerToClientEvents;
+            socket_.off(e);
+        });
+    })
+
 
     // refs.socket.on("chatMessage", message => {
     //     setMessages((prev) => [...prev, message]);

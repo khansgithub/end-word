@@ -1,31 +1,21 @@
-import { MAX_PLAYERS } from "../../shared/consts";
-import { io } from "socket.io-client";
-import { ClientPlayerSocket } from "../../shared/types";
+import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
-import { useUserStore } from "../store/userStore";
-import { redirect, RedirectType } from 'next/navigation'
-
+import { MAX_PLAYERS } from "../../shared/consts";
+import { ClientPlayerSocket } from "../../shared/types";
+import { useSocketStore, useUserStore } from "../store/userStore";
 export function Homescreen() {
     const [count, setCount] = useState(0);
 
-    const { setName } = useUserStore();
+    const { setName } = useUserStore.getState();
+    const { socket } = useSocketStore.getState();
 
-    const socketRef = useRef(io() as ClientPlayerSocket);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const blockEvent = (e: React.MouseEvent | React.KeyboardEvent) => e.preventDefault();
 
-    useEffect(() => {
-        socketRef.current.emit("getPlayerCount");
-        socketRef.current.on("playerCount", count => {
-            console.log("got player count from server");
-            setCount(count);
-        });
-    }, []);
-
-    function onClick(event: React.MouseEvent){
+    function onClick(event: React.MouseEvent) {
         if (!inputRef.current) return blockEvent(event);
-        
+
         const inputData = inputRef.current.value;
         if (inputData.length < 1) return blockEvent(event);
 
@@ -33,6 +23,27 @@ export function Homescreen() {
 
         redirect("/room");
     }
+
+    function setupSocket(socket: ClientPlayerSocket){
+        socket.on("playerCount", count => {
+            console.log("got player count from server");
+            setCount(count);
+        });
+
+        socket.on("disconnect", () => {
+            socket.off("playerCount");
+        });
+    }
+    
+    setupSocket(socket);
+
+    useEffect(() => {
+        socket.emit("getPlayerCount");
+        return () => {
+            socket.disconnect();
+            console.log("Socket disconnected");
+        };
+    }, []);
 
     return (
         <div className="flex flex-col w-full h-full justify-center items-center">

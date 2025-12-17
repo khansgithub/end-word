@@ -1,4 +1,5 @@
-- multi player with up to 5 players
+
+o- multi player with up to 5 players
     + refactor how state is used in the game logic
     + see https://chatgpt.com/c/693f267c-778c-8329-93f3-3023316a0dc2
 
@@ -7,9 +8,12 @@
     3. client asks server to join room
         if there [is space]
             4. server sends bootstrap informaiton
+                4.0 there's some logic around:
+                    4.0.1 minimum number of players <- 🐄
+                    4.0.2 what to do when there's only 1 player
                 4.1 position of the player in the room
                 4.2 state of the room + other players
-            5. client sets up game accordingly
+            5. client sets up game accordingly <- 🐄
         if there [is no space]
             4. client redirects to homescreen
 - a start screen

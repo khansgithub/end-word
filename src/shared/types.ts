@@ -13,41 +13,31 @@ export type FixedLengthArray<T, L extends number> = T[] & { length: L };
  * -------------------------------------------------- */
 
 export type Player = {
+    playerId?: number
     name: string;
     lastWord: string;
 };
 
-// export type EmptyPlayersArray = FixedLengthArray<null, typeof MAX_PLAYERS>;
-// export type PlayersArray = FixedLengthArray<Player, typeof MAX_PLAYERS>;
-
-export type PlayerProfile = {
-    playerId: number;
-    name?: string;
-};
-
-export type PlayersArray = [
-    Player?,
-    Player?,
-    Player?,
-    Player?,
-    Player?,
-];
+export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
 
 /* --------------------------------------------------
  * Socket Event Types
  * -------------------------------------------------- */
 
 export type SocketEvents = {
-    playerJoin: (playerProfile: PlayerProfile) => void;
+    playerJoin: (playerProfile: Player) => void;
+    gameUpdate: (update: Partial<GameState>) => void;
 };
 
 export type ClientToServerEvents = SocketEvents & {
     getPlayerCount: () => void;
     getRoomState: () => void;
+    registerPlayer: (playerProfile: Player) => void;
 };
 
 export type ServerToClientEvents = SocketEvents & {
     playerCount: (count: number) => void;
+    playerRegistered: (player: Required<Player>, gameState: GameState) => void;
 };
 
 /* --------------------------------------------------
@@ -55,17 +45,31 @@ export type ServerToClientEvents = SocketEvents & {
  * -------------------------------------------------- */
 
 export type SocketProperties = {
-    profile: PlayerProfile;
+    profile?: Player;
 };
 
-export type ServerPlayerSocket = Socket<
-    ClientToServerEvents,
-    ServerToClientEvents,
-    {},
-    SocketProperties
->;
+export type ServerPlayerSocket = Socket<ClientToServerEvents,ServerToClientEvents,{},SocketProperties>;
+export type ClientPlayerSocket = SocketClient<ServerToClientEvents,ClientToServerEvents>;
 
-export type ClientPlayerSocket = SocketClient<
-    ServerToClientEvents,
-    ClientToServerEvents
->;
+/* --------------------------------------------------
+ * Game States
+ * -------------------------------------------------- */
+
+export type MatchLetter = {
+    block: string
+    steps: Array<string>
+    value: string
+    next: number
+}
+
+export type GameState = {
+    // Tracks the expected Hangul block + its decomposition steps + current step index
+    // Example:
+    //   block: "각"
+    //   steps: ["ㄱ", "가", "각"]
+    //   next: 1 (next step the user must type)
+    matchLetter: MatchLetter,
+    players: PlayersArray
+    connectedPlayers: number
+    turn: number,
+}

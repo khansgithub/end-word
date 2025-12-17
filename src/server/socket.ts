@@ -1,8 +1,8 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { ExtendedError } from "socket.io";
 
 import { MAX_PLAYERS } from "../shared/consts";
+import { buildInitialGameState } from "../shared/GameState";
 import {
     ClientToServerEvents,
     PlayersArray,
@@ -15,6 +15,7 @@ import {
 /* -------------------------------------------------------------------------- */
 
 const connectedPlayersArr: PlayersArray = Array(MAX_PLAYERS).fill(undefined) as PlayersArray;
+const gameState = buildInitialGameState();
 let connectedPlayersCount = 0;
 
 /* -------------------------------------------------------------------------- */
@@ -39,31 +40,31 @@ export function setUpIOServer(io: SocketServer): SocketServer {
 /*                                 Middleware                                 */
 /* -------------------------------------------------------------------------- */
 
-function playerMiddleware(
-    socket: ServerPlayerSocket,
-    next: (err?: ExtendedError) => void
-) {
-    const playerId = socket.data.profile?.playerId;
-    console.log(`middleware - player id: ${playerId}`);
+// function playerMiddleware(
+//     socket: ServerPlayerSocket,
+//     next: (err?: ExtendedError) => void
+// ) {
+//     const playerId = socket.data.profile?.playerId;
+//     console.log(`middleware - player id: ${playerId}`);
 
-    if (playerId == null) {
-        const availableIndex = connectedPlayersArr.findIndex(v => v === undefined);
+//     if (playerId == null) {
+//         const availableIndex = connectedPlayersArr.findIndex(v => v === undefined);
 
-        if (availableIndex >= 0) {
-            console.log(`middleware - assigning seat ${availableIndex}`);
+//         if (availableIndex >= 0) {
+//             console.log(`middleware - assigning seat ${availableIndex}`);
 
-            socket.data.profile = { playerId: availableIndex };
-            connectedPlayersCount++;
-        } else {
-            console.log("middleware - room is full");
-            // TODO: handle full room
-        }
-    } else {
-        console.log("middleware - returning player");
-    }
+//             socket.data.profile = { playerId: availableIndex };
+//             connectedPlayersCount++;
+//         } else {
+//             console.log("middleware - room is full");
+//             // TODO: handle full room
+//         }
+//     } else {
+//         console.log("middleware - returning player");
+//     }
 
-    next();
-}
+//     next();
+// }
 
 /* -------------------------------------------------------------------------- */
 /*                              Connection Logic                               */
@@ -78,8 +79,10 @@ function onConnect(socket: ServerPlayerSocket) {
     registerSocketEvents(socket);
 
     socket.on("disconnect", (reason: string) => {
-        if (socket.data) {
-            connectedPlayersArr[socket.data.profile.playerId] = undefined;
+        if (socket.data?.profile) {
+            const { playerId } = socket.data.profile;
+            if(playerId === undefined) throw new Error("unexpected error")
+            connectedPlayersArr[playerId] = null;
             connectedPlayersCount--;
         }
     });
@@ -97,6 +100,10 @@ function getPlayerCount(socket: ServerPlayerSocket) {
 }
 
 function getRoomState(socket: ServerPlayerSocket) {
+    const data = {
+        connectedPlayersCount: connectedPlayersCount,
+        players: connectedPlayersArr
+    };
     console.log("socket: getRoomState");
     // TODO: emit room state
 }

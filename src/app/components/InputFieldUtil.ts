@@ -1,38 +1,32 @@
 import { RefObject } from "react";
-import { buildSyllableSteps, decomposeSyllable, decomposeWord } from "../hangul-decomposer";
+import { MatchLetter } from "../../shared/types";
+import { decomposeSyllable } from "../hangul-decomposer";
 
-export type MatchLetter = {
-    block: string
-    steps: Array<string>
-    value: string
-    next: number
-}
-
-type inputHandlerRefs = {
+export type inputHandlerRefs = {
     matchLetter: MatchLetter;
 
     inputDom: RefObject<HTMLInputElement> | RefObject<null>;
     inputDomHighlight: RefObject<HTMLInputElement> | RefObject<null>;
     inputDomText: RefObject<string>;
     inputKeyDisplay: RefObject<HTMLDivElement | null> | RefObject<null>;
-
     buttonDom: RefObject<HTMLButtonElement> | RefObject<null>;
-
-    isComposing: RefObject<boolean>;
-
-    stopTrackingInput: RefObject<boolean>;
 }
 
-export function inputHandlers({
+export function buildInputHandlers({
     matchLetter,
     inputDom,
     inputDomHighlight,
     inputDomText,
     inputKeyDisplay,
-    isComposing,
-    stopTrackingInput,
     buttonDom
-}: inputHandlerRefs) {
+}: inputHandlerRefs): {
+    onChange: (e: React.ChangeEvent<Element>) => string | void;
+    onCompositionStart: () => void;
+    onCompositionUpdate: (e: React.CompositionEvent) => void;
+    onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => void;
+    onKeyDown: (e: React.KeyboardEvent) => void;
+} {
     console.count();
     function onCompositionStart() {
         // console.log("compositionStart")
@@ -55,10 +49,13 @@ export function inputHandlers({
     // ------------------------------------------
     // onChange
     // ------------------------------------------
-    function onChange(e: React.ChangeEvent<HTMLInputElement>) {
+    function onChange(e: React.ChangeEvent<Element>) {
+        if (!inputDom.current || !inputDomHighlight.current || !inputKeyDisplay.current) return;
+
+        e = e as React.ChangeEvent<HTMLInputElement>;
         const event = e.nativeEvent as any as InputEvent;
         const letter = event.data ?? ""; // can be null for delete
-        const input = e.currentTarget.value;
+        const input = (e.currentTarget as HTMLInputElement).value;
         const prev = inputDomText.current;
 
         const ml = matchLetter;
@@ -109,7 +106,7 @@ export function inputHandlers({
     }
 
     function onKeyDown(e: React.KeyboardEvent) {
-        if (e.repeat) return;
+        if (e.repeat || !buttonDom.current || !inputKeyDisplay.current) return;
         if (e.key == "Enter") {
             buttonDom.current.click();
             return;
@@ -124,7 +121,7 @@ export function inputHandlers({
     }
 
     // setup - instead of useEffect
-    if(inputDomHighlight.current && inputDomHighlight.current.value.length < 1){
+    if (inputDomHighlight.current && inputDomHighlight.current.value.length < 1) {
         inputDomHighlight.current.value = matchLetter.steps[0];
     }
 

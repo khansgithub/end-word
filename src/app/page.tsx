@@ -42,6 +42,7 @@ const Foo = memo(function (props: { state: number}) {
         <div className="border-2 border-green-400 p-4 m-2">
             <h4>foo</h4>
             <p>times rendered: {count.current}</p>
+            <input name="foo"></input>
             <p>data: {props.state}</p>
         </div>
     )

@@ -1,16 +1,16 @@
 "use client";
 
-import { FormEvent, memo, ReactEventHandler, RefObject, useEffect, useRef } from "react";
+import React, { FormEvent, memo, RefObject, useEffect, useRef } from "react";
 
 interface props {
     inputDomHighlight: RefObject<HTMLInputElement | null>;
     inputDom: RefObject<HTMLInputElement | null>;
-    onChange: (e: FormEvent<HTMLInputElement>) => void;
-    onBeforeInput: (e: FormEvent<HTMLInputElement>) => void;
-    onCompositionStart: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onCompositionUpdate: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onCompositionEnd: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onKeyDown: (e: React.KeyboardEvent) => void;
+    onChange?: (e: React.ChangeEvent) => void;
+    onBeforeInput?: (e: FormEvent<HTMLInputElement>) => void;
+    onCompositionStart?: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onCompositionUpdate?: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onCompositionEnd?: (e: React.CompositionEvent<HTMLInputElement>) => void;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
     disabled: boolean;
 };
 
@@ -48,7 +48,7 @@ function InputBox({
     count.current = count.current + 1;
 
     useEffect(() => {
-        inputDom.current.focus();
+        inputDom.current?.focus();
     }, []);
 
     // border-amber-100
@@ -86,8 +86,8 @@ function InputBox({
 }
 
 export default memo(InputBox, (prevProps: props, nextProps: props): boolean => {
-    console.log("prev", prevProps.inputDomHighlight.current.value);
-    console.log("next", nextProps.inputDomHighlight.current.value);
+    console.log("prev", prevProps.inputDomHighlight.current?.value);
+    console.log("next", nextProps.inputDomHighlight.current?.value);
     return false;
 });
 

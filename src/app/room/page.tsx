@@ -1,7 +1,7 @@
-import Game from "../components/Game";
+import GameContainer from "../components/GameContainer";
 
 export default function(){
     return (
-        <Game></Game>
+        <GameContainer></GameContainer>
     )
 }

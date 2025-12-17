@@ -1,12 +1,12 @@
-import { Player as PlayerClass } from "../classes";
+import { Player } from "../../shared/types";
 
 interface props {
-    player: PlayerClass
+    player: Player
     turn: boolean,
     lastWord?: string
 }
 
-export default function Player({ player, turn, lastWord}: props) {
+export default function ({ player, turn, lastWord}: props) {
     return (
         <div className={[
             "flex flex-col justify-center items-center p-3 aspect-square w-40 border-5 border-blue-100",

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--trace-deprecation tsx watch src/server/server.ts",
+    "dev": "cross-env tsx watch src/server/server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
