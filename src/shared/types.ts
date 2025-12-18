@@ -15,7 +15,7 @@ export type FixedLengthArray<T, L extends number> = T[] & { length: L };
 export type Player = {
     playerId?: number
     name: string;
-    lastWord: string;
+    lastWord?: string;
 };
 
 export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
@@ -24,20 +24,21 @@ export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
  * Socket Event Types
  * -------------------------------------------------- */
 
-export type SocketEvents = {
-    playerJoin: (playerProfile: Player) => void;
+export type SharedSocketEvents = {
+    // playerJoin: (playerProfile: Player) => void;
     gameUpdate: (update: Partial<GameState>) => void;
 };
 
-export type ClientToServerEvents = SocketEvents & {
+export type ClientToServerEvents = SharedSocketEvents & {
     getPlayerCount: () => void;
-    getRoomState: () => void;
+    // getRoomState: () => void;
     registerPlayer: (playerProfile: Player) => void;
 };
 
-export type ServerToClientEvents = SocketEvents & {
+export type ServerToClientEvents = SharedSocketEvents & {
     playerCount: (count: number) => void;
     playerRegistered: (player: Required<Player>, gameState: GameState) => void;
+    playerNotRegistered: (reason: string) => void;
 };
 
 /* --------------------------------------------------
@@ -48,12 +49,13 @@ export type SocketProperties = {
     profile?: Player;
 };
 
-export type ServerPlayerSocket = Socket<ClientToServerEvents,ServerToClientEvents,{},SocketProperties>;
-export type ClientPlayerSocket = SocketClient<ServerToClientEvents,ClientToServerEvents>;
+export type ServerPlayerSocket = Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketProperties>;
+export type ClientPlayerSocket = SocketClient<ServerToClientEvents, ClientToServerEvents>;
 
 /* --------------------------------------------------
  * Game States
  * -------------------------------------------------- */
+export type GameStatus = "waiting" | "playing" | "finished";
 
 export type MatchLetter = {
     block: string
@@ -62,14 +64,11 @@ export type MatchLetter = {
     next: number
 }
 
-export type GameState = {
-    // Tracks the expected Hangul block + its decomposition steps + current step index
-    // Example:
-    //   block: "각"
-    //   steps: ["ㄱ", "가", "각"]
-    //   next: 1 (next step the user must type)
+export type GameState = Readonly<{
+    thisPlayer?: Player, // optional for the server
     matchLetter: MatchLetter,
+    status: GameStatus,
     players: PlayersArray
     connectedPlayers: number
     turn: number,
-}
+}>;

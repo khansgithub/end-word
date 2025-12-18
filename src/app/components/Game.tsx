@@ -1,23 +1,17 @@
 'use client';
 
 import { useEffect, useReducer, useRef } from "react";
-import { GameState, gameStateReducer } from "../../shared/GameState";
 import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
-import { Player as PlayerType } from "../../shared/types";
+import { GameState, Player as PlayerType } from "../../shared/types";
 import { getSocketManager, websocketHanlder } from "./socket";
 import { submitButton } from "./util";
-
-interface gameBoostrapData {
-    playerName: string,
-    playerI: number,
-    gameState: GameState,
-}
+import { gameStateReducer } from "../../shared/GameState";
 
 interface props {
     player: PlayerType,
-    gameState: GameState
+    gameState: Required<GameState>
 }
 
 export default function (props: props) {
@@ -28,7 +22,7 @@ export default function (props: props) {
     const inputHighlightDom = useRef<HTMLInputElement>(null)
     const inputDomText = useRef("");
 
-    const [gameState, gameStateUpdate] = useReducer(gameStateReducer, props.gameState);
+    const [gameState, gameStateUpdate] = useReducer(gameStateReducer<typeof props.gameState>, props.gameState);
     const inputHandelers = buildInputHandlers({
         matchLetter: gameState.matchLetter,
         buttonDom: buttonDom,
@@ -38,8 +32,10 @@ export default function (props: props) {
         inputDomHighlight: inputHighlightDom,
     });
 
+    const socket = useRef(getSocketManager());
+
     websocketHanlder({
-        socket: useRef(getSocketManager()),
+        socket: socket,
         gameState: gameState,
         gameStateUpdate: gameStateUpdate
     });
@@ -52,7 +48,10 @@ export default function (props: props) {
         }, gameState, gameStateUpdate);
     }
 
-    useEffect(() => {}, []);
+    useEffect(() => {
+        if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
+        socket.current.emit("registerPlayer", gameState.thisPlayer);
+    }, []);
 
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">

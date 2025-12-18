@@ -14,14 +14,11 @@ export default function () {
     const [userIsConnected, setUserIsConnected] = useState(false);
     const { socket } = useSocketStore.getState();
 
-    var player: Player = {
-        name: playerName,
-        lastWord: ""
-    };
-    var gameState: GameState | null = null;
+    var player: Player = { name: playerName };
+    var gameState: Required<GameState> | null = null;
 
     function setupSocket(socket: ClientPlayerSocket) {
-        socket.on("playerRegistered", (player_: Player, gameState_: GameState) => {
+        socket.on("playerRegistered", (player_, gameState_) => {
             player = player_;
             gameState = gameState_;
             console.log("got player registration from server");
@@ -36,7 +33,7 @@ export default function () {
     setupSocket(socket);
 
     useEffect(() => {
-        socket.emit("playerJoin", player);
+        socket.emit("registerPlayer", player);
         return () => {
             socket.disconnect();
             console.log("Socket disconnected");

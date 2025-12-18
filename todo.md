@@ -11,7 +11,7 @@ o- multi player with up to 5 players
                 4.0 there's some logic around:
                     4.0.1 minimum number of players <- 🐄
                     4.0.2 what to do when there's only 1 player
-                4.1 position of the player in the room
+                4.1 position of the player in the room (playerId)
                 4.2 state of the room + other players
             5. client sets up game accordingly <- 🐄
         if there [is no space]

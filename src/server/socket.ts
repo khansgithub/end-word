@@ -5,16 +5,18 @@ import { MAX_PLAYERS } from "../shared/consts";
 import { buildInitialGameState } from "../shared/GameState";
 import {
     ClientToServerEvents,
+    Player,
     PlayersArray,
     ServerPlayerSocket,
-    SocketEvents
+    ServerToClientEvents,
+    SharedSocketEvents
 } from "../shared/types";
 
 /* -------------------------------------------------------------------------- */
 /*                                   State                                    */
 /* -------------------------------------------------------------------------- */
 
-const connectedPlayersArr: PlayersArray = Array(MAX_PLAYERS).fill(undefined) as PlayersArray;
+const connectedPlayersArr: PlayersArray = Array(MAX_PLAYERS).fill(null) as PlayersArray;
 const gameState = buildInitialGameState();
 let connectedPlayersCount = 0;
 
@@ -81,7 +83,7 @@ function onConnect(socket: ServerPlayerSocket) {
     socket.on("disconnect", (reason: string) => {
         if (socket.data?.profile) {
             const { playerId } = socket.data.profile;
-            if(playerId === undefined) throw new Error("unexpected error")
+            if (playerId === undefined) throw new Error("unexpected error")
             connectedPlayersArr[playerId] = null;
             connectedPlayersCount--;
         }
@@ -93,39 +95,67 @@ function onConnect(socket: ServerPlayerSocket) {
 /* -------------------------------------------------------------------------- */
 /*                               Event Handlers                               */
 /* -------------------------------------------------------------------------- */
+type EventHandlerReturn<W extends keyof ServerToClientEvents> = [
+    W,
+    [...Parameters<ServerToClientEvents[W]>]
+];
 
-function getPlayerCount(socket: ServerPlayerSocket) {
+type EventHandler<
+    IN extends keyof ClientToServerEvents,
+    OUT extends keyof ServerToClientEvents
+> = (...args: Parameters<ClientToServerEvents[IN]>) =>
+    OUT extends OUT 
+        ? [OUT, [...Parameters<ServerToClientEvents[OUT]>]]
+        : never;
+
+const getPlayerCount: EventHandler<"getPlayerCount", "playerCount"> = () => {
+    // function getPlayerCount(): EventHandlerReturn {
     console.log("socket: getPlayerCount");
-    socket.emit("playerCount", connectedPlayersCount);
+    // socket.emit("playerCount", connectedPlayersCount);
+    return ["playerCount", [connectedPlayersCount]];
 }
 
-function getRoomState(socket: ServerPlayerSocket) {
-    const data = {
-        connectedPlayersCount: connectedPlayersCount,
-        players: connectedPlayersArr
+// const getRoomState: EventHandler<"getRoomState", > = () => {
+//     const data = {
+//         connectedPlayersCount: connectedPlayersCount,
+//         players: connectedPlayersArr
+//     };
+//     console.log("socket: getRoomState");
+//     return []
+// }
+
+const registerPlayer: EventHandler<"registerPlayer", "playerRegistered" | "playerNotRegistered"> = (playerProfile: Player) => {
+    const availableIndex = connectedPlayersArr.findIndex(v => v === null);
+    if (availableIndex == -1) {
+        const reason = "room is full";
+        return ["playerNotRegistered", [reason]]
+    }
+    console.log(`assigning seat ${availableIndex}`);
+    const player: Required<Player> = {
+        ...playerProfile,
+        playerId: availableIndex,
+        lastWord: "",
     };
-    console.log("socket: getRoomState");
-    // TODO: emit room state
+
+    connectedPlayersCount++;
+    return ["playerRegistered", [player, gameState]]
 }
 
 /* -------------------------------------------------------------------------- */
 /*                              Event Registry                                */
 /* -------------------------------------------------------------------------- */
-
-const socketEvents: Record<
-    keyof Omit<ClientToServerEvents, keyof SocketEvents>,
-    (socket: ServerPlayerSocket, ...args: any[]) => void
-> = {
+const socketEvents = {
     getPlayerCount,
-    getRoomState
+    registerPlayer
+    // getRoomState,
 };
 
 function registerSocketEvents(socket: ServerPlayerSocket) {
-    (Object.keys(socketEvents) as Array<keyof typeof socketEvents>).forEach(
-        event => {
-            socket.on(event, (...args: any[]) =>
-                socketEvents[event](socket, ...args)
-            );
-        }
-    );
+    (Object.keys(socketEvents) as Array<keyof typeof socketEvents>).forEach(event => {
+        const handler = socketEvents[event];
+        socket.on(event, (...args: Parameters<typeof handler>) => {
+            const out = handler(...args as [any]); // as [any] is just a hack, union of tuples does not support "..."
+            if (out) socket.emit(out[0], ...out[1]);
+        });
+    });
 }

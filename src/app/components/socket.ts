@@ -1,12 +1,12 @@
 import { ActionDispatch, RefObject } from "react";
 import { io } from "socket.io-client";
-import { GameState, gameStateReducer } from "../../shared/GameState";
-import { Player, ClientPlayerSocket as PlayerSocket, ServerToClientEvents } from "../../shared/types";
+import { GameStateActions, GameStateActionsBatch } from "../../shared/GameState";
+import { GameState, Player, ClientPlayerSocket as PlayerSocket, ServerToClientEvents } from "../../shared/types";
 
 export type websocketHanlderRefs = {
     socket: RefObject<PlayerSocket>,
     gameState: GameState,
-    gameStateUpdate: ActionDispatch<[action: Parameters<typeof gameStateReducer>[1]]>
+    gameStateUpdate: ActionDispatch<[action: GameStateActions | GameStateActionsBatch]>
 };
 
 export function getSocketManager(): PlayerSocket {
@@ -14,33 +14,44 @@ export function getSocketManager(): PlayerSocket {
 }
 
 export function websocketHanlder({ socket, gameState, gameStateUpdate }: websocketHanlderRefs) {
+
     const socket_ = socket.current;
     function onConnect() { }
-    function onEvent() { }
 
-    function onPlayerJoin(profile: Player ) {
-        if (profile.playerId && (profile.playerId < 0 || profile.playerId > gameState.players.length)) {
-            // defensive
-            throw new Error("unexpected error") // implment more specific errors
-        }
+    // function onPlayerJoin(profile: Player ) {
+    //     if (profile.playerId && (profile.playerId < 0 || profile.playerId > gameState.players.length)) {
+    //         // defensive
+    //         throw new Error("unexpected error") // implment more specific errors
+    //     }
+    //     gameStateUpdate({
+    //         type: "playerJoin",
+    //         payload: {
+    //             players: gameState.players as Player[],
+    //             profile: profile
+    //         }
+    //     });
+    //     // const [lastWord, setLastWord] = useState("");
+    //     // refs.players[profile.playerId] = new Player(profile.name, lastWord, setLastWord);
+
+    // }
+
+    function gameUpdate() { }
+    function playerCount(count: number) { }
+    function playerNotRegistered(reason: string) { }
+    function playerRegistered(player: Required<Player>, gameState_: GameState) {
         gameStateUpdate({
-            type: "playerJoin",
+            type: "buildMatchLetter",
             payload: {
-                players: gameState.players as Player[],
-                profile: profile
+                block: ''
             }
         });
-        // const [lastWord, setLastWord] = useState("");
-        // refs.players[profile.playerId] = new Player(profile.name, lastWord, setLastWord);
-
     }
 
-    function onPlayerCount(count: number) {}
-
     const events: ServerToClientEvents = {
-        playerJoin: onPlayerJoin,
-        playerCount: onPlayerCount,
-        gameUpdate: ()=>{}
+        playerRegistered,
+        playerNotRegistered,
+        playerCount,
+        gameUpdate
     };
 
     Object.keys(events).forEach((event) => {

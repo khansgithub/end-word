@@ -7,20 +7,7 @@ Notes from gpt:
 
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
-import { MatchLetter, Player, PlayersArray } from "./types";
-
-export type GameState = {
-    // Tracks the expected Hangul block + its decomposition steps + current step index
-    // Example:
-    //   block: "각"
-    //   steps: ["ㄱ", "가", "각"]
-    //   next: 1 (next step the user must type)
-    thisPlayerId: number | null,
-    matchLetter: MatchLetter,
-    players: PlayersArray
-    connectedPlayers: number
-    turn: number,
-}
+import { GameState, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
 
 export type GameStateActions =
     | { type: "buildMatchLetter", payload: Parameters<typeof buildMatchLetter>[0] }
@@ -42,8 +29,8 @@ function nextTurn({ currentTurn }: { currentTurn: number }): number {
     return currentTurn + 1;
 }
 
-function playerJoin(params: { players: Player[], profile: Player }): [number, Player] {
-    const availableI = params.players.findIndex((v, i) => v === undefined);
+function playerJoin(params: { players: PlayersArray, profile: Player }): [number, Player] {
+    const availableI = params.players.findIndex((v) => v == null);
     if (availableI < 0) {
         throw new Error("unexpected error");
     }
@@ -73,54 +60,63 @@ function buildMatchLetter({ block }: { block: string }): MatchLetter {
 export function buildInitialGameState(playerName?: string, playerI?: number): GameState {
     const players = Array(MAX_PLAYERS).fill(null) as PlayersArray;
     if (playerI !== undefined && playerName !== undefined) {
-        players[playerI] = {
+        const player: Player = {
             name: playerName,
-            lastWord: ""
-        };
+        }
+        players[playerI] = player;
     }
 
     return {
-        thisPlayerId: null,
         matchLetter: buildMatchLetter({ block: "가" }),
+        status: "waiting",
         players: players,
         turn: 0,
         connectedPlayers: 0,
     }
 }
 
-
-export function gameStateReducer(state: GameState, action: GameStateActions | GameStateActionsBatch): GameState {
+type ClientOrServerReturn<T> = T extends Required<GameState> ? T : GameState;
+export function gameStateReducer<T extends GameState>(state: T, action: GameStateActions | GameStateActionsBatch): ClientOrServerReturn<T> {
+    var r: T;
     switch (action.type) {
         case ("buildMatchLetter"):
-            return {
+           r = {
                 ...state,
                 matchLetter: buildMatchLetter(action.payload)
             }
+            break;
         case ("nextTurn"):
-            return {
+            r = {
                 ...state,
                 turn: nextTurn(action.payload)
             }
+            break;
         case ("playerJoin"):
             {
                 const updatedPlayers = [...state.players] as typeof state.players;
                 const [newPlayerI, newPlayer] = playerJoin(action.payload);
                 updatedPlayers[newPlayerI] = newPlayer;
-                return {
+                const connectedPlayers = updatedPlayers.filter((p) => p != null).length;
+                const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+                r = {
                     ...state,
-                    players: updatedPlayers
+                    players: updatedPlayers,
+                    connectedPlayers,
+                    status,
                 }
             }
+            break;
         case ("setPlayerLastWord"):
             {
                 const updatedPlayer = setPlayerLastWord(action.payload)
                 const updatedPlayers = [...state.players] as typeof state.players;
                 updatedPlayers[state.turn] = updatedPlayer;
-                return {
+                r = {
                     ...state,
                     players: updatedPlayers
                 }
             }
+            break;
         case ("progressNextTurn"):
             {
                 const matchLetter = buildMatchLetter({ block: action.payload.block });
@@ -130,15 +126,18 @@ export function gameStateReducer(state: GameState, action: GameStateActions | Ga
                 updatedPlayers[state.turn] = setPlayerLastWord(
                     { player: currentPlayer, playerLastWord: action.payload.playerLastWord })
                 const updatedTurn = nextTurn({ currentTurn: action.payload.currentTurn });
-                return {
+                r = {
                     ...state,
                     matchLetter: matchLetter,
                     players: updatedPlayers,
                     turn: updatedTurn
                 }
             }
+            break;
         default:
             console.error("GameReducer default");
-            return state
+            r = state
+            break;
     }
+    return r as ClientOrServerReturn<T>;
 }
