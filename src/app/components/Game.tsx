@@ -5,7 +5,7 @@ import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
 import { GameState, Player as PlayerType } from "../../shared/types";
-import { getSocketManager, websocketHanlder } from "./socket";
+import { getSocketManager, websocketHandler } from "./socket";
 import { submitButton } from "./util";
 import { gameStateReducer } from "../../shared/GameState";
 
@@ -15,7 +15,6 @@ interface props {
 }
 
 export default function (props: props) {
-    console.count("Game");
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
     const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
@@ -34,7 +33,7 @@ export default function (props: props) {
 
     const socket = useRef(getSocketManager());
 
-    websocketHanlder({
+    websocketHandler({
         socket: socket,
         gameState: gameState,
         gameStateUpdate: gameStateUpdate
@@ -53,8 +52,16 @@ export default function (props: props) {
         socket.current.emit("registerPlayer", gameState.thisPlayer);
     }, []);
 
+
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
+            {gameState.status == 'waiting'
+                ?
+                <div className="flex w-full h-full justify-center items-center bg-gray-500">
+                    <span className="loading loading-spinner loading-xl"></span>
+                </div>
+                : <></>
+            }
             <div className="text-5xl">Match: <span className="text-red-500">{gameState.matchLetter.block}</span></div>
             {/* <Foo onChange={barfoo}></Foo> */}
             {/* <InputBox></InputBox> */}

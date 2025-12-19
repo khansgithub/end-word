@@ -1,3 +1,6 @@
 {
-    "python.analysis.stubPath": "dictionary/stubs"
+    "python.analysis.stubPath": "dictionary/stubs",
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
 }

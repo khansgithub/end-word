@@ -17,16 +17,16 @@ export default function () {
 
     return (
         // <Game></Game>
-        // <Homescreen></Homescreen>
-        <div className="w-3/12 h-full flex flex-col justify-center items-center">
-            <button onClick={onClick} className="border-2 border-white p-3 m-3 "> click: {data} </button>
-            <Foo state={data}></Foo>
-            {/* <Foo onChange={onChange}></Foo> */}
-            {/* count : {JSON.stringify(data)} */}
-            {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={onClick}> button </button> */}
-            {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={foo.onClick}> button2 </button> */}
-            {/* <p>{foobar2()}</p> */}
-        </div>
+        <Homescreen></Homescreen>
+        // <div className="w-3/12 h-full flex flex-col justify-center items-center">
+        //     {/* <button onClick={onClick} className="border-2 border-white p-3 m-3 "> click: {data} </button> */}
+        //     {/* <Foo state={data}></Foo> */}
+        //     {/* <Foo onChange={onChange}></Foo> */}
+        //     {/* count : {JSON.stringify(data)} */}
+        //     {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={onClick}> button </button> */}
+        //     {/* <button className="m-3 p-4 border-2 border-amber-700" onClick={foo.onClick}> button2 </button> */}
+        //     {/* <p>{foobar2()}</p> */}
+        // </div>
     );
 }
 

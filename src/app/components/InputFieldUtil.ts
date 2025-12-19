@@ -27,7 +27,6 @@ export function buildInputHandlers({
     onBeforeInput: (e: React.FormEvent<HTMLInputElement>) => void;
     onKeyDown: (e: React.KeyboardEvent) => void;
 } {
-    console.count();
     function onCompositionStart() {
         // console.log("compositionStart")
         // isComposing.current = true;

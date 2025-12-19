@@ -27,6 +27,7 @@ export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
 export type SharedSocketEvents = {
     // playerJoin: (playerProfile: Player) => void;
     gameUpdate: (update: Partial<GameState>) => void;
+    text: (text: string) => void;
 };
 
 export type ClientToServerEvents = SharedSocketEvents & {
@@ -37,7 +38,7 @@ export type ClientToServerEvents = SharedSocketEvents & {
 
 export type ServerToClientEvents = SharedSocketEvents & {
     playerCount: (count: number) => void;
-    playerRegistered: (player: Required<Player>, gameState: GameState) => void;
+    playerRegistered: (gameState: Required<GameState>) => void;
     playerNotRegistered: (reason: string) => void;
 };
 
@@ -55,7 +56,7 @@ export type ClientPlayerSocket = SocketClient<ServerToClientEvents, ClientToServ
 /* --------------------------------------------------
  * Game States
  * -------------------------------------------------- */
-export type GameStatus = "waiting" | "playing" | "finished";
+export type GameStatus = "waiting" | "playing" | "finished" | null;
 
 export type MatchLetter = {
     block: string

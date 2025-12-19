@@ -14,6 +14,8 @@ export type GameStateActions =
     | { type: "nextTurn", payload: Parameters<typeof nextTurn>[0] }
     | { type: "playerJoin", payload: Parameters<typeof playerJoin>[0] }
     | { type: "setPlayerLastWord", payload: Parameters<typeof setPlayerLastWord>[0] }
+    | { type: "fullUpdateGameState", payload: GameState }
+    | { type: "playerLeave", payload: Parameters<typeof playerLeave>[0] }
 
 
 export type GameStateActionsBatch =
@@ -29,6 +31,15 @@ function nextTurn({ currentTurn }: { currentTurn: number }): number {
     return currentTurn + 1;
 }
 
+function playerLeave(params: { players: PlayersArray, profile: Player }): PlayersArray {
+    const playerId = params.profile.playerId;
+    if (playerId === undefined) throw new Error("unexpted error");
+    params.players[playerId] = null;
+    const r: PlayersArray = [...params.players] as PlayersArray;
+    return r;
+};
+// FIXME: this is leading - this event is to notify other players that a new player has joined
+// this is not for handling a new player joining
 function playerJoin(params: { players: PlayersArray, profile: Player }): [number, Player] {
     const availableI = params.players.findIndex((v) => v == null);
     if (availableI < 0) {
@@ -68,7 +79,7 @@ export function buildInitialGameState(playerName?: string, playerI?: number): Ga
 
     return {
         matchLetter: buildMatchLetter({ block: "가" }),
-        status: "waiting",
+        status: null,
         players: players,
         turn: 0,
         connectedPlayers: 0,
@@ -77,10 +88,10 @@ export function buildInitialGameState(playerName?: string, playerI?: number): Ga
 
 type ClientOrServerReturn<T> = T extends Required<GameState> ? T : GameState;
 export function gameStateReducer<T extends GameState>(state: T, action: GameStateActions | GameStateActionsBatch): ClientOrServerReturn<T> {
-    var r: T;
+    var r: GameState;
     switch (action.type) {
         case ("buildMatchLetter"):
-           r = {
+            r = {
                 ...state,
                 matchLetter: buildMatchLetter(action.payload)
             }
@@ -134,8 +145,22 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
                 }
             }
             break;
+        case ("fullUpdateGameState"):
+            r = {
+                ...action.payload
+            }
+            break;
+        case ("playerLeave"):
+            const updatedPlayers = playerLeave(action.payload);
+            const connectedPlayers = updatedPlayers.filter((p) => p != null).length;
+            r = {
+                ...state,
+                players: updatedPlayers,
+                connectedPlayers: connectedPlayers
+            }
+            break;
         default:
-            console.error("GameReducer default");
+            console.error("GameReducer default", action);
             r = state
             break;
     }

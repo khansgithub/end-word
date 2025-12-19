@@ -9,7 +9,7 @@ interface PlayerName {
 }
 
 interface Socket{
-    socket: ClientPlayerSocket,
+    socket: ClientPlayerSocket | null,
     setSocket: (socket: ClientPlayerSocket) => void;
 }
 
@@ -27,7 +27,7 @@ export const useUserStore = createStore<PlayerName>()(
 
 export const useSocketStore = createStore<Socket>()(
     (set) => ({
-        socket: io(),
+        socket: null,
         setSocket: (socket) => set({socket: socket})
     }),    
 )

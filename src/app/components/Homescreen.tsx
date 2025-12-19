@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore, useUserStore } from "../store/userStore";
+import { io } from 'socket.io-client';
 export function Homescreen() {
     const [count, setCount] = useState(0);
 
     const { setName } = useUserStore.getState();
-    const { socket } = useSocketStore.getState();
 
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,13 +35,23 @@ export function Homescreen() {
         });
     }
     
-    setupSocket(socket);
+    // setupSocket(socket);
 
     useEffect(() => {
+        console.count("Homescreen");
+        inputRef.current?.focus();
+        let { socket, setSocket } = useSocketStore.getState();
+        if (socket === null){
+            let socket = io();
+            setSocket(socket);
+        }
+        if (socket===null) return;
+        if (!socket.connected) throw new Error("socket is not connected")
         socket.emit("getPlayerCount");
+        // socket.emit("text", "client to server");
         return () => {
-            socket.disconnect();
-            console.log("Socket disconnected");
+            // socket.disconnect();
+            // console.log("Socket disconnected");
         };
     }, []);
 
