@@ -15,44 +15,30 @@ export type GameStateActionsType = {
         type: K
         payload: Parameters<typeof GameStateActions[K]>
     }
-}[keyof typeof GameStateActions]
+}[keyof typeof GameStateActions];
 
+// can't most of these just be one function which is passed "update data"? 
+// okay the keys here should not be the same the socket events, that makes things confusing
+// name them exactly as what they do to the data
 const GameStateActions = {
     buildMatchLetter,
     nextTurn,
     setPlayerLastWord,
     // fullUpdateGameState,
-    playerJoin,
-    playerLeave,
-    // playerRegister,
-    // playerUnregister,
+    addPlayer,
+    removePlayer,
+    registerPlayer,
     progressNextTurn,
+    updateConnectedUsers,
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
-// export type GameStateActions =
-//     | { type: "buildMatchLetter", payload: Parameters<typeof buildMatchLetter>[0] }
-//     | { type: "nextTurn", payload: Parameters<typeof nextTurn>[0] }
-//     | { type: "setPlayerLastWord", payload: Parameters<typeof setPlayerLastWord>[0] }
-//     | { type: "fullUpdateGameState", payload: GameState }
-//     | { type: "playerJoin", payload: Parameters<typeof playerJoin>[0] }
-//     | { type: "playerLeave", payload: Parameters<typeof playerLeave>[0] }
-//     | { type: "playerRegister", payload: Parameters<typeof playerLeave>[0] }
-//     | { type: "playerUnregister", payload: Parameters<typeof playerLeave>[0] }
 
-
-// export type GameStateActionsBatch =
-//     {
-//         type: "progressNextTurn",
-//         payload:
-//         & Parameters<typeof GameStateActions['buildMatchLetter']>[0]
-//         // & Extract<GameStateActions, { type: "setPlayerLastWord" }>["payload"]
-//         // & Extract<GameStateActions, { type: "nextTurn" }>["payload"]
-//     }
-
-
-// function playerRegister() { }
-// function playerUnregister() { }
-// function fullUpdateGameState(params: { state: GameState }) { }
+function updateConnectedUsers(state: GameState, count: number): GameState{
+    return {
+        ...state,
+        connectedPlayers: count
+    }
+}
 
 function nextTurn(state: GameState): GameState {
     return {
@@ -61,7 +47,7 @@ function nextTurn(state: GameState): GameState {
     };
 }
 
-function playerLeave(
+function removePlayer(
     state: GameState,
     profile: Player
 ): GameState {
@@ -79,9 +65,7 @@ function playerLeave(
     };
 }
 
-// FIXME: this is leading - this event is to notify other players that a new player has joined
-// this is not for handling a new player joining
-function playerJoin(
+function addPlayer(
     state: GameState,
     profile: Player
 ): GameState {
@@ -94,13 +78,13 @@ function playerJoin(
         throw new Error("unexpected error");
     }
 
-    const newPlayer: Player = {
+    const newPlayer: Required<Player> = {
         name: profile.name,
         lastWord: "",
         playerId: availableI,
     };
 
-    const updatedPlayers: PlayersArray = [...state.players] as PlayersArray;
+    const updatedPlayers = [...state.players] as PlayersArray;
     updatedPlayers[availableI] = newPlayer;
 
     const connectedPlayers = updatedPlayers.filter((p) => p != null).length;
@@ -111,6 +95,15 @@ function playerJoin(
         players: updatedPlayers,
         connectedPlayers,
         status,
+    };
+}
+
+function registerPlayer(state: GameState, player: Player): Required<GameState> {
+    let r: GameState;
+    r = addPlayer(state, player);
+    return {
+        ...r,
+        thisPlayer: player
     };
 }
 
@@ -195,7 +188,7 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
             r = nextTurn(...action.payload)
             break;
         case ("playerJoin"):
-            r = playerJoin(...action.payload);
+            r = addPlayer(...action.payload);
             break;
         case ("setPlayerLastWord"):
             r = setPlayerLastWord(...action.payload);

@@ -18,27 +18,27 @@ export type Player = {
     lastWord?: string;
 };
 
-export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
+export type PlayersArray = FixedLengthArray<Required<Player> | null, typeof MAX_PLAYERS>;
 
 /* --------------------------------------------------
  * Socket Event Types
  * -------------------------------------------------- */
 
 export type SharedSocketEvents = {
-    // playerJoin: (playerProfile: Player) => void;
-    gameUpdate: (update: Partial<GameState>) => void;
+    // gameUpdate: (update: Partial<GameState>) => void;
     text: (text: string) => void;
 };
 
 export type ClientToServerEvents = SharedSocketEvents & {
     getPlayerCount: () => void;
-    // getRoomState: () => void;
     registerPlayer: (playerProfile: Player) => void;
+    unregisterPlayer: (playerProfile: Player) => void; // maybe this can be just the id?
 };
 
 export type ServerToClientEvents = SharedSocketEvents & {
     playerCount: (count: number) => void;
-    playerJoined: (newPlayer: Player) => void;
+    playerJoinNotification: (newPlayer: Player) => void;
+    playerLeaveNotification: (player: Player) => void;
     playerRegistered: (gameState: Required<GameState>) => void;
     playerNotRegistered: (reason: string) => void;
 };

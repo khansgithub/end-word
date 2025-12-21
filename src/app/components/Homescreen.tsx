@@ -4,6 +4,7 @@ import { MAX_PLAYERS } from "../../shared/consts";
 import { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore, useUserStore } from "../store/userStore";
 import { io } from 'socket.io-client';
+import { getSocketManager } from './socket';
 export function Homescreen() {
     const [count, setCount] = useState(0);
 
@@ -42,8 +43,7 @@ export function Homescreen() {
         inputRef.current?.focus();
         let { socket, setSocket } = useSocketStore.getState();
         if (socket === null){
-            let socket = io();
-            setSocket(socket);
+            setSocket(getSocketManager());
         }
         if (socket===null) return;
         if (!socket.connected) throw new Error("socket is not connected")

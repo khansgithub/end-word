@@ -12,8 +12,6 @@ export function createIOServer(server: http.Server): SocketServer {
     return setUpIOServer(io);
 }
 
-type SharedState = { counter: number };
-
 function createMutex() {
     let last: Promise<void> = Promise.resolve();
 
@@ -57,16 +55,16 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
             const playerProfileWithId: Player = { ...playerProfile, playerId: availableIndex };
             void runExclusive(async () => {
                 state = gameStateReducer(state, {
-                    type: "playerJoin",
-                    payload: {
-                        players: state.players,
-                        profile: playerProfileWithId,
-                    }
+                    type: "registerPlayer",
+                    payload: [
+                        state,
+                        playerProfileWithId,
+                    ]
                 });
             });
             
             console.log(`assigning seat ${availableIndex}`);
-            socket.broadcast.emit("playerJoined", playerProfile);
+            socket.broadcast.emit("playerJoinNotification", playerProfile);
             
         });
 
