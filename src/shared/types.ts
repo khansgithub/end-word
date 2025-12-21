@@ -38,6 +38,7 @@ export type ClientToServerEvents = SharedSocketEvents & {
 
 export type ServerToClientEvents = SharedSocketEvents & {
     playerCount: (count: number) => void;
+    playerJoined: (newPlayer: Player) => void;
     playerRegistered: (gameState: Required<GameState>) => void;
     playerNotRegistered: (reason: string) => void;
 };
@@ -65,11 +66,13 @@ export type MatchLetter = {
     next: number
 }
 
-export type GameState = Readonly<{
+export type GameState = {
     thisPlayer?: Player, // optional for the server
     matchLetter: MatchLetter,
     status: GameStatus,
     players: PlayersArray
     connectedPlayers: number
     turn: number,
-}>;
+};
+
+export type GameStateFrozen = Readonly<GameState>

@@ -4,7 +4,7 @@ import { useEffect, useReducer, useRef } from "react";
 import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
-import { GameState, Player as PlayerType } from "../../shared/types";
+import { GameStateFrozen as GameState, Player as PlayerType } from "../../shared/types";
 import { getSocketManager, websocketHandler } from "./socket";
 import { submitButton } from "./util";
 import { gameStateReducer } from "../../shared/GameState";

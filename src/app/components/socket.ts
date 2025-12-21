@@ -1,13 +1,13 @@
 import { ActionDispatch, RefObject } from "react";
 import { io } from "socket.io-client";
-import { GameStateActions, GameStateActionsBatch } from "../../shared/GameState";
+import { GameStateActionsType } from "../../shared/GameState";
 import {
     ClientPlayerSocket as PlayerSocket,
     GameState,
     ServerToClientEvents,
 } from "../../shared/types";
 
-type GameStateDispatch = ActionDispatch<[action: GameStateActions | GameStateActionsBatch]>;
+type GameStateDispatch = ActionDispatch<[action: GameStateActionsType]>;
 
 export type WebsocketHandlerRefs = {
     socket: RefObject<PlayerSocket>;
