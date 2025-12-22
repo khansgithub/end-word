@@ -51,7 +51,7 @@ export type SocketProperties = {
     profile?: Player;
 };
 
-export type ServerPlayerSocket = Socket<ClientToServerEvents, ServerToClientEvents, {}, SocketProperties>;
+export type ServerPlayerSocket = Socket<ClientToServerEvents, ServerToClientEvents, object, SocketProperties>;
 export type ClientPlayerSocket = SocketClient<ServerToClientEvents, ClientToServerEvents>;
 
 /* --------------------------------------------------
@@ -67,7 +67,7 @@ export type MatchLetter = {
 }
 
 export type GameState = {
-    thisPlayer?: Player, // optional for the server
+    thisPlayer?: Required<Player>, // optional for the server
     matchLetter: MatchLetter,
     status: GameStatus,
     players: PlayersArray

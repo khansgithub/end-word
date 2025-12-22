@@ -2,5 +2,5 @@
     "python.analysis.stubPath": "dictionary/stubs",
     "files.associations": {
         "*.css": "tailwindcss"
-    },
+    }
 }

@@ -27,14 +27,14 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
         console.log("Client connected");
         console.log("socket id:", socket.id);
 
-        socket.on("gameUpdate", (update: Partial<GameState>) => {
-            void runExclusive(async () => {
-                state = {
-                    ...state,
-                    ...update
-                };
-            });
-        });
+        // socket.on("gameUpdate", (update: Partial<GameState>) => {
+        //     void runExclusive(async () => {
+        //         state = {
+        //             ...state,
+        //             ...update
+        //         };
+        //     });
+        // });
 
         socket.on("text", (text: string) => {
             console.log(`Text from client: ${text}`);
@@ -53,19 +53,25 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
             }
 
             const playerProfileWithId: Player = { ...playerProfile, playerId: availableIndex };
-            void runExclusive(async () => {
-                state = gameStateReducer(state, {
-                    type: "registerPlayer",
-                    payload: [
-                        state,
-                        playerProfileWithId,
-                    ]
-                });
-            });
+            const nextState = gameStateReducer(state, {
+                type: "addPlayer",
+                payload: [
+                    state,
+                    playerProfileWithId,
+                    true
+                ]
+            }) ;
+
+            if (nextState.thisPlayer !== undefined) throw new Error("unexpted error")
             
+            void runExclusive(async () => state = nextState);
+
             console.log(`assigning seat ${availableIndex}`);
+
+            // "as Req..." this is somethign to look at later.
+            socket.emit("playerRegistered", nextState as Required<GameState>);
             socket.broadcast.emit("playerJoinNotification", playerProfile);
-            
+
         });
 
         socket.onAny((eventName) => {

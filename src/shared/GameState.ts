@@ -27,13 +27,13 @@ const GameStateActions = {
     // fullUpdateGameState,
     addPlayer,
     removePlayer,
-    registerPlayer,
     progressNextTurn,
     updateConnectedUsers,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
 
-function updateConnectedUsers(state: GameState, count: number): GameState{
+function updateConnectedUsers(state: GameState, count: number): GameState {
     return {
         ...state,
         connectedPlayers: count
@@ -67,7 +67,8 @@ function removePlayer(
 
 function addPlayer(
     state: GameState,
-    profile: Player
+    profile: Player,
+    register: boolean = false,
 ): GameState {
     const availableI = state.players.findIndex((v) => v == null);
     if (availableI < 0) {
@@ -95,15 +96,7 @@ function addPlayer(
         players: updatedPlayers,
         connectedPlayers,
         status,
-    };
-}
-
-function registerPlayer(state: GameState, player: Player): Required<GameState> {
-    let r: GameState;
-    r = addPlayer(state, player);
-    return {
-        ...r,
-        thisPlayer: player
+        thisPlayer: register ? newPlayer : undefined
     };
 }
 
@@ -129,11 +122,11 @@ function setPlayerLastWord(
 }
 
 function progressNextTurn(state: GameState, block: string, playerLastWord: string) {
-    var state: GameState;
-    state = buildMatchLetter(state, block);
-    state = setPlayerLastWord(state, playerLastWord)
-    state = nextTurn(state);
-    return state;
+    let nextState: GameState = state;
+    nextState = buildMatchLetter(nextState, block);
+    nextState = setPlayerLastWord(nextState, playerLastWord)
+    nextState = nextTurn(nextState);
+    return nextState;
 }
 
 function buildMatchLetter(
@@ -158,17 +151,11 @@ function buildMatchLetter(
 }
 
 
-export function buildInitialGameState(playerName?: string, playerI?: number): GameState {
+export function buildInitialGameState(): GameState {
     const players = Array(MAX_PLAYERS).fill(null) as PlayersArray;
-    if (playerI !== undefined && playerName !== undefined) {
-        const player: Player = {
-            name: playerName,
-        }
-        players[playerI] = player;
-    }
-
+    const emptyGameState: GameState = {} as unknown as GameState;
     return {
-        matchLetter: buildMatchLetter({} as any as GameState, "가").matchLetter,
+        matchLetter: buildMatchLetter(emptyGameState, "가").matchLetter,
         status: null,
         players: players,
         turn: 0,
@@ -178,34 +165,13 @@ export function buildInitialGameState(playerName?: string, playerI?: number): Ga
 
 type ClientOrServerReturn<T> = T extends Required<GameState> ? T : GameState;
 export function gameStateReducer<T extends GameState>(state: T, action: GameStateActionsType): ClientOrServerReturn<T> {
-    var r: GameState;
-    action
-    switch (action.type) {
-        case ("buildMatchLetter"):
-            r = buildMatchLetter(...action.payload)
-            break;
-        case ("nextTurn"):
-            r = nextTurn(...action.payload)
-            break;
-        case ("playerJoin"):
-            r = addPlayer(...action.payload);
-            break;
-        case ("setPlayerLastWord"):
-            r = setPlayerLastWord(...action.payload);
-            break;
-        case ("progressNextTurn"):
-            r = progressNextTurn(...action.payload);
-            break;
-        // case ("fullUpdateGameState"):
-        //     r = action.payload[0].state
-        //     break;
-        case ("playerLeave"):
-            r = playerLeave(...action.payload);
-            break;
-        default:
-            console.error("GameReducer default", action);
-            r = state
-            break;
+
+    if (!Object.keys(GameStateActions).includes(action.type)) {
+        throw new Error(`couldn't find ${action.type} in GameStateActions`);
     }
-    return r as ClientOrServerReturn<T>;
+    
+    // idk how to fix the typing issue
+    // const f = GameStateActions[action.type] as (state: GameState, ...args: any[]) => GameState;
+    const f = GameStateActions[action.type] as (state: GameState, ...args: unknown[]) => GameState;
+    return f(state, ...action.payload) as ClientOrServerReturn<T>;
 }

@@ -23,7 +23,10 @@ export function handleSocket(
         return;
     }
 
-    socket.on("connect", () => {});
+    socket.on("connect", () => {
+        console.log(`Connected to socket: ${socket.id}`)
+    });
+    
     socket.on("playerCount", count => {
         dispatch({
             type: "updateConnectedUsers",
@@ -45,15 +48,20 @@ export function handleSocket(
         });
     });
 
-    socket.on("playerRegistered", (state, profile) => {
+    socket.on("playerRegistered", (state) => {
+        const player = state.thisPlayer;
         dispatch({
             type: "addPlayer",
-            payload: [state, profile],
+            payload: [state, player, true]
         });
     });
 
-    socket.on("text", text => {
+    socket.on("playerNotRegistered", reason => {
+        throw new Error("handle when room is full: " + reason);
+    });
 
+    socket.on("text", text => {
+        console.log(`Text from server: ${text}`);
     });
 
     // if (registeredSockets.has(socketInstance)) {
