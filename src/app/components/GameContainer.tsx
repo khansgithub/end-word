@@ -32,7 +32,7 @@ export default function () {
     }
 
     useEffect(() => {
-        console.log('socket.emit("registerPlayer", player);');
+        console.log('socket.emit("registerPlayer", player);', player);
         socket.emit("registerPlayer", player);
         return () => {
             tearDownHandler(socket);

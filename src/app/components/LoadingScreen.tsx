@@ -4,7 +4,7 @@ interface props {
     setUserIsConnected: Dispatch<boolean>,
 }
 
-export default function(props: props){
+function LoadingScreen(props: props){
     function connect() {
         props.setUserIsConnected(true);
     }
@@ -15,3 +15,5 @@ export default function(props: props){
         </div>
     )
 }
+
+export default LoadingScreen;

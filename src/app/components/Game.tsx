@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useReducer, useRef } from "react";
+import { gameStateReducer } from "../../shared/GameState";
+import { GameStateFrozen as GameState, Player as PlayerType } from "../../shared/types";
 import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
-import { GameStateFrozen as GameState, Player as PlayerType } from "../../shared/types";
-import { getSocketManager, websocketHandler } from "./socket";
+import { getSocketManager, handleSocket } from "./socket";
 import { submitButton } from "./util";
-import { gameStateReducer } from "../../shared/GameState";
 
 interface props {
     player: PlayerType,
@@ -33,11 +33,7 @@ export default function (props: props) {
 
     const socket = useRef(getSocketManager());
 
-    websocketHandler({
-        socket: socket,
-        gameState: gameState,
-        gameStateUpdate: gameStateUpdate
-    });
+    handleSocket(socket.current, gameState, gameStateUpdate);
 
     async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
@@ -49,6 +45,7 @@ export default function (props: props) {
 
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
+        console.log("Game - useEffect", socket.current.id);
         socket.current.emit("registerPlayer", gameState.thisPlayer);
     }, []);
 
@@ -90,9 +87,11 @@ export default function (props: props) {
             <div className="flex flex-row gap-2 justify-center items-center" id="players">
                 {
                     gameState.players
-                        .filter(p => p !== null)
-                        .map((p, i) =>
-                            <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
+                        // .filter(p => p !== null)
+                        .map((p, i) =>{
+                            if(!p) return <div key={i}> empty </div>
+                            else <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
+                        }
                         )
                 }
             </div>

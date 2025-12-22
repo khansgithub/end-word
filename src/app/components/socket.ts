@@ -1,15 +1,19 @@
+import { ActionDispatch } from "react";
 import { io } from "socket.io-client";
-import { useSocketStore } from "../store/userStore";
-import { ClientPlayerSocket, GameState } from "../../shared/types";
-import { ActionDispatch, Dispatch } from "react";
 import { GameStateActionsType } from "../../shared/GameState";
+import { ClientPlayerSocket, GameState } from "../../shared/types";
+import { useSocketStore } from "../store/userStore";
 
 export function getSocketManager(): ClientPlayerSocket {
     let socket = useSocketStore.getState().socket;
     if (socket === null) {
-        socket = io();
+        socket = io({});
         useSocketStore.getState().setSocket(socket);
     }
+    socket.on("disconnect", (reason) => {
+        console.log("socket disconnect handler: " + reason);
+    });
+
     return socket;
 }
 
@@ -29,7 +33,7 @@ export function handleSocket(
     
     socket.on("playerCount", count => {
         dispatch({
-            type: "updateConnectedUsers",
+            type: "updateConnectedPlayersCount",
             payload: [state, count]
         });
     });

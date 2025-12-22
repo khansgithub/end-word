@@ -28,6 +28,7 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
         console.log("socket id:", socket.id);
 
         // socket.on("gameUpdate", (update: Partial<GameState>) => {
+        console.log("gameUpdate");
         //     void runExclusive(async () => {
         //         state = {
         //             ...state,
@@ -37,14 +38,17 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
         // });
 
         socket.on("text", (text: string) => {
+            console.log("text", text);
             console.log(`Text from client: ${text}`);
         });
 
         socket.on("getPlayerCount", () => {
+            console.log("getPlayerCount", state.connectedPlayers);
             socket.emit("playerCount", state.connectedPlayers);
         });
 
         socket.on("registerPlayer", (playerProfile: Player) => {
+            console.log("registerPlayer", playerProfile);
             const availableIndex = state.players.findIndex(v => v === null);
             if (availableIndex == -1) {
                 const reason = "room is full";
@@ -53,17 +57,22 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
             }
 
             const playerProfileWithId: Player = { ...playerProfile, playerId: availableIndex };
+            const reducerParams = [
+                state,
+                playerProfileWithId,
+                true
+            ] as const;
+            console.log("to reducer: ", reducerParams);
             const nextState = gameStateReducer(state, {
                 type: "addPlayer",
-                payload: [
-                    state,
-                    playerProfileWithId,
-                    true
-                ]
-            }) ;
+                payload: [...reducerParams]
+            });
 
-            if (nextState.thisPlayer !== undefined) throw new Error("unexpted error")
-            
+            if (nextState.thisPlayer === undefined) {
+                console.error(nextState)
+                throw new Error("nextState.thisPlayer should be the registered players but its undefined");
+            }
+
             void runExclusive(async () => state = nextState);
 
             console.log(`assigning seat ${availableIndex}`);

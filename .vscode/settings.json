@@ -2,5 +2,11 @@
     "python.analysis.stubPath": "dictionary/stubs",
     "files.associations": {
         "*.css": "tailwindcss"
-    }
+    },
+    "eslint.rules.customizations": [
+        {
+            "rule": "no-explicit-any",
+            "severity": "off"
+        }
+    ]
 }

@@ -28,12 +28,12 @@ const GameStateActions = {
     addPlayer,
     removePlayer,
     progressNextTurn,
-    updateConnectedUsers,
+    updateConnectedPlayersCount,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
 
-function updateConnectedUsers(state: GameState, count: number): GameState {
+function updateConnectedPlayersCount(state: GameState, count: number): GameState {
     return {
         ...state,
         connectedPlayers: count
@@ -70,12 +70,16 @@ function addPlayer(
     profile: Player,
     register: boolean = false,
 ): GameState {
-    const availableI = state.players.findIndex((v) => v == null);
+    console.log("addPlayer params: ", state, profile, register);
+    const availableI = state.players.findIndex((v) => v === null);
     if (availableI < 0) {
+        console.error("state.players.findIndex((v) => v === null); == < 0");
+        console.error(state.players);
         throw new Error("unexpected error");
     }
 
     if (!profile.name) {
+        console.error("addPlayer: profile.name is undefined")
         throw new Error("unexpected error");
     }
 
@@ -169,9 +173,14 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
     if (!Object.keys(GameStateActions).includes(action.type)) {
         throw new Error(`couldn't find ${action.type} in GameStateActions`);
     }
+
+    console.log("in reducer: action > ", action.type);
+    console.log("in reducer: payload > ", action.payload);
+    // throw new Error("");
     
     // idk how to fix the typing issue
     // const f = GameStateActions[action.type] as (state: GameState, ...args: any[]) => GameState;
     const f = GameStateActions[action.type] as (state: GameState, ...args: unknown[]) => GameState;
-    return f(state, ...action.payload) as ClientOrServerReturn<T>;
+    const params = action.payload as Parameters<typeof f>;
+    return f(...params) as ClientOrServerReturn<T>;
 }

@@ -3,11 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore, useUserStore } from "../store/userStore";
-import { io } from 'socket.io-client';
 import { getSocketManager } from './socket';
 export function Homescreen() {
     const [count, setCount] = useState(0);
-
+    const [retryCount, setRetryCount] = useState(0);
     const { setName } = useUserStore.getState();
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -25,7 +24,7 @@ export function Homescreen() {
         redirect("/room");
     }
 
-    function setupSocket(socket: ClientPlayerSocket){
+    function setupSocket(socket: ClientPlayerSocket) {
         socket.on("playerCount", count => {
             console.log("got player count from server");
             setCount(count);
@@ -35,25 +34,33 @@ export function Homescreen() {
             socket.off("playerCount");
         });
     }
-    
+
     // setupSocket(socket);
 
     useEffect(() => {
         console.count("Homescreen");
         inputRef.current?.focus();
-        let { socket, setSocket } = useSocketStore.getState();
-        if (socket === null){
-            setSocket(getSocketManager());
-        }
-        if (socket===null) return;
-        if (!socket.connected) throw new Error("socket is not connected")
-        socket.emit("getPlayerCount");
-        // socket.emit("text", "client to server");
         return () => {
             // socket.disconnect();
             // console.log("Socket disconnected");
         };
     }, []);
+
+    useEffect(() => {
+        const { setSocket } = useSocketStore.getState();
+        let { socket } = useSocketStore.getState();
+        if (socket === null) {
+            socket = getSocketManager();
+            setSocket(socket);
+        }
+        if (!socket.connected) {
+            setTimeout(() => setRetryCount(c => c + 1));
+            console.error("Could not connect to socket.")
+        } else {
+            socket.emit("getPlayerCount");
+            console.log(`Connected to socket after ${retryCount} attempts.`);
+        }
+    }, [retryCount]);
 
     return (
         <div className="flex flex-col w-full h-full justify-center items-center">
