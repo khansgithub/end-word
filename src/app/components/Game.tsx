@@ -8,6 +8,7 @@ import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
 import { getSocketManager } from "./socket";
 import { submitButton } from "./util";
+import { unloadPage } from "./GameContainer";
 
 interface props {
     gameState: Required<GameStateFrozen>,
@@ -43,6 +44,11 @@ export default function Game({ gameState, dispatch }: props) {
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
         console.log("Game - useEffect", socket.current.id);
+
+        return ( () => {
+            unloadPage(socket.current);
+            debugger;
+        })
     }, []);
 
 
@@ -85,7 +91,8 @@ export default function Game({ gameState, dispatch }: props) {
                     gameState.players
                         // .filter(p => p !== null)
                         .map((p, i) => {
-                            if (!p) return <div key={i}> empty </div>
+                            console.log(`rendering players: ${i}`);
+                            if (p === null) return <div key={i}> empty </div>
                             else <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
                         })
                 }

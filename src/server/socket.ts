@@ -3,6 +3,7 @@ import { Server as SocketServer } from "socket.io";
 import { GameState, Player, ServerPlayerSocket } from "../shared/types";
 import { buildInitialGameState, gameStateReducer } from "../shared/GameState";
 
+const registeredSockets = new Map<string, Player>();
 
 export function createIOServer(server: http.Server): SocketServer {
     const io = new SocketServer(server, {
@@ -49,6 +50,10 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
 
         socket.on("registerPlayer", (playerProfile: Player) => {
             console.log("registerPlayer", playerProfile);
+            if (registeredSockets.has(socket.id)){
+                console.warn(`Skipping player because player is already registered. ${socket.id} ${JSON.stringify(registeredSockets.get(socket.id))}`);
+                return
+            }
             const availableIndex = state.players.findIndex(v => v === null);
             if (availableIndex == -1) {
                 const reason = "room is full";
@@ -62,26 +67,43 @@ function createOnConnect(state: GameState, runExclusive: <T>(fn: () => Promise<T
                 playerProfileWithId,
                 true
             ] as const;
-            console.log("to reducer: ", reducerParams);
+
             const nextState = gameStateReducer(state, {
                 type: "addPlayer",
                 payload: [...reducerParams]
             });
-
-            if (nextState.thisPlayer === undefined) {
-                console.error(nextState)
+            const newPlayer = nextState.thisPlayer;
+            if (newPlayer === undefined) {
+                console.warn(nextState)
                 throw new Error("nextState.thisPlayer should be the registered players but its undefined");
             }
 
-            void runExclusive(async () => state = nextState);
+            void runExclusive(async () => {
+                state = nextState;
+                registeredSockets.set(socket.id, newPlayer);
+            });
 
-            console.log(`assigning seat ${availableIndex}`);
+            console.log(`assigning seat to ${socket.id} ${newPlayer}: ${availableIndex}`);
 
             // "as Req..." this is somethign to look at later.
             socket.emit("playerRegistered", nextState as Required<GameState>);
             socket.broadcast.emit("playerJoinNotification", playerProfile);
 
         });
+
+        socket.on("disconnect", () => {
+            const player = registeredSockets.get(socket.id);
+            if (player === undefined) {
+                console.log(`no player with socketid: ${socket.id}`);
+                return;
+            }
+            gameStateReducer(state, {
+                type: "removePlayer",
+                payload: [state, player],
+            });
+            registeredSockets.delete(socket.id);
+            socket.broadcast.emit("playerLeaveNotification", player);
+        })
 
         socket.onAny((eventName) => {
             console.log(`event -> ${eventName}`);
