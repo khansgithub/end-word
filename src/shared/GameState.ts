@@ -184,3 +184,8 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
     const params = action.payload as Parameters<typeof f>;
     return f(...params) as ClientOrServerReturn<T>;
 }
+
+export function isRequiredGameState(state: GameState): state is Required<typeof state>{
+    console.warn("Need to implment isRequiredGameState")
+    return true;
+}

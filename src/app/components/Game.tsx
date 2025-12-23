@@ -1,27 +1,26 @@
 'use client';
 
-import { useEffect, useReducer, useRef } from "react";
-import { gameStateReducer } from "../../shared/GameState";
-import { GameStateFrozen as GameState, Player as PlayerType } from "../../shared/types";
+import { ActionDispatch, useEffect, useRef } from "react";
+import { GameStateActionsType } from "../../shared/GameState";
+import { GameStateFrozen } from "../../shared/types";
 import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
-import { getSocketManager, handleSocket } from "./socket";
+import { getSocketManager } from "./socket";
 import { submitButton } from "./util";
 
 interface props {
-    player: PlayerType,
-    gameState: Required<GameState>
+    gameState: Required<GameStateFrozen>,
+    dispatch: ActionDispatch<[action: GameStateActionsType]>,
 }
 
-export default function (props: props) {
+export default function Game({ gameState, dispatch }: props) {
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
     const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
     const inputHighlightDom = useRef<HTMLInputElement>(null)
     const inputDomText = useRef("");
 
-    const [gameState, gameStateUpdate] = useReducer(gameStateReducer<typeof props.gameState>, props.gameState);
     const inputHandelers = buildInputHandlers({
         matchLetter: gameState.matchLetter,
         buttonDom: buttonDom,
@@ -33,20 +32,17 @@ export default function (props: props) {
 
     const socket = useRef(getSocketManager());
 
-    handleSocket(socket.current, gameState, gameStateUpdate);
-
     async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
         await submitButton({
             inputDom: inputDom,
             inputDomText: inputDomText
-        }, gameState, gameStateUpdate);
+        }, gameState, dispatch);
     }
 
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
         console.log("Game - useEffect", socket.current.id);
-        socket.current.emit("registerPlayer", gameState.thisPlayer);
     }, []);
 
 
@@ -80,7 +76,7 @@ export default function (props: props) {
 
             <button
                 ref={buttonDom}
-                onClick={buttonOnSubmit || (() => { })}
+                onClick={buttonOnSubmit}
                 // disabled={!userIsConnected}
                 className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
             <div className="h-10"></div>
@@ -88,11 +84,10 @@ export default function (props: props) {
                 {
                     gameState.players
                         // .filter(p => p !== null)
-                        .map((p, i) =>{
-                            if(!p) return <div key={i}> empty </div>
+                        .map((p, i) => {
+                            if (!p) return <div key={i}> empty </div>
                             else <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
-                        }
-                        )
+                        })
                 }
             </div>
         </div>
