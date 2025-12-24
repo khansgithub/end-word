@@ -13,7 +13,8 @@ export type FixedLengthArray<T, L extends number> = T[] & { length: L };
  * -------------------------------------------------- */
 
 export type Player = {
-    playerId?: number
+    uid: string;
+    seat?: number
     name: string;
     lastWord?: string;
 };

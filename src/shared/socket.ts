@@ -2,6 +2,9 @@ import type { ActionDispatch } from "react";
 import { GameStateActionsType, buildInitialGameState, gameStateReducer } from "./GameState";
 import type { ClientPlayerSocket, GameState, Player, ServerPlayerSocket } from "./types";
 
+// ---------------------- Shared contract ----------------------
+// Socket event names so the client and server stay in sync.
+
 export const socketEvents = {
     connect: "connect",
     disconnect: "disconnect",
@@ -17,12 +20,16 @@ export const socketEvents = {
 
 type RunExclusive = <T>(fn: () => Promise<T> | T) => Promise<T>;
 
+// Used to ensure we only attach a single handler set per client socket.
+const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
+
 export type ServerSocketContext = {
     state: GameState;
     runExclusive: RunExclusive;
     registeredSockets: Map<string, Player>;
 };
 
+// Promise-based mutex to serialize state mutations across concurrent socket events.
 export function createSocketMutex(): RunExclusive {
     let last: Promise<void> = Promise.resolve();
 
@@ -41,8 +48,8 @@ export function createServerSocketContext(initialState?: GameState): ServerSocke
     };
 }
 
-const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
-
+// ---------------------- Client side ----------------------
+// Wires client listeners to update the local game state based on server pushes.
 export function registerClientSocketHandlers(
     socket: ClientPlayerSocket,
     state: GameState,
@@ -59,7 +66,7 @@ export function registerClientSocketHandlers(
     clientSocketsWithHandlers.add(socket);
 
     socket.on(socketEvents.connect, () => {
-        console.log(`Connected to socket: ${socket.id}`);
+        console.log(`Connected to socket: ${socket.id}, ${socket.auth}`);
     });
 
     socket.on(socketEvents.playerCount, (count) => {
@@ -100,6 +107,8 @@ export function registerClientSocketHandlers(
     });
 }
 
+// ---------------------- Server side ----------------------
+// Builds a connection handler that registers all server-side listeners for a new client.
 export function createServerConnectionHandler(context: ServerSocketContext) {
     let state = context.state;
     const { runExclusive, registeredSockets } = context;
@@ -107,6 +116,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
     return (socket: ServerPlayerSocket) => {
         console.log("Client connected");
         console.log("socket id:", socket.id);
+        console.log("auth:", socket.handshake.auth);
         console.log("gameUpdate");
 
         socket.on(socketEvents.text, (text: string) => {
@@ -122,8 +132,10 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         socket.on(socketEvents.registerPlayer, (playerProfile: Player) => {
             void runExclusive(async () => {
                 console.log("registerPlayer", playerProfile);
-                if (registeredSockets.has(socket.id)) {
-                    console.warn(`Skipping player because player is already registered. ${socket.id} ${JSON.stringify(registeredSockets.get(socket.id))}`);
+                // Guard against multiple register events from the same socket.
+                const auth = socket.handshake.auth.clientId;
+                if (registeredSockets.has(auth)) {
+                    console.warn(`Skipping player because player is already registered. ${socket.id} ${JSON.stringify(registeredSockets.get(auth))}`);
                     return;
                 }
 
@@ -134,7 +146,8 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
                     return;
                 }
 
-                const playerProfileWithId: Player = { ...playerProfile, playerId: availableIndex };
+                // Reserve the seat and broadcast the new player; state updates are serialized by runExclusive.
+                const playerProfileWithId: Player = { ...playerProfile, seat: availableIndex };
                 const reducerParams = [
                     state,
                     playerProfileWithId,
@@ -153,23 +166,27 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
 
                 state = nextState;
                 context.state = nextState;
-                registeredSockets.set(socket.id, newPlayer);
+                registeredSockets.set(auth, newPlayer);
 
-                console.log(`assigning seat to ${socket.id} ${newPlayer}: ${availableIndex}`);
+                console.log(`assigning seat to ${auth} ${newPlayer}: ${availableIndex}`);
 
                 socket.emit(socketEvents.playerRegistered, nextState as Required<GameState>);
                 socket.broadcast.emit(socketEvents.playerJoinNotification, playerProfile);
             });
         });
 
-        socket.on(socketEvents.disconnect, () => {
+        socket.on(socketEvents.disconnect, (reason) => {
+            console.log("Runnign disconnect handler: ", reason);
+            
             void runExclusive(async () => {
-                const player = registeredSockets.get(socket.id);
+                const auth = socket.handshake.auth.clientId;
+                const player = registeredSockets.get(auth);
                 if (player === undefined) {
-                    console.log(`no player with socketid: ${socket.id}`);
+                    console.log(`no player with socketid: ${auth}`);
                     return;
                 }
 
+                // Remove the player and notify remaining clients.
                 const nextState = gameStateReducer(state, {
                     type: "removePlayer",
                     payload: [state, player],
@@ -177,7 +194,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
 
                 state = nextState;
                 context.state = nextState;
-                registeredSockets.delete(socket.id);
+                registeredSockets.delete(auth);
                 socket.broadcast.emit(socketEvents.playerLeaveNotification, player);
             });
         });

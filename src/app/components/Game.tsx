@@ -43,10 +43,10 @@ export default function Game({ gameState, dispatch }: props) {
 
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
-        console.log("Game - useEffect", socket.current.id);
+        console.log("Game - useEffect", socket.current.auth);
 
         return ( () => {
-            unloadPage(socket.current);
+            // unloadPage(socket.current);
         })
     }, []);
 

@@ -7,7 +7,7 @@ import { getSocketManager } from './socket';
 export function Homescreen() {
     const [count, setCount] = useState(0);
     const [retryCount, setRetryCount] = useState(0);
-    const { setName } = useUserStore.getState();
+    const { playerId, setName } = useUserStore.getState();
 
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,7 +45,7 @@ export function Homescreen() {
         const { setSocket } = useSocketStore.getState();
         let { socket } = useSocketStore.getState();
         if (socket === null) {
-            socket = getSocketManager(); // TODO: Should the handler be already attached here?
+            socket = getSocketManager(playerId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
         return () => {};

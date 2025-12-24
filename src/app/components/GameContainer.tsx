@@ -20,7 +20,7 @@ export default function GameContainer() {
     type connectionState = [typeof CONNECTED, typeof CONNECTING, typeof FAILED, null][number];
     const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2];
     const { socket } = useSocketStore.getState();
-    const { playerName } = useUserStore.getState();
+    const { playerName, playerId } = useUserStore.getState();
     if (playerName.length < 1) redirect("/");
     const [userIsConnected, setUserIsConnected] = useState<connectionState>(null);
     const playerRegisterHandler = () => setUserIsConnected(CONNECTED);
@@ -38,7 +38,7 @@ export default function GameContainer() {
     //     }
     // }
 
-    const player: Player = { name: playerName };
+    const player: Player = { name: playerName, uid: playerId };
 
 
     if (socket === null || socket.disconnected) {
@@ -51,13 +51,13 @@ export default function GameContainer() {
     handleSocket(socket, state, dispatch);
 
     useEffect(() => {
-        window.addEventListener('beforeunload', (() => unloadPage(socket)));
-        router.events.on('routeChangeStart', unloadPage);
+        // window.addEventListener('beforeunload', (() => unloadPage(socket)));
+        // router.events.on('routeChangeStart', unloadPage);
 
-        console.log("Game container: ", socket.id);
+        console.log("Game container: ", socket.auth);
 
         if (userIsConnected === null) {
-            console.log('Register player;', player, socket.id);
+            console.log('Register player;', player, socket.auth);
             socket.once("playerRegistered", playerRegisterHandler);
             socket.once("playerNotRegistered", playerRegisterFailHandlers);
             socket.emit("registerPlayer", player);

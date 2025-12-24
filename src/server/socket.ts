@@ -5,8 +5,8 @@ import { createServerConnectionHandler, createServerSocketContext } from "../sha
 export function createIOServer(server: http.Server): SocketServer {
     const io = new SocketServer(server, {
         cors: { origin: "*" },
-        pingInterval: 1000,
-        pingTimeout: 3000,
+        pingInterval: 500,
+        pingTimeout: 1000,
     });
 
     return setUpIOServer(io);

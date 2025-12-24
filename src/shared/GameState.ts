@@ -51,7 +51,7 @@ function removePlayer(
     state: GameState,
     profile: Player
 ): GameState {
-    const playerId = profile.playerId;
+    const playerId = profile.seat;
     if (playerId === undefined) {
         throw new Error("unexpected error");
     }
@@ -86,7 +86,7 @@ function addPlayer(
     const newPlayer: Required<Player> = {
         name: profile.name,
         lastWord: "",
-        playerId: availableI,
+        seat: availableI,
     };
 
     const updatedPlayers = [...state.players] as PlayersArray;

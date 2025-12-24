@@ -56,7 +56,7 @@ function onConnect(socket: ServerPlayerSocket) {
     socket.on("disconnect", (reason: string) => {
         if (socket.data?.profile) {
             console.log(`${socket.id} -> disconnect`)
-            const { playerId } = socket.data.profile;
+            const { seat: playerId } = socket.data.profile;
             if (playerId === undefined) throw new Error("unexpected error");
 
             const profile = gameState.players[playerId];
@@ -136,7 +136,7 @@ const registerPlayer = (socket: ServerPlayerSocket): EventHandler<"registerPlaye
         const reason = "room is full";
         return ["playerNotRegistered", [reason]]
     } else {
-        const playerProfileWithId: Player = { ...playerProfile, playerId: availableIndex };
+        const playerProfileWithId: Player = { ...playerProfile, seat: availableIndex };
         // FIXME: this will cause race conditions. the gameState variable being mutated inside a socketio hanlder, is dangeorus.
         gameState = gameStateReducer(gameState, {
             type: "playerJoin",
