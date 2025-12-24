@@ -1,49 +1,50 @@
 'use client';
 
 import { redirect } from 'next/navigation';
-import { useEffect, useReducer, useRef, useState } from "react";
+import router from 'next/router';
+import { useEffect, useReducer, useState } from "react";
 import { buildInitialGameState, gameStateReducer, isRequiredGameState } from '../../shared/GameState';
 import { ClientPlayerSocket, GameState, GameStateFrozen, Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from "./Game";
 import { handleSocket } from './socket';
-import router from 'next/router';
 
 export function unloadPage(socket: ClientPlayerSocket | null, cb?: ((...args: any[]) => void)) {
-    alert(`unload, ${socket}, ${socket?.connected}`);
     if (socket && socket.connected) {
         socket.disconnect();
     }
     if (cb) cb();
 }
 
-export default function () {
+export default function GameContainer() {
     type connectionState = [typeof CONNECTED, typeof CONNECTING, typeof FAILED, null][number];
     const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2];
     const { socket } = useSocketStore.getState();
     const { playerName } = useUserStore.getState();
-
-    if (playerName.length < 1) {
-        if (socket) {
-            unloadPage(socket, () => {
-                redirect("/");
-            });
-        }
-    }
-
+    if (playerName.length < 1) redirect("/");
     const [userIsConnected, setUserIsConnected] = useState<connectionState>(null);
     const playerRegisterHandler = () => setUserIsConnected(CONNECTED);
     const playerRegisterFailHandlers = () => setUserIsConnected(FAILED);
-
     const [state, dispatch] = useReducer(
         gameStateReducer<GameState>,
         buildInitialGameState()
     );
 
+    // if (playerName.length < 1) {
+    //     if (socket) {
+    //         unloadPage(socket, () => {
+    //             redirect("/");
+    //         });
+    //     }
+    // }
+
     const player: Player = { name: playerName };
 
+
     if (socket === null || socket.disconnected) {
-        redirect("/");
+        unloadPage(socket);
+        return;
+        // redirect("/");
         // throw new Error(`Socket is disconnected or has not be created yet: ${socket}`);
     }
 
@@ -52,6 +53,8 @@ export default function () {
     useEffect(() => {
         window.addEventListener('beforeunload', (() => unloadPage(socket)));
         router.events.on('routeChangeStart', unloadPage);
+
+        console.log("Game container: ", socket.id);
 
         if (userIsConnected === null) {
             console.log('Register player;', player, socket.id);

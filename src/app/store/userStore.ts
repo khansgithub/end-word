@@ -1,10 +1,11 @@
 import { createStore } from "zustand";
 import { ClientPlayerSocket } from "../../shared/types";
 import { io } from "socket.io-client";
-// import { persist } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 
-interface PlayerName {
+interface PlayerSession {
     playerName: string;
+    id: string;
     setName: (name: string) => void;
 }
 
@@ -13,16 +14,18 @@ interface Socket{
     setSocket: (socket: ClientPlayerSocket) => void;
 }
 
-export const useUserStore = createStore<PlayerName>()(
-    // persist(
+export const useUserStore = createStore<PlayerSession>()(
+    persist(
         (set) => ({
             playerName: "",
+            id: crypto.randomUUID(),
             setName: (name: string) => set({ playerName: name }),
         }),
-        // {
-        //     name: "user-storage",
-        // }
-    // )
+        
+        {
+            name: "user-storage",
+        }
+    )
 );
 
 export const useSocketStore = createStore<Socket>()(

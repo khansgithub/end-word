@@ -47,7 +47,6 @@ export default function Game({ gameState, dispatch }: props) {
 
         return ( () => {
             unloadPage(socket.current);
-            debugger;
         })
     }, []);
 
@@ -56,7 +55,7 @@ export default function Game({ gameState, dispatch }: props) {
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
             {gameState.status == 'waiting'
                 ?
-                <div className="flex w-full h-full justify-center items-center bg-gray-500">
+                <div className="flex w-full h-full justify-center absolute items-center bg-black opacity-80">
                     <span className="loading loading-spinner loading-xl"></span>
                 </div>
                 : <></>

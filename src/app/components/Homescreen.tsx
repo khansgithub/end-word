@@ -1,9 +1,9 @@
-import { number } from 'framer-motion';
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { useSocketStore, useUserStore } from "../store/userStore";
 import { getSocketManager } from './socket';
+
 export function Homescreen() {
     const [count, setCount] = useState(0);
     const [retryCount, setRetryCount] = useState(0);
@@ -13,10 +13,10 @@ export function Homescreen() {
 
     const blockEvent = (e: React.MouseEvent | React.KeyboardEvent) => e.preventDefault();
 
+    // --- handlers -------------------------------------------------------
     const playerCountHandler = (count: number) => setCount(count);
 
-    // const dummyGameState = buildInitialGameState();
-
+    
     function onClick(event: React.MouseEvent) {
         if (!inputRef.current) return blockEvent(event);
 
@@ -39,44 +39,41 @@ export function Homescreen() {
         redirect("/room");
     }
 
-    // function setupSocket(socket: ClientPlayerSocket) {
-    //     socket.on("playerCount", count => {
-    //         console.log("got player count from server");
-    //         setCount(count);
-    //     });
-
-    //     socket.on("disconnect", () => {
-    //         socket.off("playerCount");
-    //     });
-    // }
-
-    // setupSocket(socket);
-
     useEffect(() => {
         console.count("Homescreen");
         inputRef.current?.focus();
-        return () => {};
-    }, []);
-
-    useEffect(() => {
         const { setSocket } = useSocketStore.getState();
         let { socket } = useSocketStore.getState();
         if (socket === null) {
             socket = getSocketManager(); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
+        return () => {};
+    }, []);
+
+    useEffect(() => {
+        let { socket } = useSocketStore.getState();
+
+        if (socket === null) throw new Error("This should not happen");
+
         if (!socket.connected) {
             console.warn(`Could not connect to socket on retry: ${retryCount}`)
             setTimeout(() => setRetryCount(c => c + 1), 1000);
         } else {
+            // check if there exists a player with the socket.id
             socket.on("playerCount", playerCountHandler);
             socket.emit("getPlayerCount");
             console.log(`Connected to socket after ${retryCount} attempts.`);
         };
+
         return () =>{
             socket.off("playerCount", playerCountHandler);
         }
     }, [retryCount]);
+
+    useEffect( () => {
+
+    }, []);
 
     return (
         <div className="flex flex-col w-full h-full min-h-fit justify-center items-center">
