@@ -13,13 +13,13 @@ export type FixedLengthArray<T, L extends number> = T[] & { length: L };
  * -------------------------------------------------- */
 
 export type Player = {
-    uid: string;
+    uid?: string;
     seat?: number
     name: string;
     lastWord?: string;
 };
 
-export type PlayersArray = FixedLengthArray<Required<Player> | null, typeof MAX_PLAYERS>;
+export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
 
 /* --------------------------------------------------
  * Socket Event Types

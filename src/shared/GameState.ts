@@ -7,7 +7,8 @@ Notes from gpt:
 
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
-import { GameState, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
+import { assertIsConcretePlayer } from "./guards";
+import type { GameState, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -83,7 +84,7 @@ function addPlayer(
         throw new Error("unexpected error");
     }
 
-    const newPlayer: Required<Player> = {
+    const newPlayer: Player | Required<Player> = {
         name: profile.name,
         lastWord: "",
         seat: availableI,
@@ -95,12 +96,20 @@ function addPlayer(
     const connectedPlayers = updatedPlayers.filter((p) => p != null).length;
     const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
 
+    let thisPlayer: Required<Player> | undefined = undefined;
+
+    if (register){
+        newPlayer.uid = profile.uid;
+        assertIsConcretePlayer(newPlayer);
+        thisPlayer = newPlayer;
+    }
+
     return {
         ...state,
         players: updatedPlayers,
         connectedPlayers,
         status,
-        thisPlayer: register ? newPlayer : undefined
+        thisPlayer: thisPlayer
     };
 }
 
@@ -189,3 +198,5 @@ export function isRequiredGameState(state: GameState): state is Required<typeof 
     console.warn("Need to implment isRequiredGameState")
     return true;
 }
+
+export { GameState };

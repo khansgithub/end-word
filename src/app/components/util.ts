@@ -1,7 +1,7 @@
 import { RefObject } from "react";
-import { GameState, GameStateActions, GameStateActionsBatch } from "../../shared/GameState";
+import { GameState, GameStateActionsType } from "../../shared/GameState";
 
-export async function submitButton(refs:{inputDom: RefObject<HTMLInputElement | null>, inputDomText: RefObject<string>}, gameState: GameState, gameStateUpdate: React.Dispatch<GameStateActions | GameStateActionsBatch>) {
+export async function submitButton(refs:{inputDom: RefObject<HTMLInputElement | null>, inputDomText: RefObject<string>}, gameState: GameState, gameStateUpdate: React.Dispatch<GameStateActionsType>) {
     if (!refs.inputDom.current) return;
     const submittedWord = refs.inputDomText.current;
     // const valid_input = await inputIsValid(submittedWord);
