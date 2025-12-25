@@ -47,7 +47,7 @@ test("room flow resets sockets after reload", async ({ page, request }) => {
         .poll(() => scrapeMetric(request, "socket_event_total", 'event="getPlayerCount"'), { timeout: 15_000, intervals: [500, 750, 1000] })
         .toBeGreaterThan(0);
 
-    const roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
+    let roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
     log("wait for Room heading text");
     await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 10_000 });
 
@@ -62,10 +62,17 @@ test("room flow resets sockets after reload", async ({ page, request }) => {
     log("wait for Match text");
     await expect(page.getByText(/Match:/)).toBeVisible({ timeout: 10_000 });
 
-    log("hard reload");
-    await page.reload();
+    log("hard reload (ignore cache)");
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Network.clearBrowserCache");
+    await cdp.send("Network.clearBrowserCookies");
+    await cdp.send("Page.reload", { ignoreCache: true });
     log("wait for redirect back to /");
     await page.waitForURL("http://localhost:4000/", { timeout: 15_000 });
+
+    roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
+    log(`check to see if the previous session has been terminated: [${await roomHeading.textContent()}]`);
+    await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 10_000 });
 
     await expect
         .poll(() => scrapeMetric(request, "socket_registered_clients"), {

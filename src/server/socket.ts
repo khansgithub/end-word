@@ -15,8 +15,8 @@ export function getServerSocketContext(): ServerSocketContext {
 export function createIOServer(server: http.Server): SocketServer {
     const io = new SocketServer(server, {
         cors: { origin: "*" },
-        pingInterval: 500,
-        pingTimeout: 1000,
+        pingInterval: 2000,
+        pingTimeout: 5000,
     });
 
     return setUpIOServer(io);
@@ -27,6 +27,7 @@ export function setUpIOServer(io: SocketServer): SocketServer {
         countEvent: countSocketEvent,
         setRegisteredClients,
     });
+    
     activeServerContext = serverSocketContext;
     io.on("connection", createServerConnectionHandler(serverSocketContext));
     return io;

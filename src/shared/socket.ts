@@ -1,22 +1,10 @@
 import type { ActionDispatch } from "react";
 import { GameStateActionsType, buildInitialGameState, gameStateReducer } from "./GameState";
+import { socketEvents } from "./socketEvents";
 import type { ClientPlayerSocket, GameState, Player, ServerPlayerSocket } from "./types";
 
 // ---------------------- Shared contract ----------------------
 // Socket event names so the client and server stay in sync.
-
-export const socketEvents = {
-    connect: "connect",
-    disconnect: "disconnect",
-    getPlayerCount: "getPlayerCount",
-    playerCount: "playerCount",
-    playerJoinNotification: "playerJoinNotification",
-    playerLeaveNotification: "playerLeaveNotification",
-    playerRegistered: "playerRegistered",
-    playerNotRegistered: "playerNotRegistered",
-    registerPlayer: "registerPlayer",
-    text: "text",
-} as const;
 
 type RunExclusive = <T>(fn: () => Promise<T> | T) => Promise<T>;
 
@@ -137,13 +125,30 @@ export function registerClientSocketHandlers(
 export function createServerConnectionHandler(context: ServerSocketContext) {
     let state = context.state;
     const { runExclusive, registeredSockets, stats } = context;
-    const countEvent = context.instrumentation?.countEvent ?? (() => {});
-    const setRegistered = context.instrumentation?.setRegisteredClients ?? (() => {});
+    const countEvent = context.instrumentation?.countEvent ?? (() => { });
+    const setRegistered = context.instrumentation?.setRegisteredClients ?? (() => { });
+    const logWithContext = (message: string) => log(context, message);
 
     return (socket: ServerPlayerSocket) => {
-        log(context, `Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
+        logWithContext(`Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
         stats.connections += 1;
         countEvent("connect");
+
+        const clientId = socket.handshake.auth ? socket.handshake.auth.clientId : undefined;
+        if (clientId && context.registeredSockets.has(clientId)){
+            const player = context.registeredSockets.get(clientId);
+            if (player === undefined) throw new Error("Player should not be undefined here");
+            socket.emit("returningPlayer", player);
+        }
+
+        socket.conn.on('packet', function (packet) {
+            logWithContext(`got packet of type: ${packet.type} from ${JSON.stringify(socket.handshake.auth)}`);
+            if (packet.type === 'ping') logWithContext('received ping');
+        });
+
+        // socket.conn.on('packetCreate', function (packet) {
+        //     if (packet.type === 'pong') logWithContext('sending pong');
+        // });
 
         socket.on(socketEvents.text, (text: string) => {
             console.log("text", text);
@@ -153,18 +158,18 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         socket.on(socketEvents.getPlayerCount, () => {
             stats.getPlayerCount += 1;
             countEvent("getPlayerCount");
-            log(context, `getPlayerCount -> ${state.connectedPlayers}`);
+            logWithContext(`getPlayerCount -> ${state.connectedPlayers}`);
             socket.emit(socketEvents.playerCount, state.connectedPlayers);
         });
 
         socket.on(socketEvents.registerPlayer, (playerProfile: Player) => {
             void runExclusive(async () => {
-                log(context, `registerPlayer ${JSON.stringify(playerProfile)}`);
+                logWithContext(`registerPlayer ${JSON.stringify(playerProfile)}`);
                 countEvent("registerPlayer");
                 // Guard against multiple register events from the same socket.
                 const auth = socket.handshake.auth.clientId;
                 if (registeredSockets.has(auth)) {
-                    log(context, `Skipping player because already registered clientId=${auth} socketId=${socket.id}`);
+                    logWithContext(`Skipping player because already registered clientId=${auth} socketId=${socket.id}`);
                     return;
                 }
 
@@ -198,7 +203,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
                 registeredSockets.set(auth, newPlayer);
                 setRegistered(registeredSockets.size);
 
-                log(context, `assigning seat to ${auth} ${JSON.stringify(newPlayer)} seat=${availableIndex}`);
+                logWithContext(`assigning seat to ${auth} ${JSON.stringify(newPlayer)} seat=${availableIndex}`);
 
                 socket.emit(socketEvents.playerRegistered, nextState as Required<GameState>);
                 socket.broadcast.emit(socketEvents.playerJoinNotification, playerProfile);
@@ -206,14 +211,14 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         });
 
         socket.on(socketEvents.disconnect, (reason) => {
-            log(context, `disconnect ${socket.id} reason=${reason}`);
+            logWithContext(`disconnect ${socket.id} reason=${reason}`);
             countEvent("disconnect");
-            
+
             void runExclusive(async () => {
                 const auth = socket.handshake.auth.clientId;
                 const player = registeredSockets.get(auth);
                 if (player === undefined) {
-                    log(context, `no player with socketid: ${auth}`);
+                    logWithContext(`no player with socketid: ${auth}`);
                     return;
                 }
 

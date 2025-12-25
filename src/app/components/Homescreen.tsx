@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { useSocketStore, useUserStore } from "../store/userStore";
 import { getSocketManager } from './socket';
+import { Player } from '../../shared/types';
 
 export function Homescreen() {
     const [count, setCount] = useState(0);
     const [retryCount, setRetryCount] = useState(0);
+    const [returningPlayer, setReturningPlayer] = useState<Player | null>(null);
     const { playerId, setName } = useUserStore.getState();
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -15,8 +17,9 @@ export function Homescreen() {
 
     // --- handlers -------------------------------------------------------
     const playerCountHandler = (count: number) => setCount(count);
+    const returningPlayerHandler = (player: Player) => setReturningPlayer(player);
+    // --------------------------------------------------------------------
 
-    
     function onClick(event: React.MouseEvent) {
         if (!inputRef.current) return blockEvent(event);
 
@@ -48,6 +51,7 @@ export function Homescreen() {
             socket = getSocketManager(playerId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
+        socket.emit("isReturningPlayer")
         return () => {};
     }, []);
 
