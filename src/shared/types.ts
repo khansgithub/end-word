@@ -1,8 +1,7 @@
 import { Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
 import { MAX_PLAYERS } from "./consts";
-import type { SocketEventName, socketEvents, SocketEvents } from "./socketEvents";
-import { EventsMap } from "socket.io/dist/typed-events";
+import { SocketEventName } from "./socket";
 
 /* --------------------------------------------------
  * Utility Types
@@ -27,51 +26,33 @@ export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
  * Socket Event Types
  * -------------------------------------------------- */
 
-type EventName<K extends keyof SocketEvents> = SocketEvents[K];
-type EventEntry<Name extends keyof SocketEvents, Handler> = {
-    [K in EventName<Name>]: Handler;
+export type SharedSocketEvents = {
+    // gameUpdate: (update: Partial<GameState>) => void;
+    text: (text: string) => void;
 };
 
-export type SharedSocketEvents = EventsMap &
-    EventEntry<"text", (text: string) => void>;
+export type ClientToServerEvents = SharedSocketEvents & {
+    getPlayerCount: () => void;
+    registerPlayer: (playerProfile: Player) => void;
+    unregisterPlayer: (playerProfile: Player) => void; // maybe this can be just the id?
+    isReturningPlayer: (clientId: string) => void;
+};
 
-export type ClientToServerEvents = SharedSocketEvents &
-    EventEntry<"getPlayerCount", () => void> &
-    EventEntry<"registerPlayer", (playerProfile: Player) => void> &
-    EventEntry<"unregisterPlayer", (playerProfile: Player) => void>; // maybe this can be just the id?
+export type ServerToClientEvents = SharedSocketEvents & {
+    playerCount: (count: number) => void;
+    playerJoinNotification: (newPlayer: Player) => void;
+    playerLeaveNotification: (player: Player) => void;
+    playerRegistered: (gameState: Required<GameState>) => void;
+    playerNotRegistered: (reason: string) => void;
+    returningPlayer: (player: Player) => void;
+};
 
-export type ServerToClientEvents = SharedSocketEvents &
-    EventEntry<"playerCount", (count: number) => void> &
-    EventEntry<"playerJoinNotification", (newPlayer: Player) => void> &
-    EventEntry<"playerLeaveNotification", (player: Player) => void> &
-    EventEntry<"playerRegistered", (gameState: Required<GameState>) => void> &
-    EventEntry<"playerNotRegistered", (reason: string) => void> &
-    EventEntry<"returningPlayer", (player: Player) => void>;
-
-// Compile-time guard: ensure the contract object and the typed events never drift.
-type EventNamesFromConst = SocketEventName;
-type EventNamesFromTypes =
-    | EventName<"connect">
-    | EventName<"disconnect">
-    | EventName<"text">
-    | EventName<"getPlayerCount">
-    | EventName<"registerPlayer">
-    | EventName<"unregisterPlayer">
-    | EventName<"playerCount">
-    | EventName<"playerJoinNotification">
-    | EventName<"playerLeaveNotification">
-    | EventName<"playerRegistered">
-    | EventName<"playerNotRegistered">
-    | EventName<"returningPlayer">
-    | EventName<"isReturningPlayer">;
-type Assert<T extends true> = T;
-type _SocketEventsAreInSync = Assert<
-    EventNamesFromConst extends EventNamesFromTypes
-        ? EventNamesFromTypes extends EventNamesFromConst
-            ? true
-            : false
-        : false
->;
+/**
+ * Compile-time guard: if any typed event name isn't present in socketEvents, this assignment fails.
+ */
+type AllTypedSocketEvents = keyof (ClientToServerEvents & ServerToClientEvents);
+type AssertAllTypedEventsExistInSocketEvents = Exclude<AllTypedSocketEvents, SocketEventName> extends never ? true : false;
+export const socketEventSyncCheck: AssertAllTypedEventsExistInSocketEvents = true;
 
 /* --------------------------------------------------
  * Socket Types

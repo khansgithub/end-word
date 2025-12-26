@@ -48,6 +48,20 @@ function nextTurn(state: GameState): GameState {
     };
 }
 
+function _postPlayerCountUpdateState(state: GameState): GameState{
+    /**
+     * This function will update values which depend on the number of players connected to the game.
+     */
+    const players = state.players;
+    const connectedPlayers = players.filter((p) => p != null).length;
+    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+    return {
+        ...state,
+        connectedPlayers: connectedPlayers,
+        status: status
+    };
+}
+
 function removePlayer(
     state: GameState,
     profile: Player
@@ -60,9 +74,10 @@ function removePlayer(
     const updatedPlayers: PlayersArray = [...state.players] as PlayersArray;
     updatedPlayers[playerId] = null;
 
+    const nextState = _postPlayerCountUpdateState({...state, players: updatedPlayers});
+
     return {
-        ...state,
-        players: updatedPlayers,
+        ...nextState,
     };
 }
 
@@ -71,7 +86,7 @@ function addPlayer(
     profile: Player,
     register: boolean = false,
 ): GameState {
-    console.log("addPlayer params: ", state, profile, register);
+    // console.log("addPlayer params: ", state, profile, register);
     const availableI = state.players.findIndex((v) => v === null);
     if (availableI < 0) {
         console.error("state.players.findIndex((v) => v === null); == < 0");
@@ -93,8 +108,7 @@ function addPlayer(
     const updatedPlayers = [...state.players] as PlayersArray;
     updatedPlayers[availableI] = newPlayer;
 
-    const connectedPlayers = updatedPlayers.filter((p) => p != null).length;
-    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+    const nextState = _postPlayerCountUpdateState({...state, players: updatedPlayers});
 
     let thisPlayer: Required<Player> | undefined = undefined;
 
@@ -105,10 +119,7 @@ function addPlayer(
     }
 
     return {
-        ...state,
-        players: updatedPlayers,
-        connectedPlayers,
-        status,
+        ...nextState,
         thisPlayer: thisPlayer
     };
 }
@@ -183,8 +194,8 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
         throw new Error(`couldn't find ${action.type} in GameStateActions`);
     }
 
-    console.log("in reducer: action > ", action.type);
-    console.log("in reducer: payload > ", action.payload);
+    // console.log("in reducer: action > ", action.type);
+    // console.log("in reducer: payload > ", action.payload);
     // throw new Error("");
     
     // idk how to fix the typing issue

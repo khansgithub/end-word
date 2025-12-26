@@ -4,7 +4,7 @@ import { ClientPlayerSocket } from "../../shared/types";
 
 interface PlayerSession {
     playerName: string;
-    playerId: string;
+    clientId: string;
     setName: (name: string) => void;
 }
 
@@ -17,7 +17,7 @@ export const useUserStore = createStore<PlayerSession>()(
     persist(
         (set) => ({
             playerName: "",
-            playerId: crypto.randomUUID(),
+            clientId: crypto.randomUUID(),
             setName: (name: string) => set({ playerName: name }),
         }),
         

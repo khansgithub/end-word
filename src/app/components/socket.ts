@@ -1,6 +1,6 @@
 import { io } from "socket.io-client";
-import { registerClientSocketHandlers } from "../../shared/socket";
-import { socketEvents } from "../../shared/socketEvents";
+import { socketEvents } from "../../shared/socket";
+import { registerClientSocketHandlers } from "../../shared/socketClient";
 import type { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore } from "../store/userStore";
 

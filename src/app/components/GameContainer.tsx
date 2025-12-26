@@ -20,7 +20,7 @@ export default function GameContainer() {
     type connectionState = [typeof CONNECTED, typeof CONNECTING, typeof FAILED, null][number];
     const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2];
     const { socket } = useSocketStore.getState();
-    const { playerName, playerId } = useUserStore.getState();
+    const { playerName, clientId: playerId } = useUserStore.getState();
     if (playerName.length < 1) redirect("/");
     const [userIsConnected, setUserIsConnected] = useState<connectionState>(null);
     const playerRegisterHandler = () => setUserIsConnected(CONNECTED);
@@ -29,14 +29,6 @@ export default function GameContainer() {
         gameStateReducer<GameState>,
         buildInitialGameState()
     );
-
-    // if (playerName.length < 1) {
-    //     if (socket) {
-    //         unloadPage(socket, () => {
-    //             redirect("/");
-    //         });
-    //     }
-    // }
 
     const player: Player = { name: playerName, uid: playerId };
 

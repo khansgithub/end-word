@@ -8,6 +8,6 @@ export function assertHasThisPlayer(state: GameState): asserts state is GameStat
 }
 
 export function assertIsConcretePlayer(player: Player): asserts player is Required<Player> {
-    const isConcrete = ![player.lastWord, player.seat].includes(undefined);
+    const isConcrete = ![player.lastWord, player.seat, player.uid].includes(undefined);
     if (!isConcrete) throw new AssertionError({message: "Player is expected to be concrete"});
 }

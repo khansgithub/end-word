@@ -1,6 +1,6 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { createServerConnectionHandler, createServerSocketContext, type ServerSocketContext } from "../shared/socket";
+import { createServerConnectionHandler, createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 
 let activeServerContext: ServerSocketContext | null = null;
