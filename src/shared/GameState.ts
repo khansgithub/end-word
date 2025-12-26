@@ -7,8 +7,8 @@ Notes from gpt:
 
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
-import { assertIsConcretePlayer } from "./guards";
-import type { GameState, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
+import { assertIsConcretePlayer, assertIsRequiredGameState } from "./guards";
+import type { GameState, GameStateFrozen, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -118,6 +118,7 @@ function addPlayer(
         thisPlayer = newPlayer;
     }
 
+    // console.log("returning dispatch:addPlayer")
     return {
         ...nextState,
         thisPlayer: thisPlayer
@@ -205,9 +206,14 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
     return f(...params) as ClientOrServerReturn<T>;
 }
 
-export function isRequiredGameState(state: GameState): state is Required<typeof state>{
-    console.warn("Need to implment isRequiredGameState")
-    return true;
+export function isRequiredGameState(state: GameState): state is Required<GameStateFrozen>{
+    try {
+        assertIsRequiredGameState(state);
+        return true;
+    } catch (err) {
+        console.warn("isRequiredGameState guard failed", err);
+        return false;
+    }
 }
 
 export { GameState };

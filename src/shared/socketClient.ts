@@ -48,6 +48,7 @@ export function registerClientSocketHandlers(
     });
 
     socket.on(socketEvents.playerRegistered, (serverState) => {
+        console.log("playerRegistered: dispatch");
         const player = serverState.thisPlayer;
         dispatch({
             type: "addPlayer",

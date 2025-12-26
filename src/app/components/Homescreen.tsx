@@ -6,7 +6,7 @@ import { getSocketManager } from './socket';
 import { ClientPlayerSocket, Player, ServerToClientEvents } from '../../shared/types';
 
 export function Homescreen() {
-    const [count, setCount] = useState(0);
+    const [playerCount, setPlayerCount] = useState(0);
     const [retryCount, setRetryCount] = useState(0);
     const [returningPlayer, setReturningPlayer] = useState<Player | null>(null);
     const { clientId, setName } = useUserStore.getState();
@@ -17,11 +17,15 @@ export function Homescreen() {
     let { socket } = useSocketStore.getState();
 
     // --- handlers -------------------------------------------------------
-    const playerCountHandler = (count: number) => setCount(count);
+    const playerCountHandler = (count: number) => setPlayerCount(count);
     const returningPlayerHandler = (player: Player) => setReturningPlayer(player);
+    const playerJoinNotificationHandler = () => setPlayerCount(c => c + 1);
+    const playerLeaveNotificationHandler = () => setPlayerCount(c => c - 1);
     const handlers = {
         playerCount: playerCountHandler,
-        returningPlayer: returningPlayerHandler
+        returningPlayer: returningPlayerHandler,
+        playerJoinNotification: playerJoinNotificationHandler,
+        playerLeaveNotification: playerLeaveNotificationHandler,
     } satisfies Partial<ServerToClientEvents>;
 
     function socketHandlers(socket: ClientPlayerSocket, apply = true) {
@@ -103,7 +107,7 @@ export function Homescreen() {
 
     return (
         <div className="flex flex-col w-full h-full min-h-fit justify-center items-center">
-            <h1>Room: {count}/{MAX_PLAYERS}</h1>
+            <h1>Room: {playerCount}/{MAX_PLAYERS}</h1>
             <div className="flex flex-row w-fit h-fit p-3 m-2 justify-center items-center gap-3 border-2 border-white">
                 <label htmlFor="name">Name:</label>
                 <input ref={inputRef} name="name" type="text" placeholder="Enter name" required={true} onKeyDown={onKeyDown} className="bg-gray-700 rounded-md p-2" />
