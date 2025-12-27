@@ -1,7 +1,9 @@
+
 import { buildInitialGameState, gameStateReducer } from "./GameState";
-import { assertIsConcretePlayer } from "./guards";
+import { assertIsConcretePlayer, isRequiredGameState } from "./guards";
 import { socketEvents } from "./socket";
-import type { GameState, Player, ServerPlayerSocket } from "./types";
+import type { GameState, Player, ServerPlayerSocket, ServerToClientEvents } from "./types";
+import { createSocketMutex, pp } from "./utils";
 
 type RunExclusive = (fn: () => Promise<void>) => Promise<void>;
 
@@ -19,17 +21,6 @@ export type ServerSocketContext = {
     };
     logs: Array<{ ts: number; msg: string }>;
 };
-
-// Promise-based mutex to serialize state mutations across concurrent socket events.
-export function createSocketMutex(): RunExclusive {
-    let last: Promise<void> = Promise.resolve();
-
-    return <T>(fn: () => Promise<T> | T): Promise<T> => {
-        const run = last.then(fn);
-        last = run.then(() => undefined, () => undefined);
-        return run;
-    };
-}
 
 export function createServerSocketContext(
     initialState?: GameState,
@@ -84,16 +75,29 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             context.state = nextState;
         };
 
+        type Emit = <E extends keyof ServerToClientEvents>(
+            event: E,
+            ...args: Parameters<ServerToClientEvents[E]>
+        ) => void;
+
+        const emit: Emit = (event, ...args) => {
+            logWithContext("emitting: " + event);
+            logWithContext("emitting payload: " + pp(args));
+            socket.emit(event, ...args);
+        };
+
+        const broadcast: Emit = (event, ...args) => {
+            socket.broadcast.emit(event, ...args);
+        };
+
         const emitExistingRegistration = (auth: string, player: Player) => {
             logWithContext(`Skipping player because already registered clientId=${auth} socketId=${socket.id}`);
             assertIsConcretePlayer(player);
             const nextState: GameState = { ...state, thisPlayer: player };
-            socket.emit(socketEvents.playerRegistered, nextState as Required<GameState>);
-        };
-
-        const findAvailableSeat = () => {
-            const seat = state.players.findIndex((v) => v === null);
-            return seat === -1 ? null : seat;
+            if (!isRequiredGameState(nextState)) {
+                throw new Error("Expected thisPlayer to be set before emitting playerRegistered");
+            }
+            emit(socketEvents.playerRegistered, nextState);
         };
 
         const addPlayerToState = (playerProfile: Player, seat: number) => {
@@ -122,9 +126,11 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
                 return;
             }
 
-            const availableSeat = findAvailableSeat();
+            const seat = state.players.findIndex((v) => v === null);
+            const availableSeat = seat === -1 ? null : seat;
+            
             if (availableSeat === null) {
-                socket.emit(socketEvents.playerNotRegistered, "room is full");
+                emit(socketEvents.playerNotRegistered, "room is full");
                 return;
             }
 
@@ -135,8 +141,11 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
 
             logWithContext(`assigning seat to ${auth} ${JSON.stringify(newPlayer)} seat=${availableSeat}`);
 
-            socket.emit(socketEvents.playerRegistered, nextState as Required<GameState>);
-            socket.broadcast.emit(socketEvents.playerJoinNotification, playerProfile);
+            if (!isRequiredGameState(nextState)) {
+                throw new Error("Expected thisPlayer to be set before emitting playerRegistered");
+            }
+            emit(socketEvents.playerRegistered, nextState);
+            broadcast(socketEvents.playerJoinNotification, playerProfile);
 
             logWithContext(JSON.stringify(registeredSockets.entries().toArray()));
 
@@ -161,7 +170,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             setState(nextState);
             registeredSockets.delete(auth);
             metrics.setRegisteredClients(registeredSockets.size);
-            socket.broadcast.emit(socketEvents.playerLeaveNotification, player);
+            broadcast(socketEvents.playerLeaveNotification, player);
 
         };
 
@@ -181,7 +190,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             runExclusive(async () => {
                 metrics.recordGetPlayerCountRequest();
                 logWithContext(`getPlayerCount -> ${state.connectedPlayers}`);
-                socket.emit(socketEvents.playerCount, state.connectedPlayers);
+                emit(socketEvents.playerCount, state.connectedPlayers);
             });
         });
 
@@ -202,7 +211,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
                 logWithContext("player: " + JSON.stringify(player));
                 logWithContext("registeredSockets keys" + registeredSockets.keys().toArray())
                 if (player === undefined) return
-                socket.emit("returningPlayer", player);
+                emit(socketEvents.returningPlayer, player);
             });
         });
 
@@ -213,7 +222,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         });
 
         socket.onAny((eventName) => {
-            console.log(`event -> ${eventName}`);
+            logWithContext(`got event -> ${eventName}`);
         });
 
 

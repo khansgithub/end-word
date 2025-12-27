@@ -1,21 +1,25 @@
 'use client';
 
-import { ActionDispatch, useEffect, useRef } from "react";
-import { GameStateActionsType } from "../../shared/GameState";
-import { GameStateFrozen } from "../../shared/types";
+import { useEffect, useReducer, useRef } from "react";
+import { gameStateReducer } from "../../shared/GameState";
+import { GameState, GameStateFrozen } from "../../shared/types";
+import { pp } from "../../shared/utils";
 import InputBox from "./InputBox";
 import { buildInputHandlers } from "./InputFieldUtil";
 import Player from "./Player";
-import { getSocketManager } from "./socket";
+import { getSocketManager, handleSocket } from "./socket";
 import { submitButton } from "./util";
-import { unloadPage } from "./GameContainer";
 
 interface props {
     gameState: Required<GameStateFrozen>,
-    dispatch: ActionDispatch<[action: GameStateActionsType]>,
+    // dispatch: ActionDispatch<[action: GameStateActionsType]>,
 }
 
-export default function Game({ gameState, dispatch }: props) {
+export default function Game(props: props) {
+    const [gameState, dispatch] = useReducer(
+        gameStateReducer<GameState>,
+        props.gameState
+    );
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
     const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
@@ -41,18 +45,21 @@ export default function Game({ gameState, dispatch }: props) {
         }, gameState, dispatch);
     }
 
+    handleSocket(socket.current, gameState, dispatch);
+    console.log(`
+            Game Component
+            gameState: ${pp(gameState)}
+            clientId: ${pp(socket.current.auth)}
+        `);
+
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
-        console.log("Game - useEffect", socket.current.auth);
-
-        return ( () => {
-            // unloadPage(socket.current);
-        })
     }, []);
 
 
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
+            <p>{gameState.status}</p>
             {gameState.status == 'waiting'
                 ?
                 <div className="flex w-full h-full justify-center absolute items-center bg-black opacity-80">

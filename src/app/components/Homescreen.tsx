@@ -37,7 +37,7 @@ export function Homescreen() {
         });
     }
     // --------------------------------------------------------------------
-    
+
     function onClick(event: React.MouseEvent) {
         if (!inputRef.current) return blockEvent(event);
 
@@ -99,8 +99,8 @@ export function Homescreen() {
     }, [returningPlayer]);
 
 
-    function foo(){
-        if(!socket) return;
+    function foo() {
+        if (!socket) return;
         const text = document.querySelector(".foo")?.value || "cat";
         socket.emit("foo", text);
     }
@@ -108,11 +108,16 @@ export function Homescreen() {
     return (
         <div className="flex flex-col w-full h-full min-h-fit justify-center items-center">
             <h1>Room: {playerCount}/{MAX_PLAYERS}</h1>
-            <div className="flex flex-row w-fit h-fit p-3 m-2 justify-center items-center gap-3 border-2 border-white">
+
+            <div className="flex flex-row w-fit h-fit p-3 m-2 justify-center items-center gap-3 " /* border-2 border-white */>
                 <label htmlFor="name">Name:</label>
                 <input ref={inputRef} name="name" type="text" placeholder="Enter name" required={true} onKeyDown={onKeyDown} className="bg-gray-700 rounded-md p-2" />
+                {/* <label className="input">
+                    <span className="label p-3">Name:</span>
+                    <input ref={inputRef} name="name" type="text" placeholder="Bob" required={true} onKeyDown={onKeyDown} className="input-md" />
+                </label> */}
             </div>
-            <button className="border-2 border-amber-300 p-3 m-5" onClick={onClick}> Join </button>
+            <button className="btn btn-wide btn-lg border border-amber-300 p-3 m-5" onClick={onClick}> Join </button>
 
             <button className="btn btn-wide" onClick={foo}>F O O</button>
             <input className='input foo' placeholder='asd'></input>

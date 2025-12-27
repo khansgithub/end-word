@@ -8,7 +8,8 @@ Notes from gpt:
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsConcretePlayer, assertIsRequiredGameState } from "./guards";
-import type { GameState, GameStateFrozen, GameStatus, MatchLetter, Player, PlayersArray } from "./types";
+import type { GameState, GameStateFrozen, GameStatus, Player, PlayersArray } from "./types";
+import { pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -107,7 +108,8 @@ function addPlayer(
 
     const updatedPlayers = [...state.players] as PlayersArray;
     updatedPlayers[availableI] = newPlayer;
-
+    
+    console.debug("-----------------------------", pp(updatedPlayers))
     const nextState = _postPlayerCountUpdateState({...state, players: updatedPlayers});
 
     let thisPlayer: Required<Player> | undefined = undefined;
@@ -195,7 +197,7 @@ export function gameStateReducer<T extends GameState>(state: T, action: GameStat
         throw new Error(`couldn't find ${action.type} in GameStateActions`);
     }
 
-    // console.log("in reducer: action > ", action.type);
+    console.log("in reducer: action > ", action.type);
     // console.log("in reducer: payload > ", action.payload);
     // throw new Error("");
     
@@ -217,3 +219,4 @@ export function isRequiredGameState(state: GameState): state is Required<GameSta
 }
 
 export { GameState };
+

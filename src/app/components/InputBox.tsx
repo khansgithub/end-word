@@ -85,10 +85,10 @@ function InputBox({
     )
 }
 
-export default memo(InputBox, (prevProps: props, nextProps: props): boolean => {
-    console.log("prev", prevProps.inputDomHighlight.current?.value);
-    console.log("next", nextProps.inputDomHighlight.current?.value);
-    return false;
-});
+// export default memo(InputBox, (prevProps: props, nextProps: props): boolean => {
+//     console.log("prev", prevProps.inputDomHighlight.current?.value);
+//     console.log("next", nextProps.inputDomHighlight.current?.value);
+//     return false;
+// });
 
-// export default memo(InputBox);
+export default memo(InputBox);

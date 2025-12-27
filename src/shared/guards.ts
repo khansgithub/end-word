@@ -25,3 +25,6 @@ export function assertIsRequiredGameState(state: GameState): asserts state is Re
     assertIsConcretePlayer(thisPlayer!);
 }
 
+export function isRequiredGameState(state: GameState): state is Required<GameState> {
+    return state.thisPlayer !== undefined;
+}

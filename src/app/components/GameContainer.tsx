@@ -1,11 +1,16 @@
 'use client';
 
 import { redirect } from 'next/navigation';
-import { memo, useEffect, useReducer, useState } from "react";
-import { buildInitialGameState, gameStateReducer } from '../../shared/GameState';
+import { useEffect, useRef, useState } from "react";
+import { buildInitialGameState } from '../../shared/GameState';
+import { assertIsRequiredGameState } from '../../shared/guards';
 import { ClientPlayerSocket, GameState, Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
-import { handleSocket } from './socket';
+import Game from './Game';
+
+const L = "Game Container: "
+const log = console.log;
+
 
 export function unloadPage(socket: ClientPlayerSocket | null, cb?: ((...args: any[]) => void)) {
     if (socket && socket.connected) {
@@ -15,23 +20,33 @@ export function unloadPage(socket: ClientPlayerSocket | null, cb?: ((...args: an
 }
 
 function GameContainer() {
-    type connectionState = [typeof CONNECTED, typeof CONNECTING, typeof FAILED, null][number];
-    const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2];
-    const { socket } = useSocketStore.getState();
+    // connection constants and type
+    const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2] as const;
+    type ConnectionState = typeof CONNECTED | typeof CONNECTING | typeof FAILED | null;
+
+    // external state from stores
     const { playerName, clientId: playerId } = useUserStore.getState();
-    if (playerName.length < 1) redirect("/");
-    const [userIsConnected, setUserIsConnected] = useState<connectionState>(null);
-    const playerRegisterHandler = () => {
-        console.log("playerRegistered: GameContainer");
+    if (!playerName) redirect("/");
+    const { socket } = useSocketStore.getState();
+
+    // React state
+    const [userIsConnected, setUserIsConnected] = useState<ConnectionState>(null);
+    const state = useRef(buildInitialGameState());
+    // const [state, dispatch] = useReducer(
+    //     gameStateReducer<GameState>,
+    //     buildInitialGameState()
+    // );
+
+    // derived data
+    const player: Player = { name: playerName, uid: playerId };
+
+    // handlers
+    const playerRegisterHandler = (state_: GameState) => {
+        log(L, "playerRegisteredHandler");
+        state.current = state_;
         setUserIsConnected(CONNECTED);
     };
     const playerRegisterFailHandlers = () => setUserIsConnected(FAILED);
-    const [state, dispatch] = useReducer(
-        gameStateReducer<GameState>,
-        buildInitialGameState()
-    );
-
-    const player: Player = { name: playerName, uid: playerId };
 
     function loadHandlers(socket: ClientPlayerSocket) {
         socket.once("playerRegistered", playerRegisterHandler);
@@ -43,24 +58,28 @@ function GameContainer() {
         socket.off("playerNotRegistered", playerRegisterFailHandlers);
     }
 
-
     if (socket === null || socket.disconnected) {
         unloadPage(socket);
+        console.warn(`Socket is disconnected or has not be created yet: ${socket}`);
         return;
         // redirect("/");
         // throw new Error(`Socket is disconnected or has not be created yet: ${socket}`);
     }
 
-    handleSocket(socket, state, dispatch);
+    // handleSocket(socket, state, dispatch);
 
     useEffect(() => {
         // window.addEventListener('beforeunload', (() => unloadPage(socket)));
         // router.events.on('routeChangeStart', unloadPage);
 
-        console.log("Game container: ", socket.auth);
+        log(L, `useEffect():
+            clientId: ${socket.auth}
+            useIsConencted: ${userIsConnected}
+        `);
 
         if (userIsConnected === null) {
-            console.log('Register player;', player, socket.auth);
+            console.count("EMIT: REGISTER PLAYER");
+            log(L, 'Register player;', player, socket.auth);
             loadHandlers(socket);
             socket.emit("registerPlayer", player);
             setUserIsConnected(CONNECTING);
@@ -71,18 +90,17 @@ function GameContainer() {
         };
 
     }, []);
+    
     console.count("GameContainer");
     switch (userIsConnected ?? CONNECTING) {
         case CONNECTED:
-            // if (!isRequiredGameState(state)) throw new Error("gameState must be Required<> at this point");
-            // const frozenGameState: Required<GameStateFrozen> = { ...state }; //FIXME: this causes the state to lose reactivity 
-            
-            console.log("CONNECTED", CONNECTED);
-            // assertIsRequiredGameState(state);
-            unloadHandlers(socket);
+            log(L, "CONNECTED", CONNECTED);
+            assertIsRequiredGameState(state.current);
+            // unloadHandlers(socket);
+            // log(L, pp(state));
             return (
-                <></>
-                // <Game gameState={state} dispatch={dispatch} ></Game>
+                // <></>
+                <Game gameState={state.current}></Game>
             )
         case CONNECTING:
             return (
@@ -98,4 +116,4 @@ function GameContainer() {
     }
 }
 
-export default memo(GameContainer);
+export default GameContainer;

@@ -2,6 +2,10 @@ import type { ActionDispatch } from "react";
 import { GameStateActionsType } from "./GameState";
 import { socketEvents } from "./socket";
 import type { ClientPlayerSocket, GameState } from "./types";
+import { pp } from "./utils";
+
+const L = "socketClient: "
+const log = console.log;
 
 // Used to ensure we only attach a single handler set per client socket.
 const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
@@ -21,6 +25,10 @@ export function registerClientSocketHandlers(
         return;
     }
     clientSocketsWithHandlers.add(socket);
+
+    socket.onAny(( e => {
+        log(L, "event: ", e);
+    }))
 
     socket.on(socketEvents.connect, () => {
         console.log(`Connected to socket: ${socket.id}, ${socket.auth}`);
@@ -48,7 +56,11 @@ export function registerClientSocketHandlers(
     });
 
     socket.on(socketEvents.playerRegistered, (serverState) => {
-        console.log("playerRegistered: dispatch");
+        log(L, "playerRegistered: dispatch, args:", pp(serverState));
+        if (state.thisPlayer !== undefined){
+            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", pp(state.thisPlayer))
+            return;
+        }
         const player = serverState.thisPlayer;
         dispatch({
             type: "addPlayer",

@@ -8,7 +8,7 @@ export function getSocketManager(clientId?: string): ClientPlayerSocket {
     let socket = useSocketStore.getState().socket;
     if (socket === null) {
         if (clientId === undefined) throw new Error("clientId is needed for initial socket connection")
-        socket = io({
+    socket = io({
             auth: {clientId},
         });
         useSocketStore.getState().setSocket(socket);
