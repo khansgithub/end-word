@@ -19,7 +19,6 @@ export type GameStateActionsType = {
     }
 }[keyof typeof GameStateActions];
 
-type ClientOrServerReturn<T> = T extends Required<GameState> ? T : GameState;
 
 // can't most of these just be one function which is passed "update data"? 
 // okay the keys here should not be the same the socket events, that makes things confusing
@@ -35,6 +34,7 @@ const GameStateActions = {
     registerPlayer,
     addPlayer,
     addAndRegisterPlayer,
+    addPlayerToArray,
     removePlayer,
     progressNextTurn,
     updateConnectedPlayersCount,
@@ -58,7 +58,7 @@ function nextTurn(state: GameState): GameState {
     };
 }
 
-function _postPlayerCountUpdateState(state: GameState): GameState{
+function _postPlayerCountUpdateState(state: GameState): GameState {
     /**
      * This function will update values which depend on the number of players connected to the game.
      */
@@ -85,7 +85,7 @@ function removePlayer(
     const updatedPlayers = clonePlayersArray<typeof state.players>(state.players);
     updatedPlayers[playerId] = null;
 
-    const nextState = _postPlayerCountUpdateState({...state, players: updatedPlayers});
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
 
     return {
         ...nextState,
@@ -97,14 +97,39 @@ function registerPlayer(
     player: PlayerWithId
 ): GameState {
     assertIsRequiredPlayerWithId(player);
-    return {...state, thisPlayer: player}
+    return { ...state, thisPlayer: player }
 }
 
+function addPlayerToArray(
+    state: GameState,
+    player: Player
+): GameState {
+    const updatedPlayers = clonePlayersArray(state.players);
+    if (player.seat === undefined) throw new Error(`Player ${pp(player)} must have a seat`)
+    updatedPlayers[player.seat] = { ...player };
+    if (state.thisPlayer) {
+        const thisPlayer = updatedPlayers[state.thisPlayer.seat] as PlayerWithId;
+        thisPlayer.uid = state.thisPlayer.uid;
+    }
+
+    const nextState = _postPlayerCountUpdateState({
+        ...state,
+        players: updatedPlayers
+    });
+
+    return nextState;
+}
+
+/**
+ * This function takes a player (which has not been assigned a seat) and givs it one.
+ * @param state 
+ * @param player 
+ * @returns 
+ */
 function addPlayer(
     state: GameState,
     player: Player,
 ): GameState {
-
     const availableI = state.players.findIndex((v) => v === null);
 
     if (availableI < 0) {
@@ -119,24 +144,28 @@ function addPlayer(
     }
 
     const updatedPlayers = clonePlayersArray(state.players);
-    
+
     let playerToAdd: Player = {
-            name: player.name,
-            lastWord: "",
-            seat: availableI,
-            uid: undefined,
+        name: player.name,
+        lastWord: "",
+        seat: availableI,
+        uid: undefined,
     };
 
-    if (state.thisPlayer){
-        playerToAdd.uid = state.thisPlayer.uid;
+    // should this be a constraint outside of the function?
+    // whichever function is calling this, it's their responsiability to pass the right kind of "player" object
+    if (state.thisPlayer) {
+        const thisPlayer = updatedPlayers[state.thisPlayer.seat];
+        if (thisPlayer === null) throw new Error(`Player at position ${state.thisPlayer.seat} should not be null`);
+        (thisPlayer as PlayerWithId).uid = state.thisPlayer.uid;
     } else {
         delete playerToAdd.uid;
     }
 
     updatedPlayers[availableI] = playerToAdd;
-    
-    const nextState = _postPlayerCountUpdateState({...state, players: updatedPlayers});
 
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
+    console.log("addPlayer in Reducer: next state is: ", pp(nextState));
     return nextState;
 }
 
@@ -209,7 +238,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
     console.log("in reducer: action > ", action.type);
     // console.log("in reducer: payload > ", action.payload);
     // throw new Error("");
-    
+
     // idk how to fix the typing issue
     // const f = GameStateActions[action.type] as (state: GameState, ...args: any[]) => GameState;
     const f = GameStateActions[action.type] as (state: GameState, ...args: unknown[]) => GameState;
@@ -222,7 +251,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 export function buildInitialGameState(options: { server: true }): GameState<ServerPlayers>;
 export function buildInitialGameState(options?: { server?: false }): GameState<ClientPlayers>;
-export function buildInitialGameState(options: { server?: boolean } = {}): GameState  {
+export function buildInitialGameState(options: { server?: boolean } = {}): GameState {
     const { server = false } = options;
     const players = server ? makePlayersArray<ServerPlayers>() : makePlayersArray<ClientPlayers>();
     const emptyGameState = {} as unknown as GameState;
@@ -239,13 +268,15 @@ export function makePlayersArray<T extends PlayersArray>(): T {
     return Array(MAX_PLAYERS).fill(null) as T;
 }
 
-export function clonePlayersArray<T extends PlayersArray>(cloneFrom: T): T{
+export function clonePlayersArray<T extends PlayersArray>(cloneFrom: T): T {
     const cloneArray = makePlayersArray<T>();
-    cloneFrom.forEach((v, i) => cloneArray[i] = v);
-    return cloneFrom;
+    cloneFrom.forEach((v, i) => {
+        cloneArray[i] = v === null ? null : { ...v };
+    });
+    return cloneArray;
 }
 
-export function isRequiredGameState(state: GameState): state is Required<GameStateFrozen>{
+export function isRequiredGameState(state: GameState): state is Required<GameStateFrozen> {
     try {
         assertIsRequiredGameState(state);
         return true;

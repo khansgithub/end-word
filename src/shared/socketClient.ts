@@ -43,8 +43,9 @@ export function registerClientSocketHandlers(
     });
 
     socket.on(socketEvents.playerJoinNotification, (newPlayer) => {
+        console.log("playerJoinNotification event received");
         dispatch({
-            type: "addPlayer",
+            type: "addPlayerToArray",
             payload: [state, newPlayer],
         });
     });
