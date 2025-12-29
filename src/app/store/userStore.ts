@@ -8,28 +8,25 @@ interface PlayerSession {
     setName: (name: string) => void;
 }
 
-interface Socket{
+interface Socket {
     socket: ClientPlayerSocket | null,
     setSocket: (socket: ClientPlayerSocket) => void;
 }
 
+const _userStore = (set: any) => ({
+    playerName: "",
+    clientId: crypto.randomUUID(),
+    setName: (name: string) => set({ playerName: name }),
+});
+
 export const useUserStore = createStore<PlayerSession>()(
-    persist(
-        (set) => ({
-            playerName: "",
-            clientId: crypto.randomUUID(),
-            setName: (name: string) => set({ playerName: name }),
-        }),
-        
-        {
-            name: "user-storage",
-        }
-    )
+    // persist(_userStore, { name: "user-storage" });
+    _userStore
 );
 
 export const useSocketStore = createStore<Socket>()(
     (set) => ({
         socket: null,
-        setSocket: (socket) => set({socket: socket})
-    }),    
+        setSocket: (socket) => set({ socket: socket })
+    }),
 )

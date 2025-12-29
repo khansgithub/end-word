@@ -99,7 +99,7 @@ export default function Game(props: props) {
                         .map((p, i) => {
                             console.log(`rendering players: ${i}`);
                             if (p === null) return <div key={i}> empty </div>
-                            else <Player key={i} player={p} turn={i == gameState.turn} lastWord={p.lastWord}></Player>
+                            else return <Player key={i} player={p} turn={i == gameState.thisPlayer?.seat} lastWord={p.lastWord}></Player>
                         })
                 }
             </div>

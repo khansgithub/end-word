@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
 import { MAX_PLAYERS } from "./consts";
 import { SocketEventName } from "./socket";
+import { EventsMap } from "socket.io/dist/typed-events";
 
 /* --------------------------------------------------
  * Utility Types
@@ -17,10 +18,21 @@ export type Player = {
     uid?: string;
     seat?: number
     name: string;
-    lastWord?: string;
+    lastWord: string;
 };
 
-export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
+// export type Player = PlayerWithId | PlayerWithoutId;
+
+export type PlayerWithId = Player & Required<Pick<Player, "uid">>;
+export type PlayerWithoutId = Omit<Player, "uid">;
+
+// export type ThisPlayer = PlayerWithId;
+// export type OtherPlayer = PlayerWithoutId;
+
+export type ClientPlayers = FixedLengthArray<PlayerWithId | PlayerWithoutId | null, typeof MAX_PLAYERS>;
+export type ServerPlayers = FixedLengthArray<PlayerWithId | null, typeof MAX_PLAYERS>;
+export type PlayersArray = ClientPlayers | ServerPlayers;
+// export type PlayersArray = FixedLengthArray<Player | null, typeof MAX_PLAYERS>;
 
 /* --------------------------------------------------
  * Socket Event Types
@@ -33,18 +45,19 @@ export type SharedSocketEvents = {
 
 export type ClientToServerEvents = SharedSocketEvents & {
     getPlayerCount: () => void;
-    registerPlayer: (playerProfile: Player) => void;
-    unregisterPlayer: (playerProfile: Player) => void; // maybe this can be just the id?
+    registerPlayer: (playerProfile: PlayerWithId) => void;
+    unregisterPlayer: (playerProfile: PlayerWithId) => void; // maybe this can be just the id?
     isReturningPlayer: (clientId: string) => void;
+    disconnect: (reason: string) => void;
 };
 
 export type ServerToClientEvents = SharedSocketEvents & {
     playerCount: (count: number) => void;
-    playerJoinNotification: (newPlayer: Player) => void;
-    playerLeaveNotification: (player: Player) => void;
-    playerRegistered: (gameState: Required<GameState>) => void;
+    playerJoinNotification: (newPlayer: PlayerWithoutId) => void;
+    playerLeaveNotification: (player: PlayerWithoutId) => void;
+    playerRegistered: (gameState: Required<GameState<ClientPlayers>>) => void;
     playerNotRegistered: (reason: string) => void;
-    returningPlayer: (player: Player) => void;
+    returningPlayer: (player: PlayerWithId) => void;
 };
 
 /**
@@ -77,13 +90,13 @@ export type MatchLetter = {
     next: number
 }
 
-export type GameState = {
-    thisPlayer?: Required<Player>, // optional for the server
+export type GameState<T extends PlayersArray = PlayersArray> = {
+    thisPlayer?: Required<PlayerWithId>, // optional for the server
     matchLetter: MatchLetter,
     status: GameStatus,
-    players: PlayersArray
+    players: T,
     connectedPlayers: number
     turn: number,
 };
 
-export type GameStateFrozen = Readonly<GameState>
+export type GameStateFrozen = Readonly<GameState<PlayersArray>>

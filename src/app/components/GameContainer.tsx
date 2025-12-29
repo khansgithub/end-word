@@ -4,9 +4,10 @@ import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from '../../shared/GameState';
 import { assertIsRequiredGameState } from '../../shared/guards';
-import { ClientPlayerSocket, GameState, Player } from '../../shared/types';
+import { ClientPlayerSocket, GameState, Player, PlayerWithId } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
+import { makeNewPlayer } from '../../shared/utils';
 
 const L = "Game Container: "
 const log = console.log;
@@ -38,7 +39,7 @@ function GameContainer() {
     // );
 
     // derived data
-    const player: Player = { name: playerName, uid: playerId };
+    const player: PlayerWithId = makeNewPlayer(playerName, playerId);
 
     // handlers
     const playerRegisterHandler = (state_: GameState) => {

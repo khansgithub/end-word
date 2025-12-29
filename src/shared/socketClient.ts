@@ -24,6 +24,7 @@ export function registerClientSocketHandlers(
     if (clientSocketsWithHandlers.has(socket)) {
         return;
     }
+    
     clientSocketsWithHandlers.add(socket);
 
     socket.onAny(( e => {
@@ -63,8 +64,8 @@ export function registerClientSocketHandlers(
         }
         const player = serverState.thisPlayer;
         dispatch({
-            type: "addPlayer",
-            payload: [state, player, true],
+            type: "addAndRegisterPlayer",
+            payload: [state, player],
         });
     });
 

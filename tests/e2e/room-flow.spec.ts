@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext } from "@playwright/test";
+import { roomFlowTestNames } from "./test-names";
 
 async function scrapeMetric(request: APIRequestContext, name: string, label?: string) {
     const res = await request.get("/metrics");
@@ -17,7 +18,7 @@ async function scrapeMetric(request: APIRequestContext, name: string, label?: st
 
 type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
 
-test("room flow resets sockets after reload", async ({ page, request }) => {
+test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
     const clientLogs: LogEntry[] = [];
 
     const log = (message: string) => {
@@ -90,6 +91,97 @@ test("room flow resets sockets after reload", async ({ page, request }) => {
     console.log("----- end metrics snapshot -----");
 
     // Collect server logs.
+    const logsRes = await request.get("/__test/server-logs");
+    let serverLogs: LogEntry[] = [];
+    if (logsRes.ok()) {
+        const logs = await logsRes.json();
+        if (Array.isArray(logs.logs)) {
+            serverLogs = logs.logs.map((l: any) => ({
+                ts: typeof l.ts === "number" ? l.ts : Date.now(),
+                msg: typeof l.msg === "string" ? l.msg : JSON.stringify(l),
+                source: "server" as const,
+            }));
+        }
+    }
+
+    const merged = [
+        ...clientLogs.map((l) => ({ ...l, source: l.source ?? "client" as const })),
+        ...serverLogs,
+    ].sort((a, b) => a.ts - b.ts);
+
+    console.log("----- merged logs (chronological) -----");
+    for (const entry of merged) {
+        console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
+    }
+    console.log("----- end merged logs -----");
+});
+
+test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }) => {
+    /**
+     * Regression guard: verify two isolated browsers can both join; then on one page we assert the UI renders all 5 player slots (#players > div count).
+     * Currently observed failure: only fewer than 5 divs render in CI/local, so this test captures and logs that discrepancy.
+     */
+    const clientLogs: LogEntry[] = [];
+    const log = (message: string, source: "client" | "browser" | "server" = "client") => {
+        const ts = Date.now();
+        const entry: LogEntry = { ts, msg: `[${source}] ${message}`, source };
+        clientLogs.push(entry);
+        console.log(new Date(ts).toISOString(), entry.msg);
+    };
+
+    const contextA = await browser.newContext({ baseURL: "http://localhost:4000" });
+    const contextB = await browser.newContext({ baseURL: "http://localhost:4000" });
+
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
+
+    const attachConsole = (pageLabel: string, page: typeof pageA) => {
+        page.on("console", (msg) => {
+            const ts = Date.now();
+            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
+            clientLogs.push({ ts, msg: line, source: "browser" });
+            console.log(new Date(ts).toISOString(), line);
+        });
+    };
+
+    attachConsole("A", pageA);
+    attachConsole("B", pageB);
+
+    log("goto / on both pages");
+    await Promise.all([pageA.goto("/"), pageB.goto("/")]);
+
+    const inputA = pageA.getByRole("textbox", { name: /name/i });
+    const inputB = pageB.getByRole("textbox", { name: /name/i });
+
+    log('fill name "Alice" on A');
+    await inputA.fill("Alice");
+    log('fill name "Bob" on B');
+    await inputB.fill("Bob");
+
+    log("press Enter on both pages to join room");
+    await Promise.all([
+        inputA.press("Enter"),
+        inputB.press("Enter"),
+        pageA.waitForURL("**/room", { timeout: 15_000 }),
+        pageB.waitForURL("**/room", { timeout: 15_000 }),
+    ]);
+
+    log("wait for loading spinners to disappear");
+    const loadingA = pageA.locator("span.loading");
+    const loadingB = pageB.locator("span.loading");
+    await Promise.all([
+        loadingA.first().waitFor({ state: "detached", timeout: 20_000 }),
+        loadingB.first().waitFor({ state: "detached", timeout: 20_000 }),
+    ]);
+
+    const playersA = pageA.locator("#players");
+    log("assert #players visible");
+    await expect(playersA).toBeVisible({ timeout: 10_000 });
+    log("assert #players has 5 children");
+    await expect(playersA.locator("> div")).toHaveCount(5, { timeout: 10_000 });
+
+    await Promise.all([contextA.close(), contextB.close()]);
+
     const logsRes = await request.get("/__test/server-logs");
     let serverLogs: LogEntry[] = [];
     if (logsRes.ok()) {
