@@ -121,14 +121,15 @@ function addPlayerToArray(
 }
 
 /**
- * This function takes a player (which has not been assigned a seat) and givs it one.
+ * This function takes a player (which has not been assigned a seat) and gives it one.
+ * This should only be called by the server.
  * @param state 
  * @param player 
  * @returns 
  */
 function addPlayer(
     state: GameState,
-    player: Player,
+    player: PlayerWithId,
 ): GameState {
     const availableI = state.players.findIndex((v) => v === null);
 
@@ -145,24 +146,12 @@ function addPlayer(
 
     const updatedPlayers = clonePlayersArray(state.players);
 
-    let playerToAdd: Player = {
-        name: player.name,
-        lastWord: "",
+
+    updatedPlayers[availableI] = {
+        ...player,
         seat: availableI,
-        uid: undefined,
+        ...(state.thisPlayer ? { uid: state.thisPlayer.uid } : {}),
     };
-
-    // should this be a constraint outside of the function?
-    // whichever function is calling this, it's their responsiability to pass the right kind of "player" object
-    if (state.thisPlayer) {
-        const thisPlayer = updatedPlayers[state.thisPlayer.seat];
-        if (thisPlayer === null) throw new Error(`Player at position ${state.thisPlayer.seat} should not be null`);
-        (thisPlayer as PlayerWithId).uid = state.thisPlayer.uid;
-    } else {
-        delete playerToAdd.uid;
-    }
-
-    updatedPlayers[availableI] = playerToAdd;
 
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
     console.log("addPlayer in Reducer: next state is: ", pp(nextState));
