@@ -2,7 +2,7 @@ import { RefObject } from "react";
 import { MatchLetter } from "../../shared/types";
 import { decomposeSyllable } from "../hangul-decomposer";
 
-export type inputHandlerRefs = {
+export type inputHandlerProps = {
     matchLetter: MatchLetter;
 
     inputDom: RefObject<HTMLInputElement> | RefObject<null>;
@@ -19,7 +19,7 @@ export function buildInputHandlers({
     inputDomText,
     inputKeyDisplay,
     buttonDom
-}: inputHandlerRefs): {
+}: inputHandlerProps): {
     onChange: (e: React.ChangeEvent<Element>) => string | void;
     onCompositionStart: () => void;
     onCompositionUpdate: (e: React.CompositionEvent) => void;
@@ -119,11 +119,6 @@ export function buildInputHandlers({
         // console.log("before input: ", e.data);
     }
 
-    // setup - instead of useEffect
-    if (inputDomHighlight.current && inputDomHighlight.current.value.length < 1) {
-        inputDomHighlight.current.value = matchLetter.steps[0];
-    }
-
     return {
         onChange,
         onCompositionStart,
@@ -132,6 +127,12 @@ export function buildInputHandlers({
         onBeforeInput,
         onKeyDown,
     }
-
-
+}
+export function initHighlightText(
+    inputDomHighlightRef:inputHandlerProps["inputDomHighlight"],
+    matchLetterRef:inputHandlerProps["matchLetter"],
+) {
+    if (inputDomHighlightRef.current && inputDomHighlightRef.current.value.length < 1) {
+        inputDomHighlightRef.current.value = matchLetterRef.steps[0];
+    }
 }

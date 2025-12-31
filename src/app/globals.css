@@ -1,31 +1,43 @@
 @import "tailwindcss";
 @plugin "daisyui";
-
+@tailwind utilities;
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --background: #ffffff;
+    --foreground: #171717;
 }
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
 }
-
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    :root {
+        --background: #0a0a0a;
+        --foreground: #ededed;
+    }
 }
-
 @utility all-unset {
-  all: unset;
+    all: unset;
+}
+@layer utilities {
+  @keyframes glow-filter {
+    0%,100% {
+      filter: drop-shadow(0 0 4px rgba(59,130,246,.4));
+    }
+    50% {
+      filter: drop-shadow(0 0 14px rgba(59,130,246,.9));
+    }
+  }
+
+
+	.animate-glow-filter {
+		animation: glow-filter 2.5s ease-in-out infinite;
+	}
 }
 
 body {
-  /* background: var(--background);
-  color: var(--foreground); */
-  font-family: Arial, Helvetica, sans-serif;
+    /* background: var(--background);
+	color: var(--foreground); */
+    font-family: Arial, Helvetica, sans-serif;
 }

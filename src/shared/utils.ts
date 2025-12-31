@@ -26,7 +26,7 @@ export function makeNewPlayer(name: string, uid?: string): PlayerWithoutId | Pla
 }
 
 
-export function serverPlayersToClientPlayers(players: ServerPlayers): ClientPlayers {
+export function cloneServerPlayersToClientPlayers(players: ServerPlayers): ClientPlayers {
     const mapped = players.map((player) => {
         if (player == null) return null;
         const { uid: _uid, ...rest } = player;

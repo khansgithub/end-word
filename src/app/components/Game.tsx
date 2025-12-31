@@ -5,7 +5,7 @@ import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
 import { pp } from "../../shared/utils";
 import InputBox from "./InputBox";
-import { buildInputHandlers } from "./InputFieldUtil";
+import { buildInputHandlers, initHighlightText } from "./InputFieldFunctions";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
 import { submitButton } from "./util";
@@ -56,13 +56,16 @@ export default function Game(props: props) {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
     }, []);
 
+    useEffect(() => {
+        if (gameState.status !== "waiting") initHighlightText(inputHighlightDom, gameState.matchLetter);
+    }, [gameState.status]);
 
     return (
         <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
             <p>{gameState.status}</p>
             {gameState.status == 'waiting'
                 ?
-                <div className="flex w-full h-full justify-center absolute items-center bg-black opacity-80">
+                <div className="flex w-dvw h-dvh justify-center absolute items-center bg-black opacity-80 z-100">
                     <span className="loading loading-spinner loading-xl"></span>
                 </div>
                 : <></>

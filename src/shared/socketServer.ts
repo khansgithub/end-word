@@ -3,7 +3,7 @@ import { buildInitialGameState, gameStateReducer, makePlayersArray } from "./Gam
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
 import { socketEvents } from "./socket";
 import { ClientPlayers, ClientToServerEvents, PlayersArray, PlayerWithoutId, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
-import { createSocketMutex, pp, RunExclusive, serverPlayersToClientPlayers } from "./utils";
+import { createSocketMutex, pp, RunExclusive, cloneServerPlayersToClientPlayers } from "./utils";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
@@ -155,7 +155,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             throw new Error("Expected thisPlayer to be set before emitting playerRegistered");
         }
 
-        const clientPlayers = serverPlayersToClientPlayers(nextState.players);
+        const clientPlayers = cloneServerPlayersToClientPlayers(nextState.players);
         clientPlayers[nextState.thisPlayer.seat] = nextState.thisPlayer;
 
         const clientState: GameState<ClientPlayers> = {
@@ -180,7 +180,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         //     }
         // })
         // // ---------------------------------------------------------------------
-        const playerWithNoId: Player = {...player};
+        const playerWithNoId: Player = {...nextState.thisPlayer};
         delete playerWithNoId.uid;
         
         emitWithLogging(logWithContext, socket, socketEvents.playerRegistered, clientState);
@@ -190,7 +190,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
     function _returnExistingPlayer(socket: ServerPlayerSocket, existingPlayer: PlayerWithId) {
         assertIsRequiredPlayerWithId(existingPlayer);
 
-        const clientPlayers = serverPlayersToClientPlayers(state.players);
+        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
         clientPlayers[existingPlayer.seat] = existingPlayer;
 
         const clientState: GameState<ClientPlayers> = {
