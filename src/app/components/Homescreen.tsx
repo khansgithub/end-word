@@ -99,28 +99,95 @@ export function Homescreen() {
     }, [returningPlayer]);
 
 
-    function foo() {
-        if (!socket) return;
-        const text = document.querySelector(".foo")?.value || "cat";
-        socket.emit("foo", text);
-    }
+    // function foo() {
+    //     if (!socket) return;
+    //     const text = document.querySelector(".foo")?.value || "cat";
+    //     socket.emit("foo", text);
+    // }
 
     return (
-        <div className="flex flex-col w-full h-full min-h-fit justify-center items-center">
-            <h1>Room: {playerCount}/{MAX_PLAYERS}</h1>
+        <div className="flex flex-col w-full h-full min-h-screen justify-center items-center p-3" style={{ 
+            background: 'var(--bg-primary)',
+        }}>
+            {/* Header */}
+            <header className="w-full max-w-md mb-4" style={{
+                padding: '0.75rem 1.25rem',
+                background: 'var(--gradient-header)',
+                borderBottom: '1px solid #1f2937',
+                borderRadius: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+            }}>
+                <div>
+                    <h1 style={{
+                        margin: 0,
+                        fontSize: '1.1rem',
+                        letterSpacing: '0.03em',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: 'var(--text-primary)',
+                    }}>
+                        <span style={{
+                            width: '0.9rem',
+                            height: '0.9rem',
+                            borderRadius: '999px',
+                            background: 'conic-gradient(from 180deg, #38bdf8, #a855f7, #22c55e, #38bdf8)',
+                            boxShadow: '0 0 14px rgba(56, 189, 248, 0.9)',
+                        }}></span>
+                        End Word
+                    </h1>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Join a game room
+                    </div>
+                </div>
+            </header>
 
-            <div className="flex flex-row w-fit h-fit p-3 m-2 justify-center items-center gap-3 " /* border-2 border-white */>
-                <label htmlFor="name">Name:</label>
-                <input ref={inputRef} name="name" type="text" placeholder="Enter name" required={true} onKeyDown={onKeyDown} className="bg-gray-700 rounded-md p-2" />
-                {/* <label className="input">
-                    <span className="label p-3">Name:</span>
-                    <input ref={inputRef} name="name" type="text" placeholder="Bob" required={true} onKeyDown={onKeyDown} className="input-md" />
-                </label> */}
+            <div className="panel w-full max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                <div className="flex flex-col items-center text-center p-6">
+                    <div className="stats stats-horizontal mb-4 w-full" style={{ 
+                        background: 'var(--gradient-chip)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '0.55rem',
+                    }}>
+                        <div className="stat place-items-center py-2">
+                            <div className="stat-title text-xs" style={{ color: 'var(--text-secondary)' }}>Players</div>
+                            <div className="stat-value text-2xl" style={{ color: 'var(--text-primary)' }}>
+                                {playerCount}/{MAX_PLAYERS}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="form-control w-full mb-4">
+                        <label className="label" htmlFor="name">
+                            <span className="label-text text-base" style={{ color: 'var(--text-primary)' }}>Your Name</span>
+                        </label>
+                        <input 
+                            ref={inputRef} 
+                            id="name"
+                            name="name" 
+                            type="text" 
+                            placeholder="Enter your name" 
+                            required={true} 
+                            onKeyDown={onKeyDown} 
+                            className="input-fsm w-full text-base py-3" 
+                            style={{ 
+                                background: 'var(--input-bg-solid)',
+                            }}
+                        />
+                    </div>
+                    
+                    <button 
+                        className="btn-fsm px-6 py-3 text-base" 
+                        onClick={onClick}
+                    > 
+                        <span>▶</span>
+                        Join Game
+                    </button>
+                </div>
             </div>
-            <button className="btn btn-wide btn-lg border border-amber-300 p-3 m-5" onClick={onClick}> Join </button>
-
-            <button className="btn btn-wide" onClick={foo}>F O O</button>
-            <input className='input foo' placeholder='asd'></input>
         </div>
     )
 }

@@ -10,6 +10,12 @@ import { EventsMap } from "socket.io/dist/typed-events";
 
 export type FixedLengthArray<T, L extends number> = T[] & { length: L };
 
+/**
+ * Function type for running exclusive async operations.
+ * Used to serialize state mutations across concurrent socket events.
+ */
+export type RunExclusive = (fn: () => Promise<void>) => Promise<void>;
+
 /* --------------------------------------------------
  * Player Types
  * -------------------------------------------------- */
@@ -39,7 +45,6 @@ export type PlayersArray = ClientPlayers | ServerPlayers;
  * -------------------------------------------------- */
 
 export type SharedSocketEvents = {
-    // gameUpdate: (update: Partial<GameState>) => void;
     text: (text: string) => void;
 };
 
@@ -48,6 +53,8 @@ export type ClientToServerEvents = SharedSocketEvents & {
     registerPlayer: (playerProfile: PlayerWithId) => void;
     unregisterPlayer: (playerProfile: PlayerWithId) => void; // maybe this can be just the id?
     isReturningPlayer: (clientId: string) => void;
+    submitWord: (word: string) => void;
+    requestFullState: () => void;
     disconnect: (reason: string) => void;
 };
 
@@ -58,6 +65,8 @@ export type ServerToClientEvents = SharedSocketEvents & {
     playerRegistered: (gameState: Required<GameState<ClientPlayers>>) => void;
     playerNotRegistered: (reason: string) => void;
     returningPlayer: (player: PlayerWithId) => void;
+    gameStateUpdate: (gameState: Required<GameState<ClientPlayers>>) => void;
+    fullStateSync: (gameState: Required<GameState<ClientPlayers>>) => void;
 };
 
 /**

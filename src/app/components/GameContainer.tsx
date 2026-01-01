@@ -105,12 +105,35 @@ function GameContainer() {
             )
         case CONNECTING:
             return (
-                <div className="flex w-full h-full justify-center items-center">
-                    <span className="loading loading-spinner loading-xl"></span>
+                <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                    <div className="panel max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                        <div className="flex flex-col items-center p-6">
+                            <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Connecting to game...</p>
+                        </div>
+                    </div>
                 </div>
             )
         case FAILED:
-            return (<> failed to connect / register </>)
+            return (
+                <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
+                    <div className="panel max-w-md" style={{ 
+                        backgroundColor: 'var(--bg-secondary-solid)',
+                        borderColor: 'rgba(248, 113, 113, 0.45)',
+                    }}>
+                        <div className="flex flex-col items-start p-6 gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full" style={{ 
+                                    background: '#f97373',
+                                    boxShadow: '0 0 8px rgba(248, 113, 113, 0.9)',
+                                }}></div>
+                                <h3 className="font-semibold text-lg" style={{ color: '#fecaca' }}>Connection Failed</h3>
+                            </div>
+                            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Failed to connect or register. Please try again.</div>
+                        </div>
+                    </div>
+                </div>
+            )
         default:
             console.error(`unexpted error: ${userIsConnected}`);
             throw new Error(`unexpted error: ${userIsConnected}`);

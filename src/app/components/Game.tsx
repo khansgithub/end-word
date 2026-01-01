@@ -42,7 +42,7 @@ export default function Game(props: props) {
         await submitButton({
             inputDom: inputDom,
             inputDomText: inputDomText
-        }, gameState, dispatch);
+        }, socket.current);
     }
 
     handleSocket(socket.current, gameState, dispatch);
@@ -61,50 +61,126 @@ export default function Game(props: props) {
     }, [gameState.status]);
 
     return (
-        <div className="flex justify-center items-center flex-col w-full min-h-fit gap-2">
-            <p>{gameState.status}</p>
-            {gameState.status == 'waiting'
-                ?
-                <div className="flex w-dvw h-dvh justify-center absolute items-center bg-black opacity-80 z-100">
-                    <span className="loading loading-spinner loading-xl"></span>
+        <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            {/* Waiting Overlay */}
+            {gameState.status === 'waiting' && (
+                <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+                    <div className="panel" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                        <div className="flex flex-col items-center p-6">
+                            <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Waiting for game to start...</p>
+                        </div>
+                    </div>
                 </div>
-                : <></>
-            }
-            <div className="text-5xl">Match: <span className="text-red-500">{gameState.matchLetter.block}</span></div>
-            {/* <Foo onChange={barfoo}></Foo> */}
-            {/* <InputBox></InputBox> */}
+            )}
 
-            <div className="flex flex-row w-full justify-center items-center">
-                <div ref={inputKeyDisplayDom} className="w-15 m-2 -ml-15 flex justify-center place-items-center aspect-square text-4xl overflow-hidden border-2 border-white"> </div>
-                <InputBox
-                    inputDomHighlight={inputHighlightDom}
-                    inputDom={inputDom}
-                    onChange={inputHandelers.onChange}
-                    onCompositionStart={() => { }}
-                    onCompositionUpdate={inputHandelers.onCompositionUpdate}
-                    onCompositionEnd={inputHandelers.onCompositionEnd}
-                    onBeforeInput={inputHandelers.onBeforeInput}
-                    onKeyDown={inputHandelers.onKeyDown}
-                    disabled={false}//{!userIsConnected}
-                />
+            {/* Game Status Badge */}
+            <div className="chip px-6 py-2" style={{ 
+                borderColor: gameState.status === 'playing' ? 'rgba(34, 197, 94, 0.45)' : 'var(--border-accent)',
+                color: gameState.status === 'playing' ? '#d1fae5' : 'var(--text-secondary)',
+            }}>
+                {gameState.status === 'playing' && <span className="chip-dot"></span>}
+                {gameState.status?.toUpperCase() || 'WAITING'}
             </div>
 
-            <button
-                ref={buttonDom}
-                onClick={buttonOnSubmit}
-                // disabled={!userIsConnected}
-                className="p-3 mt-6 text-2xl border-2 border-amber-200 bg-gray-600"> Enter </button>
-            <div className="h-10"></div>
-            <div className="flex flex-row gap-2 justify-center items-center" id="players">
-                {
-                    gameState.players
-                        // .filter(p => p !== null)
-                        .map((p, i) => {
-                            console.log(`rendering players: ${i}`);
-                            if (p === null) return <div key={i}> empty </div>
-                            else return <Player key={i} player={p} turn={i == gameState.thisPlayer?.seat} lastWord={p.lastWord}></Player>
-                        })
-                }
+            {/* Match Letter Display */}
+            <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                <div className="flex flex-col items-center p-6">
+                    <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Match Letter</h2>
+                    <div className="text-8xl font-bold mb-4" style={{ 
+                        color: 'var(--match-letter-color)',
+                        textShadow: '0 0 20px rgba(56, 189, 248, 0.5)',
+                    }}>
+                        {gameState.matchLetter.block}
+                    </div>
+                </div>
+            </div>
+
+            {/* Input Section */}
+            <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                <div className="flex flex-col items-center p-4">
+                    <div className="flex flex-row w-full justify-center items-center gap-4">
+                        <div 
+                            ref={inputKeyDisplayDom} 
+                            className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold" 
+                            style={{ 
+                                borderColor: 'var(--border-default)',
+                                background: 'var(--gradient-input)',
+                                color: 'var(--text-primary)',
+                            }}
+                        />
+                        <div className="flex-1">
+                            <InputBox
+                                inputDomHighlight={inputHighlightDom}
+                                inputDom={inputDom}
+                                onChange={inputHandelers.onChange}
+                                onCompositionStart={() => { }}
+                                onCompositionUpdate={inputHandelers.onCompositionUpdate}
+                                onCompositionEnd={inputHandelers.onCompositionEnd}
+                                onBeforeInput={inputHandelers.onBeforeInput}
+                                onKeyDown={inputHandelers.onKeyDown}
+                                disabled={gameState.turn !== gameState.thisPlayer?.seat}
+                            />
+                        </div>
+                    </div>
+                    
+                    <button
+                        ref={buttonDom}
+                        onClick={buttonOnSubmit}
+                        disabled={gameState.turn !== gameState.thisPlayer?.seat}
+                        className="btn-fsm mt-4 px-6 py-3 text-base"
+                        style={{ 
+                            opacity: gameState.turn === gameState.thisPlayer?.seat ? 1 : 0.5,
+                        }}
+                    > 
+                        <span>▶</span>
+                        Submit Word
+                    </button>
+                </div>
+            </div>
+
+            {/* Players Section */}
+            <div className="panel w-full max-w-4xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+                <div className="p-4">
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Players</h3>
+                    <div className="flex flex-row flex-wrap gap-4 justify-center items-start" id="players">
+                        {
+                            gameState.players.map((p, i) => {
+                                if (p === null) {
+                                    return (
+                                        <div 
+                                            key={i} 
+                                            className="panel w-32 opacity-50" 
+                                            style={{ backgroundColor: 'var(--bg-secondary-solid)' }}
+                                        >
+                                            <div className="flex flex-col items-center p-3">
+                                                <div className="avatar placeholder">
+                                                    <div className="flex flex-col justify-center items-center rounded-full w-16 h-16" style={{ 
+                                                        background: 'var(--gradient-avatar-empty)',
+                                                        border: '1px solid var(--border-default)',
+                                                    }}>
+                                                        <span className="text-2xl" style={{ color: 'var(--text-secondary)' }}>?</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Empty</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                const isCurrentPlayer = gameState.thisPlayer?.seat === i;
+                                return (
+                                    <Player 
+                                        key={i} 
+                                        player={p} 
+                                        turn={gameState.turn === i} 
+                                        lastWord={p.lastWord}
+                                        isCurrentPlayer={isCurrentPlayer}
+                                    />
+                                );
+                            })
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     );

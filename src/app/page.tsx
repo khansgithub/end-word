@@ -39,7 +39,7 @@ const Foo = memo(function (props: { state: number}) {
     }, []);
     return (
         // <input className="border-2 border-white" onChange={onChange}/>
-        <div className="border-2 border-green-400 p-4 m-2">
+        <div className="border-2 p-4 m-2" style={{ borderColor: 'var(--border-success)' }}>
             <h4>foo</h4>
             <p>times rendered: {count.current}</p>
             <input name="foo"></input>

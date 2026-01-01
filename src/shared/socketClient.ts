@@ -33,6 +33,10 @@ export function registerClientSocketHandlers(
 
     socket.on(socketEvents.connect, () => {
         console.log(`Connected to socket: ${socket.id}, ${socket.auth}`);
+        // Request full state sync on reconnection to ensure we're in sync
+        if (state.thisPlayer) {
+            socket.emit(socketEvents.requestFullState);
+        }
     });
 
     socket.on(socketEvents.playerCount, (count) => {
@@ -72,6 +76,40 @@ export function registerClientSocketHandlers(
 
     socket.on(socketEvents.playerNotRegistered, (reason) => {
         throw new Error("handle when room is full: " + reason);
+    });
+
+    // Handle game state updates from server (source of truth)
+    socket.on(socketEvents.gameStateUpdate, (serverState) => {
+        log(L, "gameStateUpdate received from server:", pp(serverState));
+        // Replace local state with server state (server is source of truth)
+        if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
+            dispatch({
+                type: "replaceGameState",
+                payload: [state, serverState],
+            });
+        } else {
+            console.warn("gameStateUpdate: thisPlayer mismatch or missing", {
+                server: serverState.thisPlayer,
+                local: state.thisPlayer
+            });
+        }
+    });
+
+    // Handle full state sync (e.g., on reconnection)
+    socket.on(socketEvents.fullStateSync, (serverState) => {
+        log(L, "fullStateSync received from server:", pp(serverState));
+        // Replace entire local state with server state
+        if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
+            dispatch({
+                type: "replaceGameState",
+                payload: [state, serverState],
+            });
+        } else {
+            console.warn("fullStateSync: thisPlayer mismatch or missing", {
+                server: serverState.thisPlayer,
+                local: state.thisPlayer
+            });
+        }
     });
 
     socket.on(socketEvents.text, (text) => {

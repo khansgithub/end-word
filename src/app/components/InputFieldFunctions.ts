@@ -84,29 +84,48 @@ export function buildInputHandlers({
         console.log("--------------");
         console.log("input:", input, "letter:", letter);
         console.log("prev input:", inputDomText.current);
-        console.log("matchLetter:", JSON.stringify(ml));
+        // console.log("matchLetter:", JSON.stringify(ml));
         console.log("--------------");
         inputKeyDisplay.current.textContent = letter.slice(-1);
 
-        if (input.length == 0) return clearInput();
-        if ([...ml.steps, ""].includes(prev)) {
+        const inputIsEmpty = input.length == 0;
+        if (inputIsEmpty) return clearInput();
+
+        const inputIsComposing = ml.steps.includes(prev);
+        const inputIsFirstLetter = prev == "";
+        if (inputIsComposing || inputIsFirstLetter) {
             console.log("(State S_ㄱ) state: ", prev);
             if (input.startsWith(block)) return continueInput();
             if (ml.steps.includes(input)) return continueInput();
             if (decomposeSyllable(input).length == decomposeSyllable(block).length + 1) return continueInput();
-            return blockInput();
+            console.log("inputIsComposing || inputIsFirstLetter > no further action");
+            return blockInput(); // FIXME: This will revert something like 값 -> 가 when entered. That shouldn't happen, however I'm not sure how fix it.  
         }
 
-        if (input.startsWith(block)) return continueInput();
-        if (decomposeSyllable(input).length == decomposeSyllable(block).length + 1) return continueInput();
+        const inputIsValid = input.startsWith(block);
+        if (inputIsValid) return continueInput();
+        
+        const inputIsLonger = decomposeSyllable(input).length == decomposeSyllable(block).length + 1;
+        if (inputIsLonger) return continueInput();
 
         console.log("no state");
         return clearInput();
     }
 
     function onKeyDown(e: React.KeyboardEvent) {
-        if (e.repeat || !buttonDom.current || !inputKeyDisplay.current) return;
+        if (e.repeat || !buttonDom.current || !inputKeyDisplay.current){
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (e.key == " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         if (e.key == "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
             buttonDom.current.click();
             return;
         }

@@ -1,0 +1,118 @@
+/* 
+ * FSM-Inspired Color Scheme
+ * Based on the FSM Visualizer design with dark slate backgrounds,
+ * cyan/purple/green accents, and radial gradients
+ */
+
+:root {
+  /* ============================================
+     BASE COLOR PALETTE - FSM Theme
+     ============================================ */
+  
+  /* Primary Brand Colors - FSM inspired */
+  --color-primary: #38bdf8;        /* Cyan - primary focus, accents */
+  --color-secondary: #a855f7;      /* Purple - secondary accents */
+  --color-accent: #22c55e;           /* Green - success states, indicators */
+  
+  /* Neutral Base Colors - Dark Slate Theme */
+  --color-neutral-darkest: #0f172a;  /* Slate-900 - body background */
+  --color-neutral-darker: #020617;   /* Almost black - panel backgrounds */
+  --color-neutral-dark: #030712;     /* Dark - secondary surfaces */
+  --color-neutral-medium: #1f2937;   /* Gray-800 - borders, tertiary */
+  --color-neutral-light: #e5e7eb;    /* Gray-200 - main text */
+  --color-neutral-pure: #ffffff;      /* Pure white - borders, highlights */
+  --color-neutral-pure-dark: #000000; /* Pure black - overlays */
+  
+  /* Status Colors */
+  --color-error: #f97373;            /* Red - errors, invalid states */
+  --color-error-dark: #f87171;       /* Darker red - error borders */
+  --color-warning: #fbbf24;         /* Amber - warnings */
+  --color-success: #22c55e;         /* Green - success states */
+  --color-info: #38bdf8;            /* Cyan - informational states */
+  
+  /* ============================================
+     SEMANTIC COLOR MAPPINGS
+     ============================================ */
+  
+  /* Background Colors */
+  --bg-primary: var(--color-neutral-darkest);      /* Main app background #0f172a */
+  --bg-secondary-solid: #020617;    /* Solid fallback for panel */
+  --bg-tertiary: var(--color-neutral-dark);        /* Input fields, cards */
+  --bg-quaternary: var(--color-neutral-medium);     /* Buttons, interactive elements */
+  --bg-overlay: rgba(15, 23, 42, 0.95);    /* Modal overlays with backdrop blur */
+  
+  /* Gradient Backgrounds */
+  --gradient-panel: radial-gradient(circle at top, #020617 0, #020617 35%, #030712 100%);
+  --gradient-button: radial-gradient(circle at top left, #38bdf8, #4f46e5 45%, #a855f7 100%);
+  --gradient-input: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
+  --gradient-chip: radial-gradient(circle at top, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.8));
+  --gradient-header: radial-gradient(circle at top left, #1d4ed8, #020617 55%);
+  --gradient-avatar-active: radial-gradient(circle at top left, #38bdf8, #4f46e5 45%, #a855f7 100%);
+  --gradient-avatar-default: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.9));
+  --gradient-avatar-empty: radial-gradient(circle at top, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.8));
+  
+  /* Text Colors */
+  --text-primary: var(--color-neutral-light);       /* Main text color #e5e7eb */
+  --text-secondary: #9ca3af;                       /* Gray-400 - secondary text, muted */
+  --text-accent: var(--color-primary);              /* Accent text (match letters, highlights) */
+  --text-inverse: var(--color-neutral-pure-dark);   /* Text on light backgrounds */
+  
+  /* Border Colors */
+  --border-default: rgba(148, 163, 184, 0.18);     /* Subtle borders */
+  --border-accent: rgba(148, 163, 184, 0.35);       /* Accent borders */
+  --border-accent-light: rgba(31, 41, 55, 0.9);     /* Light accent borders */
+  --border-error: rgba(248, 113, 113, 0.45);       /* Error state borders */
+  --border-success: var(--color-success);           /* Success state borders */
+  --border-focus: rgba(56, 189, 248, 0.7);         /* Focus border */
+  
+  /* Interactive States */
+  --interactive-focus: var(--color-primary);        /* Focus ring color #38bdf8 */
+  --interactive-focus-light: rgba(56, 189, 248, 0.35);  /* Focus glow (subtle) */
+  --interactive-focus-strong: rgba(56, 189, 248, 0.9);  /* Focus glow (strong) */
+  --interactive-hover: var(--color-secondary);      /* Hover state color */
+  
+  /* Button Colors - Gradient */
+  --button-bg: var(--gradient-button);  /* Gradient button */
+  --button-bg-solid: #38bdf8;       /* Solid fallback */
+  --button-border: rgba(15, 23, 42, 0.8);          /* Button border */
+  --button-text: var(--text-primary);               /* Button text */
+  
+  /* Shadow Colors */
+  --shadow-color: rgba(15, 23, 42, 0.95);          /* Shadow color for depth */
+  --shadow-panel: 0 20px 40px rgba(15, 23, 42, 0.95), 0 0 0 1px rgba(15, 23, 42, 0.9);
+  --shadow-button: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 10px 24px rgba(15, 23, 42, 0.9), 0 0 22px rgba(56, 189, 248, 0.5);
+  
+  /* Special Use Cases */
+  --match-letter-color: #fbbf24; /* Amber-400: Strong contrast, still warm/cool harmony */
+  --input-border-default: rgba(31, 41, 55, 0.9);   /* Input field default border */
+  --input-border-error: var(--border-error);        /* Input field error border */
+  --input-bg: var(--gradient-input);  /* Input background */
+  --input-bg-solid: #020617;        /* Solid fallback */
+  
+  /* Disabled Input States */
+  --input-bg-disabled: radial-gradient(circle at top left, rgba(31, 41, 55, 0.6), rgba(31, 41, 55, 0.5) 40%, rgba(31, 41, 55, 0.6) 100%);
+  --input-border-disabled: rgba(75, 85, 99, 0.4);   /* Muted gray border */
+  --input-text-disabled: rgba(156, 163, 175, 0.5);  /* Muted text color */
+  --input-overlay-disabled: rgba(15, 23, 42, 0.7);   /* Dark overlay for disabled state */
+}
+
+/* 
+ * THEME CUSTOMIZATION GUIDE
+ * 
+ * To create a new theme, simply change the base colors above:
+ * 
+ * Example - Dark Blue Theme:
+ *   --color-primary: #1e40af;
+ *   --color-secondary: #60a5fa;
+ *   --color-accent: #34d399;
+ * 
+ * Example - Purple Theme:
+ *   --color-primary: #7c3aed;
+ *   --color-secondary: #a78bfa;
+ *   --color-accent: #f472b6;
+ * 
+ * Example - Warm Theme:
+ *   --color-primary: #ea580c;
+ *   --color-secondary: #fbbf24;
+ *   --color-accent: #10b981;
+ */

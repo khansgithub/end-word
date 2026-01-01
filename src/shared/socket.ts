@@ -12,6 +12,10 @@ export const socketEvents = {
     unregisterPlayer: "unregisterPlayer",
     isReturningPlayer: "isReturningPlayer",
     returningPlayer: "returningPlayer",
+    submitWord: "submitWord",
+    gameStateUpdate: "gameStateUpdate",
+    requestFullState: "requestFullState",
+    fullStateSync: "fullStateSync",
     text: "text",
 } as const;
 

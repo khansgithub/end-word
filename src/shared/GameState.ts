@@ -26,6 +26,10 @@ export type GameStateActionsType = {
 // =============================================================================
 // REDUCER MAP
 // =============================================================================
+function replaceGameState(state: GameState, newState: GameState): GameState {
+    return { ...newState };
+}
+
 const GameStateActions = {
     buildMatchLetter,
     nextTurn,
@@ -38,7 +42,7 @@ const GameStateActions = {
     removePlayer,
     progressNextTurn,
     updateConnectedPlayersCount,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    replaceGameState,
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
 // =============================================================================

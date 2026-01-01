@@ -26,7 +26,7 @@ export function setUpIOServer(io: SocketServer): SocketServer {
     const serverSocketContext = createServerSocketContext(undefined, {
         countEvent: countSocketEvent,
         setRegisteredClients,
-    });
+    }, io);
     
     activeServerContext = serverSocketContext;
     io.on("connection", createServerConnectionHandler(serverSocketContext));

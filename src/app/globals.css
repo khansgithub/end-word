@@ -1,43 +1,153 @@
 @import "tailwindcss";
 @plugin "daisyui";
 @tailwind utilities;
+@import "./colours.css";
+
 :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    --background: #0f172a;
+    --foreground: #e5e7eb;
 }
+
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-    --font-sans: var(--font-geist-sans);
-    --font-mono: var(--font-geist-mono);
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
-}
+
 @utility all-unset {
     all: unset;
 }
+
 @layer utilities {
   @keyframes glow-filter {
     0%,100% {
-      filter: drop-shadow(0 0 4px rgba(59,130,246,.4));
+      filter: drop-shadow(0 0 4px var(--interactive-focus-light));
     }
     50% {
-      filter: drop-shadow(0 0 14px rgba(59,130,246,.9));
+      filter: drop-shadow(0 0 14px var(--interactive-focus-strong));
     }
   }
 
+  @keyframes pulse-glow {
+    0%,100% {
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(56, 189, 248, 1);
+    }
+  }
 
 	.animate-glow-filter {
 		animation: glow-filter 2.5s ease-in-out infinite;
 	}
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* FSM Panel Style */
+  .panel {
+    background: var(--gradient-panel);
+    border-radius: 0.9rem;
+    border: 1px solid var(--border-default);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.95), 0 0 0 1px rgba(15, 23, 42, 0.9);
+    padding: 0.75rem 0.85rem 0.85rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* FSM Button Style */
+  .btn-fsm {
+    border-radius: 999px;
+    border: none;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-primary);
+    background: var(--gradient-button);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 10px 24px rgba(15, 23, 42, 0.9), 0 0 22px rgba(56, 189, 248, 0.5);
+    white-space: nowrap;
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  }
+
+  .btn-fsm:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 5px 15px rgba(15, 23, 42, 0.9);
+  }
+
+  .btn-fsm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* FSM Chip/Badge Style */
+  .chip {
+    border-radius: 999px;
+    border: 1px solid var(--border-accent);
+    padding: 0.18rem 0.45rem;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--gradient-chip);
+    backdrop-filter: blur(16px);
+  }
+
+  .chip-dot {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: var(--color-success);
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
+  }
+
+  /* FSM Input Style */
+  .input-fsm {
+    background: var(--gradient-input);
+    border-radius: 0.55rem;
+    border: 1px solid var(--input-border-default);
+    padding: 0.7rem 0.75rem;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    outline: none;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.95);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  }
+
+  .input-fsm:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 1px rgba(8, 47, 73, 0.9), 0 0 18px var(--interactive-focus-light);
+  }
+
+  .input-fsm:disabled {
+    background: var(--input-bg-disabled);
+    border-color: var(--input-border-disabled);
+    color: var(--input-text-disabled);
+    cursor: not-allowed;
+    opacity: 0.7;
+    position: relative;
+  }
+
+  .input-fsm::placeholder {
+    color: #4b5563;
+  }
+
+  .input-fsm:disabled::placeholder {
+    color: rgba(75, 85, 99, 0.4);
+  }
 }
 
 body {
-    /* background: var(--background);
-	color: var(--foreground); */
-    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
 }

@@ -15,7 +15,7 @@ export default function () {
         <div className="flex flex-col gap-2">
             <p>player name is: {playerName}</p>
             {isConnected ? <p>connected</p> : <p>not connected</p>}
-            <button className="border-2 border-white p-3 m-2" onClick={e => setIsConnected(v => !v)}> connect </button>
+            <button className="border-2 p-3 m-2" style={{ borderColor: 'var(--border-default)' }} onClick={e => setIsConnected(v => !v)}> connect </button>
         </div>
     )
 }
