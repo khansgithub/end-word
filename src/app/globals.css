@@ -108,40 +108,6 @@
     box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
   }
 
-  /* FSM Input Style */
-  .input-fsm {
-    background: var(--gradient-input);
-    border-radius: 0.55rem;
-    border: 1px solid var(--input-border-default);
-    padding: 0.7rem 0.75rem;
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    outline: none;
-    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.95);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.2s ease;
-  }
-
-  .input-fsm:focus {
-    border-color: var(--border-focus);
-    box-shadow: 0 0 0 1px rgba(8, 47, 73, 0.9), 0 0 18px var(--interactive-focus-light);
-  }
-
-  .input-fsm:disabled {
-    background: var(--input-bg-disabled);
-    border-color: var(--input-border-disabled);
-    color: var(--input-text-disabled);
-    cursor: not-allowed;
-    opacity: 0.7;
-    position: relative;
-  }
-
-  .input-fsm::placeholder {
-    color: #4b5563;
-  }
-
-  .input-fsm:disabled::placeholder {
-    color: rgba(75, 85, 99, 0.4);
-  }
 }
 
 body {

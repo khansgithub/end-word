@@ -172,9 +172,14 @@ export function Homescreen() {
                             placeholder="Enter your name" 
                             required={true} 
                             onKeyDown={onKeyDown} 
-                            className="input-fsm w-full text-base py-3" 
+                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[#4b5563] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_rgba(8,47,73,0.9),0_0_18px_var(--interactive-focus-light)]" 
                             style={{ 
                                 background: 'var(--input-bg-solid)',
+                                boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
+                                color: 'var(--text-primary)',
+                            }}
+                            onBlur={(e) => {
+                                e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)';
                             }}
                         />
                     </div>

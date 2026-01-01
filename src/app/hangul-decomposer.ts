@@ -134,6 +134,43 @@ export function buildSyllableSteps(syllable: string): string[] {
     return steps;
 }
 
+/**
+ * Checks if the given input is a Hangul double (complex) consonant or vowel,
+ * such as ㅆ, ㄲ, ㅄ, etc.
+ * Optionally accepts a 'type' parameter ('initial', 'final', or 'both').
+ * 
+ * @param letter The letter to check
+ * @param type Optional: restricts check to only double initial, double final, or both
+ * @returns true if it's a double letter, false otherwise
+ */
+export function isDoubleLetter(
+    letter: string,
+    type: "initial" | "final" | "both" = "both"
+): boolean {
+    // Representative double initial consonants in Hangul
+    const doubleInitialConsonants = [
+        "ㄲ", "ㄸ", "ㅃ", "ㅆ", "ㅉ"
+    ];
+    // Representative double final consonants in Hangul (complex batchim)
+    const doubleFinalConsonants = [
+        "ㄳ", "ㄵ", "ㄶ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅄ", "ㅆ"
+    ];
+
+    // Double vowels (diphthongs) technically exist (like ㅒ, ㅖ, ㅘ, etc.),
+    // but "double letter" usually refers to consonants in Hangul.
+    // If needed, add double vowels here.
+
+    if (type === "initial") {
+        return doubleInitialConsonants.includes(letter);
+    }
+    if (type === "final") {
+        return doubleFinalConsonants.includes(letter);
+    }
+    // type == "both"
+    return doubleInitialConsonants.includes(letter) || doubleFinalConsonants.includes(letter);
+}
+
+
 // /**
 //  * Example standalone usage
 //  */

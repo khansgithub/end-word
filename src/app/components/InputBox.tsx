@@ -27,6 +27,9 @@ function InputBox({
 }: props) {
     const [isError, setIsError] = React.useState(false);
 
+    // Shared base classes for both input elements
+    const sharedInputClasses = "col-start-1 row-start-1 w-full h-20 text-5xl rounded-[0.55rem] font-mono outline-none transition-all duration-200 ease-in-out py-[0.7rem] px-[0.75rem]";
+
     useEffect(() => {
         inputDom.current?.focus();
     }, []);
@@ -61,10 +64,11 @@ function InputBox({
                     type="text"
                     disabled={true}
                     readOnly
-                    className="input-fsm col-start-1 row-start-1 w-full h-20 text-5xl px-4 inset-0 pointer-events-none select-none border-transparent"
+                    className={`${sharedInputClasses} inset-0 pointer-events-none select-none border-transparent border`}
                     style={{ 
+                        background: 'var(--gradient-input)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--color-primary)',
-                        backgroundColor: 'transparent',
+                        boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
                         opacity: disabled ? 0.4 : 1,
                     }}
                     aria-hidden="true"
@@ -76,12 +80,14 @@ function InputBox({
                     disabled={disabled}
                     maxLength={7}
                     minLength={2}
-                    lang="ko"
                     onChange={onChange}
+                    onCompositionStart={onCompositionStart}
+                    onCompositionUpdate={onCompositionUpdate}
+                    onCompositionEnd={onCompositionEnd}
+                    onBeforeInput={onBeforeInput}
                     onKeyDown={onKeyDown}
-                    className={`input-fsm col-start-1 row-start-1 w-full h-20 text-5xl px-4 z-10 ${isError ? 'input-error' : ''}`}
+                    className={`${sharedInputClasses} background-transparent z-10 border disabled:cursor-not-allowed disabled:opacity-70`}
                     style={{
-                        background: disabled ? 'var(--input-bg-disabled)' : 'transparent',
                         borderColor: disabled 
                             ? 'var(--input-border-disabled)' 
                             : isError 
@@ -89,6 +95,7 @@ function InputBox({
                                 : 'var(--input-border-default)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--text-primary)',
                         caretColor: disabled ? 'transparent' : 'var(--interactive-focus)',
+                        boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
                     }}
                     onFocus={(e) => {
                         if (disabled) return;

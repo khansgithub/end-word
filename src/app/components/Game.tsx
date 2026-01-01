@@ -114,7 +114,7 @@ export default function Game(props: props) {
                                 inputDomHighlight={inputHighlightDom}
                                 inputDom={inputDom}
                                 onChange={inputHandelers.onChange}
-                                onCompositionStart={() => { }}
+                                onCompositionStart={inputHandelers.onCompositionStart}
                                 onCompositionUpdate={inputHandelers.onCompositionUpdate}
                                 onCompositionEnd={inputHandelers.onCompositionEnd}
                                 onBeforeInput={inputHandelers.onBeforeInput}

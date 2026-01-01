@@ -10,9 +10,10 @@
     "lint": "eslint",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "dev:e2e": "cross-env NODE_ENV=test PLAYWRIGHT_TEST=1 PORT=4000 tsx src/server/server.ts",
     "test:e2e": "playwright test",
-    "test:e2e:run": "tsx tests/e2e/run-tests.ts"
+    "test:e2e:custom": "tsx tests/e2e/run-tests.ts",
+    "test:all": "vitest --run --reporter=json --outputFile=test-results/unit-tests.json && playwright test --reporter=json > test-results/e2e-tests.json",
+    "dev:e2e": "cross-env NODE_ENV=test PLAYWRIGHT_TEST=1 PORT=4000 tsx src/server/server.ts"
   },
   "dependencies": {
     "express": "^5.2.1",
