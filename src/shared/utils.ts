@@ -87,6 +87,8 @@ export function cloneServerPlayersToClientPlayers(players: ServerPlayers): Clien
  * @todo Move API URL to constants
  */
 export async function inputIsValid(input: string): Promise<boolean> {
+    console.warn("skipping this for dev purposes");
+    return true
     if (input.length === 0) return false;
 
     const res = await fetch("/dictionary/word/" + input);

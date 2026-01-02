@@ -507,6 +507,7 @@ describe("validateInput function", () => {
             triggerValidation(handlers, "가", "ㄱ", "가", false);
             expect(handlers.inputDomText.current).toBe("가");
         });
+
     });
 });
 
