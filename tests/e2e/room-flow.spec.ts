@@ -1,19 +1,29 @@
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, CDPSession, BrowserContext, Page, Locator } from "@playwright/test";
 import { roomFlowTestNames } from "./test-names";
+import { decomposeSyllable } from "../../src/app/hangul-decomposer";
 
-async function scrapeMetric(request: APIRequestContext, name: string, label?: string) {
-    const res = await request.get("/metrics");
-    const text = await res.text();
-    const lines = text.split("\n").map((l) => l.trim());
-    const matcher = label
-        ? new RegExp(`^${name}\\{[^}]*${label.replace(/[-/\\\\.^$*+?()[\\]{}|]/g, "\\$&")}[^}]*\\} (\\d+(?:\\.\\d+)?)$`)
-        : new RegExp(`^${name} (\\d+(?:\\.\\d+)?)$`);
-    for (const line of lines) {
-        const m = matcher.exec(line);
-        if (m) return Number(m[1]);
+async function scrapeMetric(request: APIRequestContext, name: string, label?: string): Promise<number> {
+    try {
+        const res = await request.get("/metrics");
+        if (!res.ok()) {
+            console.warn(`[scrapeMetric] Failed to fetch metrics: ${res.status()} ${res.statusText()}`);
+            return 0;
+        }
+        const text = await res.text();
+        const lines = text.split("\n").map((l) => l.trim());
+        const matcher = label
+            ? new RegExp(`^${name}\\{[^}]*${label.replace(/[-/\\\\.^$*+?()[\\]{}|]/g, "\\$&")}[^}]*\\} (\\d+(?:\\.\\d+)?)$`)
+            : new RegExp(`^${name} (\\d+(?:\\.\\d+)?)$`);
+        for (const line of lines) {
+            const m = matcher.exec(line);
+            if (m) return Number(m[1]);
+        }
+        return 0;
+    } catch (error) {
+        console.warn(`[scrapeMetric] Error scraping metric ${name}:`, error);
+        return 0;
     }
-    return 0;
 }
 
 type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
@@ -22,29 +32,47 @@ async function collectAndPrintMergedLogs(
     clientLogs: LogEntry[],
     request: APIRequestContext
 ): Promise<void> {
-    const logsRes = await request.get("/__test/server-logs");
-    let serverLogs: LogEntry[] = [];
-    if (logsRes.ok()) {
-        const logs = await logsRes.json();
-        if (Array.isArray(logs.logs)) {
-            serverLogs = logs.logs.map((l: any) => ({
-                ts: typeof l.ts === "number" ? l.ts : Date.now(),
-                msg: typeof l.msg === "string" ? l.msg : JSON.stringify(l),
-                source: "server" as const,
-            }));
+    try {
+        const logsRes = await request.get("/__test/server-logs");
+        let serverLogs: LogEntry[] = [];
+        if (logsRes.ok()) {
+            try {
+                const logs = await logsRes.json();
+                if (Array.isArray(logs.logs)) {
+                    serverLogs = logs.logs.map((l: any) => ({
+                        ts: typeof l.ts === "number" ? l.ts : Date.now(),
+                        msg: typeof l.msg === "string" ? l.msg : JSON.stringify(l),
+                        source: "server" as const,
+                    }));
+                }
+            } catch (parseError) {
+                console.warn("[collectAndPrintMergedLogs] Failed to parse server logs:", parseError);
+            }
+        } else {
+            console.warn(`[collectAndPrintMergedLogs] Failed to fetch server logs: ${logsRes.status()} ${logsRes.statusText()}`);
+        }
+
+        const merged = [
+            ...clientLogs.map((l) => ({ ...l, source: l.source ?? "client" as const })),
+            ...serverLogs,
+        ].sort((a, b) => a.ts - b.ts);
+
+        console.log("----- merged logs (chronological) -----");
+        for (const entry of merged) {
+            console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
+        }
+        console.log("----- end merged logs -----");
+    } catch (error) {
+        console.error("[collectAndPrintMergedLogs] Error collecting logs:", error);
+        // Still print client logs even if server logs fail
+        if (clientLogs.length > 0) {
+            console.log("----- client logs only (server logs unavailable) -----");
+            for (const entry of clientLogs) {
+                console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
+            }
+            console.log("----- end client logs -----");
         }
     }
-
-    const merged = [
-        ...clientLogs.map((l) => ({ ...l, source: l.source ?? "client" as const })),
-        ...serverLogs,
-    ].sort((a, b) => a.ts - b.ts);
-
-    console.log("----- merged logs (chronological) -----");
-    for (const entry of merged) {
-        console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
-    }
-    console.log("----- end merged logs -----");
 }
 
 test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
@@ -64,62 +92,89 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
         console.log(new Date(ts).toISOString(), line);
     });
 
-    log("goto /");
-    await page.goto("/");
+    let cdp: CDPSession | null = null;
 
-    log("wait for socket connect (server stats)");
-    await expect
-        .poll(() => scrapeMetric(request, "socket_event_total", 'event="connect"'), { timeout: 15_000, intervals: [500, 750, 1000] })
-        .toBeGreaterThan(0);
+    try {
+        log("goto /");
+        await page.goto("/");
 
-    log("wait for playerCount event (server stats)");
-    await expect
-        .poll(() => scrapeMetric(request, "socket_event_total", 'event="getPlayerCount"'), { timeout: 15_000, intervals: [500, 750, 1000] })
-        .toBeGreaterThan(0);
+        log("wait for socket connect (server stats)");
+        await expect
+            .poll(() => scrapeMetric(request, "socket_event_total", 'event="connect"'), { timeout: 15_000, intervals: [500, 750, 1000] })
+            .toBeGreaterThan(0);
 
-    let roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
-    log("wait for Room heading text");
-    await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 10_000 });
+        log("wait for playerCount event (server stats)");
+        await expect
+            .poll(() => scrapeMetric(request, "socket_event_total", 'event="getPlayerCount"'), { timeout: 15_000, intervals: [500, 750, 1000] })
+            .toBeGreaterThan(0);
 
-    const nameInput = page.getByRole("textbox", { name: /name/i });
-    log('fill name "Foo"');
-    await nameInput.fill("Foo");
-    log("press Enter to join room");
-    await nameInput.press("Enter");
+        let roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
+        log("wait for Room heading text");
+        await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 5_000 });
 
-    log("wait for navigation to /room");
-    await page.waitForURL("**/room", { timeout: 15_000 });
-    log("wait for Match text");
-    await expect(page.getByText(/Match:/)).toBeVisible({ timeout: 10_000 });
+        const nameInput = page.getByRole("textbox", { name: /name/i });
+        log('fill name "Foo"');
+        await nameInput.fill("Foo");
+        log("press Enter to join room");
+        await nameInput.press("Enter");
 
-    log("hard reload (ignore cache)");
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Network.clearBrowserCache");
-    await cdp.send("Network.clearBrowserCookies");
-    await cdp.send("Page.reload", { ignoreCache: true });
-    log("wait for redirect back to /");
-    await page.waitForURL("http://localhost:4000/", { timeout: 15_000 });
+        log("wait for navigation to /room");
+        await page.waitForURL("**/room", { timeout: 15_000 });
+        log("wait for Match text");
+        await expect(page.getByText(/Match:/)).toBeVisible({ timeout: 5_000 });
 
-    roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
-    log(`check to see if the previous session has been terminated: [${await roomHeading.textContent()}]`);
-    await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 10_000 });
+        log("hard reload (ignore cache)");
+        cdp = await page.context().newCDPSession(page);
+        await cdp.send("Network.clearBrowserCache");
+        await cdp.send("Network.clearBrowserCookies");
+        await cdp.send("Page.reload", { ignoreCache: true });
+        log("wait for redirect back to /");
+        await page.waitForURL("http://localhost:4000/", { timeout: 15_000 });
 
-    await expect
-        .poll(() => scrapeMetric(request, "socket_registered_clients"), {
-            timeout: 8_000,
-            intervals: [500, 1000, 1500, 2000],
-        })
-        .toBe(0);
+        roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
+        log(`check to see if the previous session has been terminated: [${await roomHeading.textContent()}]`);
+        await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 5_000 });
 
-    // Dump a summary of metrics for visibility.
-    const metricsText = await (await request.get("/metrics")).text();
-    console.log("----- metrics snapshot -----");
-    for (const line of metricsText.split("\n")) {
-        if (line.startsWith("socket_")) console.log(line);
+        await expect
+            .poll(() => scrapeMetric(request, "socket_registered_clients"), {
+                timeout: 8_000,
+                intervals: [500, 1000, 1500, 2000],
+            })
+            .toBe(0);
+
+        // Dump a summary of metrics for visibility.
+        try {
+            const metricsRes = await request.get("/metrics");
+            if (metricsRes.ok()) {
+                const metricsText = await metricsRes.text();
+                console.log("----- metrics snapshot -----");
+                for (const line of metricsText.split("\n")) {
+                    if (line.startsWith("socket_")) console.log(line);
+                }
+                console.log("----- end metrics snapshot -----");
+            }
+        } catch (metricsError) {
+            log(`Failed to fetch metrics: ${metricsError}`);
+        }
+    } catch (error) {
+        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+            log(`Stack trace: ${error.stack}`);
+        }
+        throw error; // Re-throw after logging
+    } finally {
+        // Always collect logs for debugging, even on failure
+        await collectAndPrintMergedLogs(clientLogs, request);
+
+        // Cleanup CDP session if it was created
+        if (cdp) {
+            try {
+                await cdp.detach();
+            } catch (cleanupError) {
+                log(`Failed to detach CDP session: ${cleanupError}`);
+            }
+        }
     }
-    console.log("----- end metrics snapshot -----");
-
-    await collectAndPrintMergedLogs(clientLogs, request);
 });
 
 test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }) => {
@@ -135,60 +190,88 @@ test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }) => {
         console.log(new Date(ts).toISOString(), entry.msg);
     };
 
-    const contextA = await browser.newContext({ baseURL: "http://localhost:4000" });
-    const contextB = await browser.newContext({ baseURL: "http://localhost:4000" });
+    let contextA: BrowserContext | null = null;
+    let contextB: BrowserContext | null = null;
 
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
+    try {
+        contextA = await browser.newContext({ baseURL: "http://localhost:4000" });
+        contextB = await browser.newContext({ baseURL: "http://localhost:4000" });
 
-    const attachConsole = (pageLabel: string, page: typeof pageA) => {
-        page.on("console", (msg) => {
-            const ts = Date.now();
-            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
-            clientLogs.push({ ts, msg: line, source: "browser" });
-            console.log(new Date(ts).toISOString(), line);
-        });
-    };
+        const pageA = await contextA.newPage();
+        const pageB = await contextB.newPage();
 
-    attachConsole("A", pageA);
-    attachConsole("B", pageB);
+        const attachConsole = (pageLabel: string, page: typeof pageA) => {
+            page.on("console", (msg) => {
+                const ts = Date.now();
+                const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
+                clientLogs.push({ ts, msg: line, source: "browser" });
+                console.log(new Date(ts).toISOString(), line);
+            });
+        };
 
-    log("goto / on both pages");
-    await Promise.all([pageA.goto("/"), pageB.goto("/")]);
+        attachConsole("A", pageA);
+        attachConsole("B", pageB);
 
-    const inputA = pageA.getByRole("textbox", { name: /name/i });
-    const inputB = pageB.getByRole("textbox", { name: /name/i });
+        log("goto / on both pages");
+        await Promise.all([pageA.goto("/"), pageB.goto("/")]);
 
-    log('fill name "Alice" on A');
-    await inputA.fill("Alice");
-    log('fill name "Bob" on B');
-    await inputB.fill("Bob");
+        const inputA = pageA.getByRole("textbox", { name: /name/i });
+        const inputB = pageB.getByRole("textbox", { name: /name/i });
 
-    log("press Enter on both pages to join room");
-    await Promise.all([
-        inputA.press("Enter"),
-        inputB.press("Enter"),
-        pageA.waitForURL("**/room", { timeout: 15_000 }),
-        pageB.waitForURL("**/room", { timeout: 15_000 }),
-    ]);
+        log('fill name "Alice" on A');
+        await inputA.fill("Alice");
+        log('fill name "Bob" on B');
+        await inputB.fill("Bob");
 
-    log("wait for loading spinners to disappear");
-    const loadingA = pageA.locator("span.loading");
-    const loadingB = pageB.locator("span.loading");
-    await Promise.all([
-        loadingA.first().waitFor({ state: "detached", timeout: 20_000 }),
-        loadingB.first().waitFor({ state: "detached", timeout: 20_000 }),
-    ]);
+        log("press Enter on both pages to join room");
+        await Promise.all([
+            inputA.press("Enter"),
+            inputB.press("Enter"),
+            pageA.waitForURL("**/room", { timeout: 15_000 }),
+            pageB.waitForURL("**/room", { timeout: 15_000 }),
+        ]);
 
-    const playersA = pageA.locator("#players");
-    log("assert #players visible");
-    await expect(playersA).toBeVisible({ timeout: 10_000 });
-    log("assert #players has 5 children");
-    await expect(playersA.locator("> div")).toHaveCount(5, { timeout: 10_000 });
+        log("wait for loading spinners to disappear");
+        const loadingA = pageA.locator("span.loading");
+        const loadingB = pageB.locator("span.loading");
+        await Promise.all([
+            loadingA.first().waitFor({ state: "detached", timeout: 20_000 }),
+            loadingB.first().waitFor({ state: "detached", timeout: 20_000 }),
+        ]);
 
-    await Promise.all([contextA.close(), contextB.close()]);
+        const playersA = pageA.locator("#players");
+        log("assert #players visible");
+        await expect(playersA).toBeVisible({ timeout: 5_000 });
+        log("assert #players has 5 children");
+        await expect(playersA.locator("> div")).toHaveCount(5, { timeout: 5_000 });
+    } catch (error) {
+        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+            log(`Stack trace: ${error.stack}`);
+        }
+        throw error; // Re-throw after logging
+    } finally {
+        // Always close contexts, even on failure
+        const closePromises: Promise<void>[] = [];
+        if (contextA) {
+            closePromises.push(
+                contextA.close().catch((err) => {
+                    log(`Failed to close contextA: ${err}`);
+                })
+            );
+        }
+        if (contextB) {
+            closePromises.push(
+                contextB.close().catch((err) => {
+                    log(`Failed to close contextB: ${err}`);
+                })
+            );
+        }
+        await Promise.all(closePromises);
 
-    await collectAndPrintMergedLogs(clientLogs, request);
+        // Always collect logs for debugging, even on failure
+        await collectAndPrintMergedLogs(clientLogs, request);
+    }
 });
 
 test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) => {
@@ -196,6 +279,23 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
      * Test that when player 1 submits a valid word, the turn changes to player 2,
      * and the inputDomHighlight value is updated to the new matchLetter's first step.
      */
+
+    async function assertHighlightValue(page: Page, highlightInputLocator: Locator) {
+        const currentMatchLetterDisplay = await getMatchLetterDisplay(page);
+        if (!currentMatchLetterDisplay) throw new Error("No match letter found");
+        const highlightInputValue = await highlightInputLocator.inputValue();
+        const highlightExpectValue = decomposeSyllable(currentMatchLetterDisplay)[0];
+        expect(highlightInputValue).toBe(highlightExpectValue);
+        return highlightExpectValue;
+    }
+
+    async function getMatchLetterDisplay(page: Page) {
+        const r = await page.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/).textContent();
+        if (!r) throw new Error("No match letter found");
+        return r;
+    }
+
+    const baseURL = "http://localhost:4000";
     const clientLogs: LogEntry[] = [];
     const log = (message: string) => {
         const ts = Date.now();
@@ -204,151 +304,151 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         console.log(new Date(ts).toISOString(), entry.msg);
     };
 
-    const contextA = await browser.newContext({ baseURL: "http://localhost:4000" });
-    const contextB = await browser.newContext({ baseURL: "http://localhost:4000" });
+    let contextA: BrowserContext | null = null;
+    let contextB: BrowserContext | null = null;
 
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
+    try {
+        contextA = await browser.newContext({ baseURL });
+        contextB = await browser.newContext({ baseURL });
 
-    const attachConsole = (pageLabel: string, page: typeof pageA) => {
-        page.on("console", (msg) => {
-            const ts = Date.now();
-            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
-            clientLogs.push({ ts, msg: line, source: "browser" });
-            console.log(new Date(ts).toISOString(), line);
-        });
-    };
+        const pageA = await contextA.newPage();
+        const pageB = await contextB.newPage();
 
-    attachConsole("A", pageA);
-    attachConsole("B", pageB);
+        const attachConsole = (pageLabel: string, page: typeof pageA) => {
+            page.on("console", (msg) => {
+                const ts = Date.now();
+                const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
+                clientLogs.push({ ts, msg: line, source: "browser" });
+                console.log(new Date(ts).toISOString(), line);
+            });
+        };
 
-    log("goto / on both pages");
-    await Promise.all([pageA.goto("/"), pageB.goto("/")]);
+        attachConsole("A", pageA);
+        attachConsole("B", pageB);
 
-    const inputA = pageA.getByRole("textbox", { name: /name/i });
-    const inputB = pageB.getByRole("textbox", { name: /name/i });
+        const dom = {
+            pageA: {
+                input: pageA.getByRole("textbox", { name: /name/i }),
+                highlightInput: pageA.locator('input[aria-hidden="true"]').first(),
+                wordInput: pageA.locator("input:not([readonly])"),
+                submitButton: pageA.getByRole("button", { name: /submit word/i }),
+                loadingBlur: pageA.locator("div.backdrop-blur-sm"),
+            },
+            pageB: {
+                input: pageB.getByRole("textbox", { name: /name/i }),
+                highlightInput: pageB.locator('input[aria-hidden="true"]').first(),
+                wordInput: pageB.locator("input:not([readonly])"),
+                submitButton: pageB.getByRole("button", { name: /submit word/i }),
+                loadingBlur: pageB.locator("div.backdrop-blur-sm"),
+            },
+        };
 
-    log('fill name "Player1" on A');
-    await inputA.fill("Player1");
-    log('fill name "Player2" on B');
-    await inputB.fill("Player2");
+        // Go to the home page
+        log("goto / on both pages");
+        await Promise.all([pageA.goto("/"), pageB.goto("/")]);
 
-    log("press Enter on both pages to join room");
-    await Promise.all([
-        inputA.press("Enter"),
-        inputB.press("Enter"),
-        pageA.waitForURL("**/room", { timeout: 15_000 }),
-        pageB.waitForURL("**/room", { timeout: 15_000 }),
-    ]);
+        // Fill in the names
+        log('fill name "Player1" on A');
+        await dom.pageA.input.fill("Player1");
+        log('fill name "Player2" on B');
+        await dom.pageB.input.fill("Player2");
 
-    log("wait for loading spinners to disappear");
-    const loadingA = pageA.locator("span.loading");
-    const loadingB = pageB.locator("span.loading");
-    await Promise.all([
-        loadingA.first().waitFor({ state: "detached", timeout: 20_000 }),
-        loadingB.first().waitFor({ state: "detached", timeout: 20_000 }),
-    ]);
+        // Press Enter on Page A, wait for the loading screen, then press Enter on Page B
+        log("press Enter on both pages to join room");
+        await expect(dom.pageA.input).toHaveValue("Player1", { timeout: 5_000 });
+        await dom.pageA.input.press("Enter");
+        await expect(dom.pageA.loadingBlur).toContainText("Waiting for game to start...", { timeout: 5_000 });
+        await dom.pageB.input.press("Enter");
 
-    log("wait for game to start (status should be 'playing')");
-    await expect(pageA.getByText("PLAYING")).toBeVisible({ timeout: 10_000 });
-    await expect(pageB.getByText("PLAYING")).toBeVisible({ timeout: 10_000 });
+        await pageA.waitForURL("**/room", { timeout: 15_000 })
+        await pageB.waitForURL("**/room", { timeout: 15_000 });
 
-    // Find the highlight input element (the one with aria-hidden="true")
-    const highlightInputA = pageA.locator('input[aria-hidden="true"]').first();
-    const highlightInputB = pageB.locator('input[aria-hidden="true"]').first();
+        // Make sure the lodaing screen is gone
+        log("wait for game to start (status should be 'playing')");
+        await expect(dom.pageA.loadingBlur).toHaveCount(0);
+        await expect(dom.pageB.loadingBlur).toHaveCount(0);
 
-    log("get initial matchLetter from page A");
-    const matchLetterDisplayA = pageA.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/);
-    const matchLetterDisplayB = pageB.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/);
-    await expect(matchLetterDisplayA).toBeVisible({ timeout: 10_000 });
-    const initialMatchLetter = await matchLetterDisplayA.textContent();
-    log(`initial matchLetter: ${initialMatchLetter}`);
+        // Find the highlight input element (the one with aria-hidden="true")
+        log("get initial highlight value from page A");
+        const highlightValueA = await assertHighlightValue(pageA, dom.pageA.highlightInput);
+        log(`initial highlight value on page A: ${highlightValueA}`);
 
-    // Verify initial highlight value (should be the first step of the matchLetter)
-    // For "가", the first step is "ㄱ"
-    const initialHighlightValue = await highlightInputA.inputValue();
-    log(`initial highlight value on page A: ${initialHighlightValue}`);
-
-    // Find the actual input field (not the highlight one)
-    const wordInputA = pageA.getByRole('textbox', { disabled: false }).first();
-    const wordInputB = pageB.getByRole('textbox', { disabled: false }).first();
-    const submitButtonA = pageA.getByRole("button", { name: /submit word/i });
-    const submitButtonB = pageB.getByRole("button", { name: /submit word/i });
-
-    
-    log("check if it's player 1's turn (wordInputA should exist and not be empty)");
-    let isPageAEnabled = false;
-    // We check if wordInputA resolves to a DOM element and is not empty (enabled), otherwise, it's B's turn
-    const wordInputAHandle = await wordInputA.elementHandle({ timeout: 1_000 });
-    log("Checking if wordInputA element exists...");
-    if (wordInputAHandle) {
-        log("wordInputAHandle found. Evaluating its state...");
-        const isDisabled = await wordInputAHandle.evaluate(
-            (el) => !(el instanceof HTMLInputElement) || el.disabled
-        );
-        log(`Checked wordInputAHandle: isDisabled = ${isDisabled}`);
-        if (!isDisabled) {
-            log("wordInputA is enabled; it's page A's turn.");
+        // Verify it's player 1's turn
+        log("check if it's player 1's turn (wordInputA should exist and not be empty)");
+        let isPageAEnabled = false;
+        if (await dom.pageA.wordInput.isEnabled({ timeout: 5_000 })) {
             isPageAEnabled = true;
-        } else {
-            log("wordInputA is present but disabled, switching to page B");
-            await expect(wordInputB).toBeEnabled({ timeout: 10_000 });
-            isPageAEnabled = false;
         }
-    } else {
-        log("wordInputA does not exist, switching to page B");
-        await expect(wordInputB).toBeEnabled({ timeout: 10_000 });
-        isPageAEnabled = false;
+
+        // Type a valid word starting with the matchLetter
+        // For example, if matchLetter is "가", type "가나다"
+        // Map Korean initial consonant (choseong) or first letter to a sample word
+        // For testing, provide a few sample mappings
+        const firstLetterToWord: Record<string, string> = {
+            "가": "가나다",
+            "나": "나비",
+            "다": "다람쥐",
+            "마": "마을",
+            "바": "바다",
+            "사": "사과",
+        };
+        const wordToSubmit = firstLetterToWord[await getMatchLetterDisplay(pageA)];
+        log(`typing word: ${wordToSubmit}`);
+        await dom.pageA.wordInput.fill(wordToSubmit, { timeout: 1_000 });
+
+        log("submitting word");
+        await dom.pageA.submitButton.click();
+
+        // Wait for the turn to change - the input on the active page should become disabled
+        log("waiting for turn to change (input on active page should become disabled)");
+        await expect(dom.pageA.wordInput).toBeDisabled({ timeout: 5_000 });
+
+        // Wait for the new matchLetter to appear (should be the last character of the submitted word)
+        const expectedNewMatchLetter = wordToSubmit.slice(-1);
+        log(`waiting for new matchLetter to be: ${expectedNewMatchLetter}`);
+        Promise.all([
+            expect(await getMatchLetterDisplay(pageA)).toBe(expectedNewMatchLetter),
+            expect(await getMatchLetterDisplay(pageB)).toBe(expectedNewMatchLetter),
+        ]);
+
+        // Verify the input on page B is enabled
+        log("verifying input on page B is enabled");
+        await expect(dom.pageB.wordInput).toBeEnabled({ timeout: 5_000 });
+
+        // Verify the input on page A is disabled
+        log("verifying input on page A is disabled");
+        await expect(dom.pageA.wordInput).toBeDisabled({ timeout: 5_000 });
+
+        // Get highlight value on page B
+        log("get highlight value on page B");
+        const highlightValueB = await assertHighlightValue(pageB, dom.pageB.highlightInput);
+        log(`highlight value on page B: ${highlightValueB}`);
+    } catch (error) {
+        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+            log(`Stack trace: ${error.stack}`);
+        }
+        throw error; // Re-throw after logging
+    } finally {
+        // Always close contexts, even on failure
+        const closePromises: Promise<void>[] = [];
+        if (contextA) {
+            closePromises.push(
+                contextA.close().catch((err) => {
+                    log(`Failed to close contextA: ${err}`);
+                })
+            );
+        }
+        if (contextB) {
+            closePromises.push(
+                contextB.close().catch((err) => {
+                    log(`Failed to close contextB: ${err}`);
+                })
+            );
+        }
+        await Promise.all(closePromises);
+
+        // Always collect logs for debugging, even on failure
+        await collectAndPrintMergedLogs(clientLogs, request);
     }
-
-    // Determine which page to use
-    const activeWordInput = isPageAEnabled ? wordInputA : wordInputB;
-    const activeSubmitButton = isPageAEnabled ? submitButtonA : submitButtonB;
-    const activePage = isPageAEnabled ? pageA : pageB;
-    const inactiveWordInput = isPageAEnabled ? wordInputB : wordInputA;
-    const activeMatchLetterDisplay = isPageAEnabled ? matchLetterDisplayA : matchLetterDisplayB;
-    const activeHighlightInput = isPageAEnabled ? highlightInputA : highlightInputB;
-    const inactiveMatchLetterDisplay = isPageAEnabled ? matchLetterDisplayB : matchLetterDisplayA;
-
-    // Type a valid word starting with the matchLetter
-    // For example, if matchLetter is "가", type "가나다"
-    const wordToSubmit = initialMatchLetter === "가" ? "가나다" : `${initialMatchLetter}나다`;
-    log(`typing word: ${wordToSubmit}`);
-    await activeWordInput.fill(wordToSubmit);
-
-    log("submitting word");
-    await activeSubmitButton.click();
-
-    // Wait for the turn to change - the input on the active page should become disabled
-    log("waiting for turn to change (input on active page should become disabled)");
-    await expect(activeWordInput).toBeDisabled({ timeout: 10_000 });
-
-    // Wait for the new matchLetter to appear (should be the last character of the submitted word)
-    const expectedNewMatchLetter = wordToSubmit.slice(-1);
-    log(`waiting for new matchLetter to be: ${expectedNewMatchLetter}`);
-    await expect(activeMatchLetterDisplay).toHaveText(expectedNewMatchLetter, { timeout: 10_000 });
-
-    // Get the new highlight value - should be the first step of the new matchLetter
-    // For "다", the first step is "ㄷ"
-    const newHighlightValue = await activeHighlightInput.inputValue();
-    log(`new highlight value on active page: ${newHighlightValue}`);
-
-    // Verify the highlight value is updated to the new matchLetter's first step
-    // We need to determine what the first step should be based on the new matchLetter
-    // For "다", it should be "ㄷ"
-    const expectedHighlight = expectedNewMatchLetter === "다" ? "ㄷ" : expectedNewMatchLetter[0];
-    expect(newHighlightValue).toBe(expectedHighlight);
-
-    // Also verify on the inactive page that it's now their turn and the highlight is correct
-    log(`verifying inactive page (${isPageAEnabled ? 'B' : 'A'}) now has their turn`);
-    await expect(inactiveWordInput).toBeEnabled({ timeout: 10_000 });
-
-    const inactiveHighlightInput = isPageAEnabled ? highlightInputB : highlightInputA;
-    const inactiveHighlightValue = await inactiveHighlightInput.inputValue();
-    log(`highlight value on inactive page: ${inactiveHighlightValue}`);
-    expect(inactiveHighlightValue).toBe(expectedHighlight);
-
-    await Promise.all([contextA.close(), contextB.close()]);
-
-    await collectAndPrintMergedLogs(clientLogs, request);
 });
