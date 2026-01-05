@@ -9,7 +9,7 @@ import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { ClientPlayers, GameState, GameStateFrozen, GameStatus, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
-import { isSuppress, pp } from "./utils";
+import { getCurrentPlayerIndex, isSuppress, pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -173,13 +173,14 @@ function setPlayerLastWord(
     state: GameState,
     playerLastWord: string
 ): GameState {
-    const player = state.players[state.turn];
+    const currentPlayerIndex = getCurrentPlayerIndex(state.turn, state.connectedPlayers);
+    const player = state.players[currentPlayerIndex];
     if (!player) {
         throw new Error("unexpected error");
     }
 
     const updatedPlayers = clonePlayersArray<typeof state.players>(state.players);
-    updatedPlayers[state.turn] = {
+    updatedPlayers[currentPlayerIndex] = {
         ...player,
         lastWord: playerLastWord,
     };
@@ -249,7 +250,7 @@ export function buildInitialGameState(options: { server?: boolean } = {}): GameS
     const players = server ? makePlayersArray<ServerPlayers>() : makePlayersArray<ClientPlayers>();
     const emptyGameState = {} as unknown as GameState;
     return {
-        matchLetter: buildMatchLetter(emptyGameState, "가").matchLetter,
+        matchLetter: buildMatchLetter(emptyGameState, "값").matchLetter,
         status: null,
         players: players,
         turn: 0,

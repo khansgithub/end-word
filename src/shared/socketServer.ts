@@ -4,7 +4,7 @@ import { buildInitialGameState, gameStateReducer, makePlayersArray } from "./Gam
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
 import { socketEvents } from "./socket";
 import { ClientPlayers, ClientToServerEvents, PlayersArray, PlayerWithoutId, RunExclusive, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
-import { createSocketMutex, pp, cloneServerPlayersToClientPlayers, inputIsValid, isSuppress } from "./utils";
+import { createSocketMutex, pp, cloneServerPlayersToClientPlayers, inputIsValid, isPlayerTurn, isSuppress } from "./utils";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
@@ -372,7 +372,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             }
 
             // Validate it's the player's turn
-            if (state.turn !== player.seat) {
+            if (!isPlayerTurn(state.turn, state.connectedPlayers, player.seat)) {
                 logWithContext(`submitWord: not player's turn. Current turn: ${state.turn}, Player seat: ${player.seat}`);
                 return;
             }

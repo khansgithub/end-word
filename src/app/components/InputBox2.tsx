@@ -40,6 +40,33 @@ const useInputStore = create<InputState>((set) => ({
     }),
 }));
 
+/**
+ * InputBox2 Zustand State & Props Documentation
+ * 
+ * Zustand store state:
+ * - inputValue:      The current user input in the actual <input> field. Updated on user typing.
+ * - highlightValue:  The text shown in the "highlight" input overlay, representing the match letter or composition.
+ * - isComposing:     Whether the user is currently composing text (IME/composition input, e.g. for Hangul typing).
+ * - isError:         Indicates whether the current input is considered invalid by validation logic.
+ * - lastKey:         The last character/key input detected (used for display or logic feedback).
+ * - setInputValue:       Setter to update inputValue.
+ * - setHighlightValue:   Setter to update highlightValue.
+ * - setIsComposing:      Setter to update isComposing.
+ * - setIsError:          Setter to update isError.
+ * - setLastKey:          Setter to update lastKey.
+ * - reset:               Resets all input-related state.
+ * 
+ * Props on InputBox2:
+ * - matchLetter:         The current letter to match (with decomposed steps) for input guidance.
+ * - disabled:            Whether the input is disabled (prevents editing, changes visual feedback).
+ * - onSubmit:            Optional. Called with completed input when "Enter" is pressed and input is non-empty.
+ * - onKeyDisplayChange:  Optional. Called with every key typed or erased; used to update key overlay display.
+ * 
+ * InputBox2 uses a dual layer input:
+ * - The highlight layer shows the expected match letter(s) and composition progress.
+ * - The real input layer is where users type. Handlers (change, composition, keydown) keep all state and visual feedback in-sync with the store and parent callbacks.
+ */
+
 interface InputBox2Props {
     matchLetter: MatchLetter;
     disabled: boolean;
@@ -239,6 +266,7 @@ function InputBox2({
             e.stopPropagation();
             if (onSubmit && inputValue) {
                 onSubmit(inputValue);
+                clearInput();
             }
             return;
         }

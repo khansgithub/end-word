@@ -31,7 +31,7 @@ export function createSocketMutex(): RunExclusive {
  */
 export function pp(obj: any): string {
     // if (isSuppress()) return "[SUPPRESS=TRUE]";
-    return "[SUPPRESS=TRUE]";
+    // return "[SUPPRESS=TRUE]";
     return JSON.stringify(obj, null, '\t');
 }
 
@@ -73,6 +73,30 @@ export function cloneServerPlayersToClientPlayers(players: ServerPlayers): Clien
         const { uid: _uid, ...rest } = player;
         return rest;
     }) as ClientPlayers;
+}
+
+/**
+ * Gets the index of the current player based on the turn number and number of connected players.
+ * Uses modulo arithmetic to cycle through players.
+ *
+ * @param turn - The current turn number
+ * @param connectedPlayers - The number of connected players
+ * @returns The index of the current player (0-based)
+ */
+export function getCurrentPlayerIndex(turn: number, connectedPlayers: number): number {
+    return turn % connectedPlayers;
+}
+
+/**
+ * Checks if it's a specific player's turn.
+ *
+ * @param turn - The current turn number
+ * @param connectedPlayers - The number of connected players
+ * @param playerSeat - The seat/index of the player to check
+ * @returns True if it's the specified player's turn, false otherwise
+ */
+export function isPlayerTurn(turn: number, connectedPlayers: number, playerSeat: number): boolean {
+    return getCurrentPlayerIndex(turn, connectedPlayers) === playerSeat;
 }
 
 // ============================================================================

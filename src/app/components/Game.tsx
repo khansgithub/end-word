@@ -3,11 +3,12 @@
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
-import InputBox from "./InputBox";
-import { buildInputHandlers, setGhostValue } from "./InputFieldFunctions";
+import { isPlayerTurn } from "../../shared/utils";
+import InputBox2 from "./InputBox2";
+import { setGhostValue } from "./InputFieldFunctions";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
-import { submitButton } from "./util";
+import { submitButton, submitButton2 } from "./util";
 
 interface props {
     gameState: Required<GameStateFrozen>,
@@ -19,20 +20,12 @@ export default function Game(props: props) {
         gameStateReducer<GameState>,
         props.gameState
     );
+    const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat);
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
     const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
     const inputHighlightDom = useRef<HTMLInputElement>(null)
     const inputDomText = useRef("");
-
-    const inputHandelers = buildInputHandlers({
-        matchLetter: gameState.matchLetter,
-        buttonDom: buttonDom,
-        inputDom: inputDom,
-        inputDomText: inputDomText,
-        inputKeyDisplay: inputKeyDisplayDom,
-        inputDomHighlight: inputHighlightDom,
-    });
 
     const socket = useRef(getSocketManager());
 
@@ -113,7 +106,7 @@ export default function Game(props: props) {
                             }}
                         />
                         <div className="flex-1">
-                            <InputBox
+                            {/* <InputBox
                                 inputDomHighlight={inputHighlightDom}
                                 inputDom={inputDom}
                                 onChange={inputHandelers.onChange}
@@ -122,7 +115,16 @@ export default function Game(props: props) {
                                 onCompositionEnd={inputHandelers.onCompositionEnd}
                                 onBeforeInput={inputHandelers.onBeforeInput}
                                 onKeyDown={inputHandelers.onKeyDown}
-                                disabled={gameState.turn !== gameState.thisPlayer?.seat}
+                                disabled={gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat)}
+                            /> */}
+                            <InputBox2
+                                matchLetter={gameState.matchLetter}
+                                disabled={isDisabled}
+                                onSubmit={submitButton2}
+                                onKeyDisplayChange={(key: string) => {
+                                    if (!inputKeyDisplayDom.current) return;
+                                    inputKeyDisplayDom.current.textContent = key;
+                                }}
                             />
                         </div>
                     </div>
@@ -130,10 +132,10 @@ export default function Game(props: props) {
                     <button
                         ref={buttonDom}
                         onClick={buttonOnSubmit}
-                        disabled={gameState.turn !== gameState.thisPlayer?.seat}
+                        disabled={isDisabled}
                         className="btn-fsm mt-4 px-6 py-3 text-base"
                         style={{ 
-                            opacity: gameState.turn === gameState.thisPlayer?.seat ? 1 : 0.5,
+                            opacity: gameState.thisPlayer?.seat !== undefined && isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat) ? 1 : 0.5,
                         }}
                     > 
                         <span>▶</span>
@@ -175,7 +177,7 @@ export default function Game(props: props) {
                                     <Player 
                                         key={i} 
                                         player={p} 
-                                        turn={gameState.turn === i} 
+                                        turn={isPlayerTurn(gameState.turn, gameState.connectedPlayers, i)} 
                                         lastWord={p.lastWord}
                                         isCurrentPlayer={isCurrentPlayer}
                                     />
