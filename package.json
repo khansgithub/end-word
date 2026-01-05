@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/server/server.ts",
+    "dev": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
     "debug": "cross-env DEBUG=engine.io:* tsx watch src/server/server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "dev:e2e": "cross-env NODE_ENV=test PLAYWRIGHT_TEST=1 PORT=4000 tsx src/server/server.ts",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:e2e:custom": "tsx tests/e2e/run-tests.ts",
-    "test:all": "vitest --run --reporter=json --outputFile=test-results/unit-tests.json && playwright test --reporter=json > test-results/e2e-tests.json",
-    "dev:e2e": "cross-env NODE_ENV=test PLAYWRIGHT_TEST=1 PORT=4000 tsx src/server/server.ts"
+    "test:playwright": "playwright test",
+    "test:playwright:grep": "cross-env SUPPRESS=true playwright test --grep",
+    "test:playwright:custom": "tsx tests/e2e/run-tests.ts",
+    "test:all": "vitest --run --reporter=json --outputFile=test-results/unit-tests.json && playwright test --reporter=json > test-results/e2e-tests.json"
   },
   "dependencies": {
     "express": "^5.2.1",

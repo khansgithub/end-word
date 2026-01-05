@@ -3,9 +3,8 @@
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
-import { pp } from "../../shared/utils";
 import InputBox from "./InputBox";
-import { buildInputHandlers, initHighlightText } from "./InputFieldFunctions";
+import { buildInputHandlers, setGhostValue } from "./InputFieldFunctions";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
 import { submitButton } from "./util";
@@ -46,19 +45,24 @@ export default function Game(props: props) {
     }
 
     handleSocket(socket.current, gameState, dispatch);
-    console.log(`
-            Game Component
-            gameState: ${pp(gameState)}
-            clientId: ${pp(socket.current.auth)}
-        `);
+    // console.log(`
+    //         Game Component
+    //         gameState: ${pp(gameState)}
+    //         clientId: ${pp(socket.current.auth)}
+    //     `);
 
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
     }, []);
 
     useEffect(() => {
-        if (gameState.status !== "waiting") initHighlightText(inputHighlightDom, gameState.matchLetter);
+        if (gameState.status !== "waiting") setGhostValue(inputHighlightDom, gameState.matchLetter);
     }, [gameState.status]);
+
+    useEffect(() => {
+        console.log("useEffect() [gameState.matchLetter]:", gameState.matchLetter);
+        setGhostValue(inputHighlightDom, gameState.matchLetter);
+    }, [gameState.matchLetter]);
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -76,8 +80,8 @@ export default function Game(props: props) {
 
             {/* Game Status Badge */}
             <div className="chip px-6 py-2" style={{ 
-                borderColor: gameState.status === 'playing' ? 'rgba(34, 197, 94, 0.45)' : 'var(--border-accent)',
-                color: gameState.status === 'playing' ? '#d1fae5' : 'var(--text-secondary)',
+                borderColor: gameState.status === 'playing' ? 'var(--border-success-subtle)' : 'var(--border-accent)',
+                color: gameState.status === 'playing' ? 'var(--text-success-light)' : 'var(--text-secondary)',
             }}>
                 {gameState.status === 'playing' && <span className="chip-dot"></span>}
                 {gameState.status?.toUpperCase() || 'WAITING'}
@@ -89,7 +93,7 @@ export default function Game(props: props) {
                     <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Match Letter</h2>
                     <div className="text-8xl font-bold mb-4" style={{ 
                         color: 'var(--match-letter-color)',
-                        textShadow: '0 0 20px rgba(56, 189, 248, 0.5)',
+                        textShadow: '0 0 20px var(--text-shadow-cyan)',
                     }}>
                         {gameState.matchLetter.block}
                     </div>

@@ -30,6 +30,8 @@ export function createSocketMutex(): RunExclusive {
  * @returns Formatted JSON string with tab indentation
  */
 export function pp(obj: any): string {
+    // if (isSuppress()) return "[SUPPRESS=TRUE]";
+    return "[SUPPRESS=TRUE]";
     return JSON.stringify(obj, null, '\t');
 }
 
@@ -96,4 +98,15 @@ export async function inputIsValid(input: string): Promise<boolean> {
 
     const data = await res.json();
     return Object.keys(data).length > 0;
+}
+
+// ============================================================================
+// Environment Utilities
+// ============================================================================
+
+/**
+ * Returns true if SUPPRESS is set to true.
+ */
+export function isSuppress(): boolean {
+    return String(process.env.SUPPRESS).toLowerCase() === "true";
 }

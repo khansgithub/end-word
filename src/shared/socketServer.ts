@@ -4,7 +4,7 @@ import { buildInitialGameState, gameStateReducer, makePlayersArray } from "./Gam
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
 import { socketEvents } from "./socket";
 import { ClientPlayers, ClientToServerEvents, PlayersArray, PlayerWithoutId, RunExclusive, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
-import { createSocketMutex, pp, cloneServerPlayersToClientPlayers, inputIsValid } from "./utils";
+import { createSocketMutex, pp, cloneServerPlayersToClientPlayers, inputIsValid, isSuppress } from "./utils";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
@@ -26,7 +26,7 @@ function emitWithLogging<E extends keyof ServerToClientEvents>(
     ...args: Parameters<ServerToClientEvents[E]>
 ) {
     logWithContext("emitting: " + event);
-    logWithContext("emitting payload: " + pp(args));
+    logWithContext("emitting payload: " + isSuppress() ? "[SUPPRESS=TRUE]" : pp(args));
     socket.emit(event, ...args);
 }
 
@@ -37,7 +37,7 @@ function broadcastEmitWithLogging<E extends keyof ServerToClientEvents>(
     ...args: Parameters<ServerToClientEvents[E]>
 ) {
     logWithContext("broadcast emitting: " + event);
-    logWithContext("broadcast emitting payload: " + pp(args));
+    logWithContext("broadcast emitting payload: " + isSuppress() ? "[SUPPRESS=TRUE]" : pp(args));
     socket.broadcast.emit(event, ...args);
 }
 

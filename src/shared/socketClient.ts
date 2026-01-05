@@ -2,10 +2,11 @@ import type { ActionDispatch } from "react";
 import { GameStateActionsType } from "./GameState";
 import { socketEvents } from "./socket";
 import type { ClientPlayerSocket, GameState } from "./types";
-import { pp } from "./utils";
+import { isSuppress, pp} from "./utils";
 
 const L = "socketClient: "
 const log = console.log;
+// const pp = isSuppress() ? () => { return "[SUPPRESS=TRUE]"; } : prettyprint;
 
 // Used to ensure we only attach a single handler set per client socket.
 const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
@@ -32,7 +33,7 @@ export function registerClientSocketHandlers(
     }))
 
     socket.on(socketEvents.connect, () => {
-        console.log(`Connected to socket: ${socket.id}, ${socket.auth}`);
+        log(L, `Connected to socket: ${socket.id}, ${socket.auth}`);
         // Request full state sync on reconnection to ensure we're in sync
         if (state.thisPlayer) {
             socket.emit(socketEvents.requestFullState);
@@ -47,7 +48,7 @@ export function registerClientSocketHandlers(
     });
 
     socket.on(socketEvents.playerJoinNotification, (newPlayer) => {
-        console.log("playerJoinNotification event received");
+        log(L, "playerJoinNotification event received");
         dispatch({
             type: "addPlayerToArray",
             payload: [state, newPlayer],
@@ -64,7 +65,7 @@ export function registerClientSocketHandlers(
     socket.on(socketEvents.playerRegistered, (serverState) => {
         log(L, "playerRegistered: dispatch, args:", pp(serverState));
         if (state.thisPlayer !== undefined){
-            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", pp(state.thisPlayer))
+            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", isSuppress() ? "[SUPPRESS=TRUE]" : pp(state.thisPlayer))
             return;
         }
         const player = serverState.thisPlayer;
@@ -113,6 +114,6 @@ export function registerClientSocketHandlers(
     });
 
     socket.on(socketEvents.text, (text) => {
-        console.log(`Text from server: ${text}`);
+        log(L, `Text from server: ${text}`);
     });
 }

@@ -68,7 +68,7 @@ function InputBox({
                     style={{ 
                         background: 'var(--gradient-input)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--color-primary)',
-                        boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
+                        boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                         opacity: disabled ? 0.4 : 1,
                     }}
                     aria-hidden="true"
@@ -95,15 +95,15 @@ function InputBox({
                                 : 'var(--input-border-default)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--text-primary)',
                         caretColor: disabled ? 'transparent' : 'var(--interactive-focus)',
-                        boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
+                        boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                     }}
                     onFocus={(e) => {
                         if (disabled) return;
                         if (!isError) {
                             e.currentTarget.style.borderColor = 'var(--border-focus)';
-                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(8, 47, 73, 0.9), 0 0 18px var(--interactive-focus-light)';
+                            e.currentTarget.style.boxShadow = '0 0 0 1px var(--input-focus-border), 0 0 18px var(--interactive-focus-light)';
                         } else {
-                            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(248, 113, 113, 0.3), 0 0 18px rgba(248, 113, 113, 0.2)';
+                            e.currentTarget.style.boxShadow = '0 0 0 1px var(--input-error-focus-border), 0 0 18px var(--input-error-focus-glow)';
                         }
                     }}
                     onBlur={(e) => {
@@ -111,7 +111,7 @@ function InputBox({
                         e.currentTarget.style.borderColor = isError 
                             ? 'var(--input-border-error)' 
                             : 'var(--input-border-default)';
-                        e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)';
+                        e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--input-box-shadow)';
                     }}
                 />
                 {/* Disabled overlay with lock icon */}
@@ -148,7 +148,7 @@ function InputBox({
             </div>
             {isError && !disabled && (
                 <label className="label py-1">
-                    <span className="label-text-alt" style={{ color: '#fecaca', fontSize: '0.7rem' }}>
+                    <span className="label-text-alt" style={{ color: 'var(--text-error)', fontSize: '0.7rem' }}>
                         Invalid word
                     </span>
                 </label>

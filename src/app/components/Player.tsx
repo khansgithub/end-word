@@ -14,16 +14,16 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
             style={{ 
                 backgroundColor: 'var(--bg-secondary-solid)',
                 borderColor: isCurrentPlayer 
-                    ? 'rgba(56, 189, 248, 0.7)' 
+                    ? 'var(--player-border-focus)' 
                     : turn 
-                        ? 'rgba(56, 189, 248, 0.5)' 
+                        ? 'var(--player-border-turn)' 
                         : 'var(--border-default)',
                 borderWidth: isCurrentPlayer ? '2px' : turn ? '1.5px' : '1px',
                 transform: turn ? 'scale(1.05)' : isCurrentPlayer ? 'scale(1.02)' : 'scale(1)',
                 boxShadow: isCurrentPlayer 
-                    ? '0 0 0 1px rgba(8, 47, 73, 0.9), 0 0 18px rgba(56, 189, 248, 0.35), 0 20px 40px rgba(15, 23, 42, 0.95)' 
+                    ? '0 0 0 1px var(--player-shadow-focus), 0 0 18px var(--interactive-focus-light), 0 20px 40px var(--shadow-color)' 
                     : turn 
-                        ? '0 0 12px rgba(56, 189, 248, 0.9), 0 20px 40px rgba(15, 23, 42, 0.95)' 
+                        ? '0 0 12px var(--player-shadow-glow), 0 20px 40px var(--shadow-color)' 
                         : 'var(--shadow-panel)',
             }}
         >
@@ -33,7 +33,7 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
                     className="chip absolute -top-2 -right-2 z-10"
                     style={{ 
                         background: 'var(--gradient-button)',
-                        borderColor: 'rgba(56, 189, 248, 0.7)',
+                        borderColor: 'var(--player-border-focus)',
                         color: 'var(--text-primary)',
                         fontWeight: 'bold',
                         padding: '0.18rem 0.45rem',
@@ -54,15 +54,15 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
                                     ? 'var(--gradient-avatar-default)' 
                                     : 'var(--gradient-avatar-empty)',
                             border: isCurrentPlayer 
-                                ? '2px solid rgba(56, 189, 248, 0.7)' 
+                                ? '2px solid var(--player-border-focus)' 
                                 : turn 
-                                    ? '1.5px solid rgba(56, 189, 248, 0.5)' 
+                                    ? '1.5px solid var(--player-border-turn)' 
                                     : '1px solid var(--border-default)',
                             color: 'var(--text-primary)',
                             boxShadow: isCurrentPlayer 
-                                ? '0 0 12px rgba(56, 189, 248, 0.9), 0 0 22px rgba(56, 189, 248, 0.5)' 
+                                ? '0 0 12px var(--player-shadow-glow), 0 0 22px var(--player-shadow-glow-subtle)' 
                                 : turn 
-                                    ? '0 0 10px rgba(56, 189, 248, 0.9)' 
+                                    ? '0 0 10px var(--player-shadow-glow)' 
                                     : 'none',
                         }}
                     >
@@ -85,8 +85,8 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
                 
                 {turn && (
                     <div className="chip mt-1" style={{ 
-                        borderColor: 'rgba(56, 189, 248, 0.45)',
-                        color: '#d1fae5',
+                        borderColor: 'var(--player-border-chip)',
+                        color: 'var(--text-success-light)',
                     }}>
                         <span className="chip-dot"></span>
                         Turn

@@ -420,7 +420,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         await expect(dom.pageA.wordInput).toBeDisabled({ timeout: 5_000 });
 
         // Get highlight value on page B
-        log("get highlight value on page B");
+        log("assert highlight value on page B is valid");
         const highlightValueB = await assertHighlightValue(pageB, dom.pageB.highlightInput);
         log(`highlight value on page B: ${highlightValueB}`);
     } catch (error) {

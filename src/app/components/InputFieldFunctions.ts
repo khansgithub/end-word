@@ -219,11 +219,11 @@ export function buildInputHandlers({
         isComposing,
     }
 }
-export function initHighlightText(
+export function setGhostValue(
     inputDomHighlightRef:inputHandlerProps["inputDomHighlight"],
     matchLetterRef:inputHandlerProps["matchLetter"],
 ) {
-    if (inputDomHighlightRef.current && inputDomHighlightRef.current.value.length < 1) {
+    if (inputDomHighlightRef.current) {
         inputDomHighlightRef.current.value = matchLetterRef.steps[0];
     }
 }

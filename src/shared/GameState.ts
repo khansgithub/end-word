@@ -9,7 +9,7 @@ import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { ClientPlayers, GameState, GameStateFrozen, GameStatus, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
-import { pp } from "./utils";
+import { isSuppress, pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -158,7 +158,7 @@ function addPlayer(
     };
 
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
-    console.log("addPlayer in Reducer: next state is: ", pp(nextState));
+    console.log("addPlayer in Reducer: next state is: ", isSuppress() ? "[SUPPRESS=TRUE]" : pp(nextState));
     return nextState;
 }
 

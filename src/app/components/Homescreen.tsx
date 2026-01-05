@@ -113,7 +113,7 @@ export function Homescreen() {
             <header className="w-full max-w-md mb-4" style={{
                 padding: '0.75rem 1.25rem',
                 background: 'var(--gradient-header)',
-                borderBottom: '1px solid #1f2937',
+                borderBottom: '1px solid var(--border-medium)',
                 borderRadius: '0.9rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -134,8 +134,8 @@ export function Homescreen() {
                             width: '0.9rem',
                             height: '0.9rem',
                             borderRadius: '999px',
-                            background: 'conic-gradient(from 180deg, #38bdf8, #a855f7, #22c55e, #38bdf8)',
-                            boxShadow: '0 0 14px rgba(56, 189, 248, 0.9)',
+                            background: 'conic-gradient(from 180deg, var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-primary))',
+                            boxShadow: '0 0 14px var(--interactive-focus-strong)',
                         }}></span>
                         End Word
                     </h1>
@@ -172,14 +172,14 @@ export function Homescreen() {
                             placeholder="Enter your name" 
                             required={true} 
                             onKeyDown={onKeyDown} 
-                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[#4b5563] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_rgba(8,47,73,0.9),0_0_18px_var(--interactive-focus-light)]" 
+                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]" 
                             style={{ 
                                 background: 'var(--input-bg-solid)',
-                                boxShadow: 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)',
+                                boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                                 color: 'var(--text-primary)',
                             }}
                             onBlur={(e) => {
-                                e.currentTarget.style.boxShadow = 'inset 0 0 0 1px rgba(15, 23, 42, 0.95)';
+                                e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--input-box-shadow)';
                             }}
                         />
                     </div>

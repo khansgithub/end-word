@@ -12,7 +12,7 @@ export async function submitButton(
     // Validate word is not empty
     if (submittedWord.length === 0) {
         refs.inputDom.current?.classList.add("invalid");
-        return;
+        return
     }
 
     // Send word submission to server (server is source of truth)
