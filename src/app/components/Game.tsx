@@ -60,7 +60,6 @@ export default function Game(props: props) {
     }, [gameState.status]);
 
     useEffect(() => {
-        console.log("useEffect() [gameState.matchLetter]:", gameState.matchLetter);
         setGhostValue(inputHighlightDom, gameState.matchLetter);
     }, [gameState.matchLetter]);
 
