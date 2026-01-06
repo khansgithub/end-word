@@ -3,23 +3,15 @@
 import React, { FormEvent, memo, useEffect, useRef, useCallback } from "react";
 import { create } from "zustand";
 import { MatchLetter } from "../../shared/types";
-import { validateInput as validateInputLogic, calculateHighlightText, ValidationAction } from "./inputValidation";
+import { 
+    validateInput as validateInputLogic,
+    calculateHighlightText,
+    ValidationAction, 
+    clearInput as _clearInput
+} from "./inputValidation";
+import { InputState } from "../store/userStore";
 
 // Zustand store for input state to minimize re-renders
-interface InputState {
-    inputValue: string;
-    highlightValue: string;
-    isComposing: boolean;
-    isError: boolean;
-    lastKey: string;
-    setInputValue: (value: string) => void;
-    setHighlightValue: (value: string) => void;
-    setIsComposing: (value: boolean) => void;
-    setIsError: (value: boolean) => void;
-    setLastKey: (value: string) => void;
-    reset: () => void;
-}
-
 const useInputStore = create<InputState>((set) => ({
     inputValue: "",
     highlightValue: "",
@@ -41,7 +33,7 @@ const useInputStore = create<InputState>((set) => ({
 }));
 
 /**
- * InputBox2 Zustand State & Props Documentation
+ * InputBox Zustand State & Props Documentation
  * 
  * Zustand store state:
  * - inputValue:      The current user input in the actual <input> field. Updated on user typing.
@@ -56,30 +48,30 @@ const useInputStore = create<InputState>((set) => ({
  * - setLastKey:          Setter to update lastKey.
  * - reset:               Resets all input-related state.
  * 
- * Props on InputBox2:
+ * Props on InputBox:
  * - matchLetter:         The current letter to match (with decomposed steps) for input guidance.
  * - disabled:            Whether the input is disabled (prevents editing, changes visual feedback).
  * - onSubmit:            Optional. Called with completed input when "Enter" is pressed and input is non-empty.
  * - onKeyDisplayChange:  Optional. Called with every key typed or erased; used to update key overlay display.
  * 
- * InputBox2 uses a dual layer input:
+ * InputBox uses a dual layer input:
  * - The highlight layer shows the expected match letter(s) and composition progress.
  * - The real input layer is where users type. Handlers (change, composition, keydown) keep all state and visual feedback in-sync with the store and parent callbacks.
  */
 
-interface InputBox2Props {
+interface InputBoxProps {
     matchLetter: MatchLetter;
     disabled: boolean;
     onSubmit?: (word: string) => void;
     onKeyDisplayChange?: (key: string) => void;
 }
 
-function InputBox2({
+function InputBox({
     matchLetter,
     disabled,
     onSubmit,
     onKeyDisplayChange,
-}: InputBox2Props) {
+}: InputBoxProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const prevInputRef = useRef<string>("");
     
@@ -103,13 +95,7 @@ function InputBox2({
     }, []);
 
     // Helper functions for input manipulation
-    const clearInput = useCallback(() => {
-        const store = useInputStore.getState();
-        store.setInputValue("");
-        store.setHighlightValue(matchLetter.steps[0] || "");
-        prevInputRef.current = "";
-        store.setIsError(false);
-    }, [matchLetter.steps]);
+    const clearInput = useCallback(() => _clearInput(useInputStore, prevInputRef, matchLetter), [matchLetter.steps]);
 
     const blockInput = useCallback(() => {
         useInputStore.getState().setInputValue(prevInputRef.current);
@@ -124,30 +110,20 @@ function InputBox2({
         store.setHighlightValue(highlightText);
     }, [matchLetter]);
 
-    // Input validation logic - uses extracted pure validation function
+    const actionHandlers = useRef<Record<ValidationAction["type"], (...args: any[]) => void>>({
+        CLEAR: clearInput,
+        BLOCK: blockInput,
+        CONTINUE: (input: string) => continueInput(input),
+    });
+
     const validateInput = useCallback((
         input: string,
         prev: string,
         letter: string,
         composing: boolean
     ): void => {
-        const action = validateInputLogic(input, prev, letter, composing, matchLetter);
-        
-        // debug ------------------------------------------------------------
-        continueInput((action as { type: "CONTINUE"; input: string }).input);
-        return;
-        // debug ------------------------------------------------------------
-        switch (action.type) {
-            case "CLEAR":
-                clearInput();
-                break;
-            case "BLOCK":
-                blockInput();
-                break;
-            case "CONTINUE":
-                continueInput(action.input);
-                break;
-        }
+        const action = validateInputLogic(input, prev, letter, composing, matchLetter);        
+        actionHandlers.current[action.type]();
     }, [matchLetter, clearInput, blockInput, continueInput]);
 
     // Event handlers
@@ -355,5 +331,5 @@ export const setInputError = (error: boolean) => useInputStore.getState().setIsE
 // Export a function to reset the input
 export const resetInput = () => useInputStore.getState().reset();
 
-export default memo(InputBox2);
+export default memo(InputBox);
 

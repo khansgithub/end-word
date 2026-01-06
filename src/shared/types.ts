@@ -2,7 +2,6 @@ import { Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
 import { MAX_PLAYERS } from "./consts";
 import { SocketEventName } from "./socket";
-import { EventsMap } from "socket.io/dist/typed-events";
 
 /* --------------------------------------------------
  * Utility Types

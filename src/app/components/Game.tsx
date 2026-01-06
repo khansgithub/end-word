@@ -4,7 +4,7 @@ import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
-import InputBox2 from "./InputBox";
+import InputBox from "./InputBox";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
 import { submitButton, submitButton2 } from "./util";
@@ -108,7 +108,7 @@ export default function Game(props: props) {
                                 onKeyDown={inputHandelers.onKeyDown}
                                 disabled={gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat)}
                             /> */}
-                            <InputBox2
+                            <InputBox
                                 matchLetter={gameState.matchLetter}
                                 disabled={isDisabled}
                                 onSubmit={submitButton2}

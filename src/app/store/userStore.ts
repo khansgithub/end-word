@@ -1,5 +1,4 @@
 import { createStore } from "zustand";
-import { persist } from "zustand/middleware";
 import { ClientPlayerSocket } from "../../shared/types";
 
 interface PlayerSession {
@@ -11,6 +10,20 @@ interface PlayerSession {
 interface Socket {
     socket: ClientPlayerSocket | null,
     setSocket: (socket: ClientPlayerSocket) => void;
+}
+
+export interface InputState {
+    inputValue: string;
+    highlightValue: string;
+    isComposing: boolean;
+    isError: boolean;
+    lastKey: string;
+    setInputValue: (value: string) => void;
+    setHighlightValue: (value: string) => void;
+    setIsComposing: (value: boolean) => void;
+    setIsError: (value: boolean) => void;
+    setLastKey: (value: string) => void;
+    reset: () => void;
 }
 
 const _userStore = (set: any) => ({

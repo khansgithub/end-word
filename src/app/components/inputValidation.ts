@@ -1,5 +1,7 @@
+import { StoreApi } from "zustand";
 import { MatchLetter } from "../../shared/types";
 import { decomposeSyllable } from "../hangul-decomposer";
+import { InputState } from "../store/userStore";
 
 /**
  * Validation action types that determine what should happen to the input
@@ -99,3 +101,18 @@ export function calculateHighlightText(input: string, matchLetter: MatchLetter):
     return highlightText;
 }
 
+export function clearInput(
+    useInputStore: StoreApi<InputState>,
+    prevInputRef: React.RefObject<String>,
+    matchLetter: MatchLetter
+){
+    const store = useInputStore.getState();
+    store.setInputValue("");
+    store.setHighlightValue(matchLetter.steps[0] || "");
+    prevInputRef.current = "";
+    store.setIsError(false);
+}
+
+// todo: make a function which does validateInput in inputbox
+// this is so that in testing you can mock the dependencies, and test the behaviour
+// of the inputbox validation logic more accurately.

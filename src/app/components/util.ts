@@ -23,18 +23,18 @@ export async function submitButton(
 }
 
 /**
- * submitButtonForInputBox2:
+ * submitButtonForInputBox:
  * - Accepts: 
  *    - socket: ClientPlayerSocket
  *    - optional onError callback (for error UI, e.g. show invalid word)
- * - Grabs word from InputBox2's Zustand store
+ * - Grabs word from InputBox's Zustand store
  * - If empty, optionally triggers error UI; otherwise, emits to server.
- *   Does NOT manipulate DOM node refs, but fits with InputBox2 logic/exported hooks.
+ *   Does NOT manipulate DOM node refs, but fits with InputBox logic/exported hooks.
  */
 import { getInputValue, setInputError, resetInput } from "./InputBox";
 import { getSocketManager } from "./socket";
 
-export async function submitButtonForInputBox2(
+export async function submitButtonForInputBox(
     socket: ClientPlayerSocket,
     onError?: () => void
 ) {
