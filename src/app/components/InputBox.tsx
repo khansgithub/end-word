@@ -1,71 +1,256 @@
 "use client";
 
-import React, { FormEvent, memo, RefObject, useEffect } from "react";
+import React, { FormEvent, memo, useEffect, useRef, useCallback } from "react";
+import { create } from "zustand";
+import { MatchLetter } from "../../shared/types";
+import { validateInput as validateInputLogic, calculateHighlightText, ValidationAction } from "./inputValidation";
 
-interface props {
-    inputDomHighlight: RefObject<HTMLInputElement | null>;
-    inputDom: RefObject<HTMLInputElement | null>;
-    onChange?: (e: React.ChangeEvent) => void;
-    onBeforeInput?: (e: FormEvent<HTMLInputElement>) => void;
-    onCompositionStart?: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onCompositionUpdate?: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onCompositionEnd?: (e: React.CompositionEvent<HTMLInputElement>) => void;
-    onKeyDown?: (e: React.KeyboardEvent) => void;
+// Zustand store for input state to minimize re-renders
+interface InputState {
+    inputValue: string;
+    highlightValue: string;
+    isComposing: boolean;
+    isError: boolean;
+    lastKey: string;
+    setInputValue: (value: string) => void;
+    setHighlightValue: (value: string) => void;
+    setIsComposing: (value: boolean) => void;
+    setIsError: (value: boolean) => void;
+    setLastKey: (value: string) => void;
+    reset: () => void;
+}
+
+const useInputStore = create<InputState>((set) => ({
+    inputValue: "",
+    highlightValue: "",
+    isComposing: false,
+    isError: false,
+    lastKey: "",
+    setInputValue: (value: string) => set({ inputValue: value }),
+    setHighlightValue: (value: string) => set({ highlightValue: value }),
+    setIsComposing: (value: boolean) => set({ isComposing: value }),
+    setIsError: (value: boolean) => set({ isError: value }),
+    setLastKey: (value: string) => set({ lastKey: value }),
+    reset: () => set({ 
+        inputValue: "", 
+        highlightValue: "", 
+        isComposing: false, 
+        isError: false,
+        lastKey: "" 
+    }),
+}));
+
+/**
+ * InputBox2 Zustand State & Props Documentation
+ * 
+ * Zustand store state:
+ * - inputValue:      The current user input in the actual <input> field. Updated on user typing.
+ * - highlightValue:  The text shown in the "highlight" input overlay, representing the match letter or composition.
+ * - isComposing:     Whether the user is currently composing text (IME/composition input, e.g. for Hangul typing).
+ * - isError:         Indicates whether the current input is considered invalid by validation logic.
+ * - lastKey:         The last character/key input detected (used for display or logic feedback).
+ * - setInputValue:       Setter to update inputValue.
+ * - setHighlightValue:   Setter to update highlightValue.
+ * - setIsComposing:      Setter to update isComposing.
+ * - setIsError:          Setter to update isError.
+ * - setLastKey:          Setter to update lastKey.
+ * - reset:               Resets all input-related state.
+ * 
+ * Props on InputBox2:
+ * - matchLetter:         The current letter to match (with decomposed steps) for input guidance.
+ * - disabled:            Whether the input is disabled (prevents editing, changes visual feedback).
+ * - onSubmit:            Optional. Called with completed input when "Enter" is pressed and input is non-empty.
+ * - onKeyDisplayChange:  Optional. Called with every key typed or erased; used to update key overlay display.
+ * 
+ * InputBox2 uses a dual layer input:
+ * - The highlight layer shows the expected match letter(s) and composition progress.
+ * - The real input layer is where users type. Handlers (change, composition, keydown) keep all state and visual feedback in-sync with the store and parent callbacks.
+ */
+
+interface InputBox2Props {
+    matchLetter: MatchLetter;
     disabled: boolean;
-};
+    onSubmit?: (word: string) => void;
+    onKeyDisplayChange?: (key: string) => void;
+}
 
-function InputBox({
-    inputDomHighlight,
-    inputDom,
-    onChange,
-    onCompositionStart,
-    onCompositionUpdate,
-    onCompositionEnd,
-    onBeforeInput,
-    onKeyDown,
+function InputBox2({
+    matchLetter,
     disabled,
-}: props) {
-    const [isError, setIsError] = React.useState(false);
+    onSubmit,
+    onKeyDisplayChange,
+}: InputBox2Props) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const prevInputRef = useRef<string>("");
+    
+    // Zustand selectors - only re-render when specific values change
+    const inputValue = useInputStore((state) => state.inputValue);
+    const highlightValue = useInputStore((state) => state.highlightValue);
+    const isError = useInputStore((state) => state.isError);
+    const isComposing = useInputStore((state) => state.isComposing);
+    const lastKey = useInputStore((state) => state.lastKey);
+
+    // Initialize highlight value when matchLetter changes
+    useEffect(() => {
+        if (matchLetter.steps[0]) {
+            useInputStore.getState().setHighlightValue(matchLetter.steps[0]);
+        }
+    }, [matchLetter]);
+
+    // Focus input on mount
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    // Helper functions for input manipulation
+    const clearInput = useCallback(() => {
+        const store = useInputStore.getState();
+        store.setInputValue("");
+        store.setHighlightValue(matchLetter.steps[0] || "");
+        prevInputRef.current = "";
+        store.setIsError(false);
+    }, [matchLetter.steps]);
+
+    const blockInput = useCallback(() => {
+        useInputStore.getState().setInputValue(prevInputRef.current);
+    }, []);
+
+    const continueInput = useCallback((input: string) => {
+        const store = useInputStore.getState();
+        store.setInputValue(input);
+        prevInputRef.current = input;
+        
+        const highlightText = calculateHighlightText(input, matchLetter);
+        store.setHighlightValue(highlightText);
+    }, [matchLetter]);
+
+    // Input validation logic - uses extracted pure validation function
+    const validateInput = useCallback((
+        input: string,
+        prev: string,
+        letter: string,
+        composing: boolean
+    ): void => {
+        const action = validateInputLogic(input, prev, letter, composing, matchLetter);
+        
+        // debug ------------------------------------------------------------
+        continueInput((action as { type: "CONTINUE"; input: string }).input);
+        return;
+        // debug ------------------------------------------------------------
+        switch (action.type) {
+            case "CLEAR":
+                clearInput();
+                break;
+            case "BLOCK":
+                blockInput();
+                break;
+            case "CONTINUE":
+                continueInput(action.input);
+                break;
+        }
+    }, [matchLetter, clearInput, blockInput, continueInput]);
+
+    // Event handlers
+    const handleCompositionStart = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+        console.log("IME composition started");
+        useInputStore.getState().setIsComposing(true);
+    }, []);
+
+    const handleCompositionUpdate = useCallback((e: React.CompositionEvent) => {
+        // still composing — ignore
+    }, []);
+
+    const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+        console.log("IME composition ended");
+        useInputStore.getState().setIsComposing(false);
+
+        const input = e.currentTarget.value;
+        const prev = prevInputRef.current;
+        const letter = ""; // No letter detail from IME composition end
+
+        console.clear();
+        console.log("--------------");
+        console.log("(onCompositionEnd) input:", input);
+        console.log("prev input:", prev);
+        console.log("composition state:", false);
+        console.log("--------------");
+
+        validateInput(input, prev, letter, false);
+    }, [validateInput]);
+
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const event = e.nativeEvent as any as InputEvent;
+        const letter = event.data ?? ""; // can be null for delete
+        const input = e.currentTarget.value;
+        const prev = prevInputRef.current;
+        const store = useInputStore.getState();
+
+        // Clear error state when user starts typing
+        if (isError) {
+            store.setIsError(false);
+        }
+
+        console.clear();
+        console.log("--------------");
+        console.log("input:", input, "letter:", letter);
+        console.log("prev input:", prevInputRef.current);
+        console.log("composition state:", isComposing);
+        console.log("--------------");
+
+        if (onKeyDisplayChange) {
+            onKeyDisplayChange(letter.slice(-1));
+        }
+        store.setLastKey(letter.slice(-1));
+
+        validateInput(input, prev, letter, isComposing);
+    }, [isComposing, isError, validateInput, onKeyDisplayChange]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.repeat) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            if (onSubmit && inputValue) {
+                onSubmit(inputValue);
+                clearInput();
+            }
+            return;
+        }
+        if (e.key === "Backspace" && inputValue === "") {
+            if (onKeyDisplayChange) {
+                onKeyDisplayChange("");
+            }
+            useInputStore.getState().setLastKey("");
+        }
+    }, [inputValue, onSubmit, onKeyDisplayChange, clearInput]);
+
+    const handleBeforeInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+        // console.log("before input: ", e.data);
+    }, []);
 
     // Shared base classes for both input elements
     const sharedInputClasses = "col-start-1 row-start-1 w-full h-20 text-5xl rounded-[0.55rem] font-mono outline-none transition-all duration-200 ease-in-out py-[0.7rem] px-[0.75rem]";
 
-    useEffect(() => {
-        inputDom.current?.focus();
-    }, []);
-
-    // Watch for invalid class changes on the input element
-    useEffect(() => {
-        if (!inputDom.current) return;
-
-        // TODO: Replace this with a react hook.
-        const observer = new MutationObserver(() => {
-            const hasInvalidClass = inputDom.current?.classList.contains('invalid') ?? false;
-            setIsError(hasInvalidClass);
-        });
-
-        observer.observe(inputDom.current, {
-            attributes: true,
-            attributeFilter: ['class'],
-        });
-
-        // Initial check
-        setIsError(inputDom.current.classList.contains('invalid'));
-
-        return () => observer.disconnect();
-    }, [inputDom]);
-
     return (
         <div className="form-control w-full">
-            <div className=" grid grid-cols-1 grid-rows-1 relative w-full">
+            <div className="grid grid-cols-1 grid-rows-1 relative w-full">
                 {/* Highlight layer - shows the match letter */}
                 <input
-                    ref={inputDomHighlight}
                     type="text"
                     disabled={true}
                     readOnly
+                    value={highlightValue}
                     className={`${sharedInputClasses} inset-0 pointer-events-none select-none border-transparent border`}
-                    style={{ 
+                    style={{
                         background: 'var(--gradient-input)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--color-primary)',
                         boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
@@ -75,23 +260,24 @@ function InputBox({
                 />
                 {/* Actual input layer */}
                 <input
-                    ref={inputDom}
+                    ref={inputRef}
                     type="text"
                     disabled={disabled}
                     maxLength={7}
                     minLength={2}
-                    onChange={onChange}
-                    onCompositionStart={onCompositionStart}
-                    onCompositionUpdate={onCompositionUpdate}
-                    onCompositionEnd={onCompositionEnd}
-                    onBeforeInput={onBeforeInput}
-                    onKeyDown={onKeyDown}
+                    value={inputValue}
+                    onChange={handleChange}
+                    onCompositionStart={handleCompositionStart}
+                    onCompositionUpdate={handleCompositionUpdate}
+                    onCompositionEnd={handleCompositionEnd}
+                    onBeforeInput={handleBeforeInput}
+                    onKeyDown={handleKeyDown}
                     className={`${sharedInputClasses} background-transparent z-10 border disabled:cursor-not-allowed disabled:opacity-70`}
                     style={{
-                        borderColor: disabled 
-                            ? 'var(--input-border-disabled)' 
-                            : isError 
-                                ? 'var(--input-border-error)' 
+                        borderColor: disabled
+                            ? 'var(--input-border-disabled)'
+                            : isError
+                                ? 'var(--input-border-error)'
                                 : 'var(--input-border-default)',
                         color: disabled ? 'var(--input-text-disabled)' : 'var(--text-primary)',
                         caretColor: disabled ? 'transparent' : 'var(--interactive-focus)',
@@ -108,15 +294,15 @@ function InputBox({
                     }}
                     onBlur={(e) => {
                         if (disabled) return;
-                        e.currentTarget.style.borderColor = isError 
-                            ? 'var(--input-border-error)' 
+                        e.currentTarget.style.borderColor = isError
+                            ? 'var(--input-border-error)'
                             : 'var(--input-border-default)';
                         e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--input-box-shadow)';
                     }}
                 />
                 {/* Disabled overlay with lock icon */}
                 {disabled && (
-                    <div 
+                    <div
                         className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
                         style={{
                             background: 'var(--input-overlay-disabled)',
@@ -124,19 +310,19 @@ function InputBox({
                         }}
                     >
                         <div className="flex flex-col items-center gap-1">
-                            <svg 
-                                width="24" 
-                                height="24" 
-                                viewBox="0 0 24 24" 
-                                fill="none" 
-                                stroke="currentColor" 
+                            <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
                                 strokeWidth="2"
                                 style={{ color: 'var(--input-text-disabled)' }}
                             >
-                                <rect x="5" y="11" width="14" height="10" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                             </svg>
-                            <span 
+                            <span
                                 className="text-xs font-medium"
                                 style={{ color: 'var(--input-text-disabled)' }}
                             >
@@ -154,13 +340,20 @@ function InputBox({
                 </label>
             )}
         </div>
-    )
+    );
 }
 
-// export default memo(InputBox, (prevProps: props, nextProps: props): boolean => {
-//     console.log("prev", prevProps.inputDomHighlight.current?.value);
-//     console.log("next", nextProps.inputDomHighlight.current?.value);
-//     return false;
-// });
+// Export a hook to access the input store from outside
+export const useInputBoxStore = () => useInputStore;
 
-export default memo(InputBox);
+// Export a function to get the current input value (for submission)
+export const getInputValue = () => useInputStore.getState().inputValue;
+
+// Export a function to set error state (for submission validation)
+export const setInputError = (error: boolean) => useInputStore.getState().setIsError(error);
+
+// Export a function to reset the input
+export const resetInput = () => useInputStore.getState().reset();
+
+export default memo(InputBox2);
+

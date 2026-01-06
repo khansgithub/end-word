@@ -1,10 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import Game from "./components/Game";
-import { Dispatch, memo, RefObject, useEffect, useRef, useState } from "react";
-import { foobar } from "./util";
-import { Homescreen } from "./components/Homescreen";
+import { memo, useEffect, useRef, useState } from "react";
+import { buildInitialGameState } from "../shared/GameState";
+import InputBox from "./components/InputBox";
 
 export default function () {
     const [data, setData] = useState(0);
@@ -17,7 +15,8 @@ export default function () {
 
     return (
         // <Game></Game>
-        <Homescreen></Homescreen>
+        // <Homescreen></Homescreen>
+        <InputBox matchLetter={buildInitialGameState().matchLetter} disabled={false}></InputBox>
         // <div className="w-3/12 h-full flex flex-col justify-center items-center">
         //     {/* <button onClick={onClick} className="border-2 border-white p-3 m-3 "> click: {data} </button> */}
         //     {/* <Foo state={data}></Foo> */}

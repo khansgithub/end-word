@@ -4,8 +4,7 @@ import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
-import InputBox2 from "./InputBox2";
-import { setGhostValue } from "./InputFieldFunctions";
+import InputBox2 from "./InputBox";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
 import { submitButton, submitButton2 } from "./util";
@@ -47,14 +46,6 @@ export default function Game(props: props) {
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
     }, []);
-
-    useEffect(() => {
-        if (gameState.status !== "waiting") setGhostValue(inputHighlightDom, gameState.matchLetter);
-    }, [gameState.status]);
-
-    useEffect(() => {
-        setGhostValue(inputHighlightDom, gameState.matchLetter);
-    }, [gameState.matchLetter]);
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>

@@ -8,7 +8,7 @@ Notes from gpt:
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { ClientPlayers, GameState, GameStateFrozen, GameStatus, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
+import { ClientPlayers, GameState, GameStateFrozen, GameStatus, MatchLetter, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
 import { getCurrentPlayerIndex, isSuppress, pp } from "./utils";
 
 export type GameStateActionsType = {
@@ -31,7 +31,6 @@ function replaceGameState(state: GameState, newState: GameState): GameState {
 }
 
 const GameStateActions = {
-    buildMatchLetter,
     nextTurn,
     setPlayerLastWord,
     // fullUpdateGameState,
@@ -193,31 +192,29 @@ function setPlayerLastWord(
 
 function progressNextTurn(state: GameState, block: string, playerLastWord: string) {
     let nextState: GameState = state;
-    nextState = buildMatchLetter(nextState, block);
+    nextState = {
+        ...nextState,
+        matchLetter: buildMatchLetter(block),
+    };
     nextState = setPlayerLastWord(nextState, playerLastWord)
     nextState = nextTurn(nextState);
     return nextState;
 }
 
 function buildMatchLetter(
-    state: GameState,
     block: string
-): GameState {
+): MatchLetter {
     if (block.length > 1) {
         throw new Error("Must be 1 syllable");
     }
 
     const arr = buildSyllableSteps(block);
-
     return {
-        ...state,
-        matchLetter: {
-            block,
-            steps: [...arr],
-            value: block,
-            next: 0,
-        },
-    };
+        block,
+        steps: [...arr],
+        value: block,
+        next: 0,
+    } satisfies MatchLetter;
 }
 
 // =============================================================================
@@ -250,7 +247,7 @@ export function buildInitialGameState(options: { server?: boolean } = {}): GameS
     const players = server ? makePlayersArray<ServerPlayers>() : makePlayersArray<ClientPlayers>();
     const emptyGameState = {} as unknown as GameState;
     return {
-        matchLetter: buildMatchLetter(emptyGameState, "값").matchLetter,
+        matchLetter: buildMatchLetter("값"),
         status: null,
         players: players,
         turn: 0,

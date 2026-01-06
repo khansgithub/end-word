@@ -72,6 +72,7 @@ describe("setPlayerLastWord", () => {
     });
 });
 
+// FIXME: update these tests because the function now returns a MatchLetter instead of a GameState
 describe("buildMatchLetter", () => {
     it("should create matchLetter with single syllable", () => {
         const state = createTestGameState();

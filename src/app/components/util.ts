@@ -31,7 +31,7 @@ export async function submitButton(
  * - If empty, optionally triggers error UI; otherwise, emits to server.
  *   Does NOT manipulate DOM node refs, but fits with InputBox2 logic/exported hooks.
  */
-import { getInputValue, setInputError, resetInput } from "./InputBox2";
+import { getInputValue, setInputError, resetInput } from "./InputBox";
 import { getSocketManager } from "./socket";
 
 export async function submitButtonForInputBox2(
