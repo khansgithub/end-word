@@ -93,6 +93,18 @@ function GameContainer() {
     }, []);
     
     console.count("GameContainer");
+    
+    const StatusPanel = ({ children, hasError = false }: { children: React.ReactNode; hasError?: boolean }) => (
+        <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'transparent' }}>
+            <div className="panel max-w-md" style={{ 
+                backgroundColor: 'var(--bg-secondary-solid)',
+                ...(hasError && { borderColor: 'var(--border-error)' }),
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+    
     switch (userIsConnected ?? CONNECTING) {
         case CONNECTED:
             log(L, "CONNECTED", CONNECTED);
@@ -105,34 +117,27 @@ function GameContainer() {
             )
         case CONNECTING:
             return (
-                <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                    <div className="panel max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
-                        <div className="flex flex-col items-center p-6">
-                            <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Connecting to game...</p>
-                        </div>
+                <StatusPanel>
+                    <div className="flex flex-col items-center p-6">
+                        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Connecting to game...</p>
                     </div>
-                </div>
+                </StatusPanel>
             )
         case FAILED:
             return (
-                <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                    <div className="panel max-w-md" style={{ 
-                        backgroundColor: 'var(--bg-secondary-solid)',
-                        borderColor: 'var(--border-error)',
-                    }}>
-                        <div className="flex flex-col items-start p-6 gap-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-6 h-6 rounded-full" style={{ 
-                                    background: 'var(--text-error-dark)',
-                                    boxShadow: '0 0 8px var(--error-glow)',
-                                }}></div>
-                                <h3 className="font-semibold text-lg" style={{ color: 'var(--text-error)' }}>Connection Failed</h3>
-                            </div>
-                            <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Failed to connect or register. Please try again.</div>
+                <StatusPanel hasError>
+                    <div className="flex flex-col items-start p-6 gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full" style={{ 
+                                background: 'var(--text-error-dark)',
+                                boxShadow: '0 0 8px var(--error-glow)',
+                            }}></div>
+                            <h3 className="font-semibold text-lg" style={{ color: 'var(--text-error)' }}>Connection Failed</h3>
                         </div>
+                        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Failed to connect or register. Please try again.</div>
                     </div>
-                </div>
+                </StatusPanel>
             )
         default:
             console.error(`unexpted error: ${userIsConnected}`);

@@ -4,6 +4,9 @@
  * cyan/purple/green accents, and radial gradients
  */
 
+/* ============================================
+   DARK MODE (Default)
+   ============================================ */
 :root {
   /* ============================================
      BASE COLOR PALETTE - FSM Theme
@@ -82,6 +85,9 @@
   --shadow-panel: 0 20px 40px rgba(15, 23, 42, 0.95), 0 0 0 1px rgba(15, 23, 42, 0.9);
   --shadow-button: 0 0 0 1px rgba(15, 23, 42, 0.8), 0 10px 24px rgba(15, 23, 42, 0.9), 0 0 22px rgba(56, 189, 248, 0.5);
   
+  /* Noise Texture */
+  --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  
   /* Special Use Cases */
   --match-letter-color: #fbbf24; /* Amber-400: Strong contrast, still warm/cool harmony */
   --input-border-default: rgba(31, 41, 55, 0.9);   /* Input field default border */
@@ -124,6 +130,104 @@
   
   /* Border Colors - Additional */
   --border-medium: #1f2937;                           /* Medium border (same as --color-neutral-medium) */
+}
+
+/* ============================================
+   LIGHT MODE
+   ============================================ */
+:root[data-theme="light"] {
+  /* Neutral Base Colors - Light Theme */
+  --color-neutral-darkest: #e2e8f0;  /* Slate-200 - body background (light gray) */
+  --color-neutral-darker: #f8fafc;   /* Slate-50 - panel backgrounds (off-white) */
+  --color-neutral-dark: #f1f5f9;     /* Slate-100 - secondary surfaces */
+  --color-neutral-medium: #cbd5e1;   /* Slate-300 - borders, tertiary */
+  --color-neutral-light: #1e293b;    /* Slate-800 - main text */
+  --color-neutral-pure: #ffffff;      /* Pure white - borders, highlights */
+  --color-neutral-pure-dark: #000000; /* Pure black - overlays */
+  
+  /* Background Colors */
+  --bg-primary: var(--color-neutral-darkest);      /* Main app background - light gray */
+  --bg-secondary-solid: #f1f5f9;    /* Solid fallback for panel - light gray */
+  --bg-tertiary: var(--color-neutral-darker);        /* Input fields, cards */
+  --bg-quaternary: var(--color-neutral-medium);     /* Buttons, interactive elements */
+  --bg-overlay: rgba(226, 232, 240, 0.95);    /* Modal overlays with backdrop blur */
+  
+  /* Gradient Backgrounds */
+  --gradient-panel: radial-gradient(circle at top, #f8fafc 0, #f8fafc 35%, #f1f5f9 100%);
+  --gradient-button: radial-gradient(circle at top left, #f5c742, #f5853a 45%, #e85ba3 100%);
+  --gradient-input: radial-gradient(circle at top left, #f8fafc, #f8fafc 40%, #f8fafc 100%);
+  --gradient-chip: radial-gradient(circle at top, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.9));
+  --gradient-header: radial-gradient(circle at top left, #f5a82a, #f8fafc 55%);
+  --gradient-avatar-active: radial-gradient(circle at top left, #f5c742, #f5853a 45%, #e85ba3 100%);
+  --gradient-avatar-default: radial-gradient(circle at top, rgba(248, 250, 252, 0.9), rgba(248, 250, 252, 0.9));
+  --gradient-avatar-empty: radial-gradient(circle at top, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.9));
+  
+  /* Text Colors */
+  --text-primary: var(--color-neutral-light);       /* Main text color #1e293b */
+  --text-secondary: #334155;                       /* Slate-700 - secondary text, even darker */
+  --text-inverse: var(--color-neutral-pure);   /* Text on dark backgrounds */
+  
+  /* Border Colors */
+  --border-default: rgba(100, 116, 139, 0.4);     /* Subtle borders - darker */
+  --border-accent: rgba(100, 116, 139, 0.6);       /* Accent borders - darker */
+  --border-accent-light: rgba(148, 163, 184, 0.9);     /* Light accent borders - darker */
+  --border-error: rgba(239, 68, 68, 0.6);       /* Error state borders */
+  --border-focus: rgba(168, 85, 247, 0.7);         /* Focus border - purple instead of blue */
+  
+  /* Interactive States */
+  --interactive-focus: var(--color-secondary);        /* Focus ring color - purple */
+  --interactive-focus-light: rgba(168, 85, 247, 0.25);  /* Focus glow (subtle) - purple */
+  --interactive-focus-strong: rgba(168, 85, 247, 0.6);  /* Focus glow (strong) - purple */
+  
+  /* Button Colors */
+  --button-border: rgba(241, 245, 249, 0.8);          /* Button border */
+  
+  /* Shadow Colors */
+  --shadow-color: rgba(15, 23, 42, 0.05);          /* Shadow color for depth - much lighter */
+  --shadow-panel: 0 4px 8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(148, 163, 184, 0.5);
+  --shadow-button: 0 0 0 1px rgba(241, 245, 249, 0.8), 0 2px 8px rgba(15, 23, 42, 0.08), 0 0 6px rgba(168, 85, 247, 0.3);
+  
+  /* Noise Texture */
+  --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.2'/%3E%3C/svg%3E");
+  
+  /* Special Use Cases */
+  --input-border-default: rgba(148, 163, 184, 0.9);   /* Input field default border - darker */
+  --input-bg-solid: #f8fafc;        /* Solid fallback - off-white */
+  
+  /* Disabled Input States */
+  --input-bg-disabled: radial-gradient(circle at top left, rgba(203, 213, 225, 0.4), rgba(203, 213, 225, 0.3) 40%, rgba(203, 213, 225, 0.4) 100%);
+  --input-border-disabled: rgba(100, 116, 139, 0.6);   /* Muted gray border - darker */
+  --input-text-disabled: rgba(100, 116, 139, 0.5);  /* Muted text color */
+  --input-overlay-disabled: rgba(241, 245, 249, 0.7);   /* Light overlay for disabled state */
+  --input-box-shadow: rgba(203, 213, 225, 0.3);        /* Input box shadow inset - lighter */
+  --input-focus-border: rgba(168, 85, 247, 0.7);        /* Input focus border color - purple */
+  --input-error-focus-border: rgba(239, 68, 68, 0.4);  /* Input error focus border */
+  --input-error-focus-glow: rgba(239, 68, 68, 0.3);    /* Input error focus glow */
+  
+  /* Error Text Colors */
+  --text-error: #dc2626;                              /* Dark red error text */
+  --error-glow: rgba(239, 68, 68, 0.9);            /* Error glow/shadow */
+  
+  /* Player/Avatar Colors */
+  --player-border-focus: rgba(168, 85, 247, 0.7);     /* Player focus border - purple */
+  --player-border-turn: rgba(168, 85, 247, 0.5);      /* Player turn border - purple */
+  --player-border-chip: rgba(168, 85, 247, 0.45);     /* Player turn chip border - purple */
+  --player-shadow-focus: rgba(168, 85, 247, 0.6);        /* Player focus shadow border - purple */
+  --player-shadow-glow: rgba(168, 85, 247, 0.6);      /* Player glow shadow - purple */
+  --player-shadow-glow-subtle: rgba(168, 85, 247, 0.3); /* Player subtle glow - purple */
+  
+  /* Success Colors */
+  --border-success-subtle: rgba(34, 197, 94, 0.6);  /* Subtle success border */
+  --text-success-light: #065f46;                      /* Dark green success text */
+  
+  /* Text Shadow */
+  --text-shadow-cyan: rgba(168, 85, 247, 0.2);        /* Purple text shadow instead of cyan */
+  
+  /* Placeholder Text */
+  --text-placeholder: #94a3b8;                        /* Placeholder text color */
+  
+  /* Border Colors - Additional */
+  --border-medium: #94a3b8;                           /* Medium border - darker */
 }
 
 /* 

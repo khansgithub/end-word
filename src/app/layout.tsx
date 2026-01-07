@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -27,7 +28,9 @@ export default function RootLayout({
             <body className={
                 `${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen p-0 m-0`
             } style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                <ThemeToggle />
                 <main className="w-full min-h-screen">
+                <ThemeToggle />
                     {children}
                 </main>
             </body>

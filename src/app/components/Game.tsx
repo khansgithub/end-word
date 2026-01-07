@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useReducer, useRef } from "react";
@@ -60,20 +61,19 @@ export default function Game(props: props) {
                 </div>
             )}
 
-            {/* Game Status Badge */}
-            <div className="chip px-6 py-2" style={{ 
-                borderColor: gameState.status === 'playing' ? 'var(--border-success-subtle)' : 'var(--border-accent)',
-                color: gameState.status === 'playing' ? 'var(--text-success-light)' : 'var(--text-secondary)',
+            {/* Round Number Badge */}
+            <div className="chip px-6 py-2" style={{
+                borderColor: 'var(--border-accent)',
+                color: 'var(--text-secondary)',
             }}>
-                {gameState.status === 'playing' && <span className="chip-dot"></span>}
-                {gameState.status?.toUpperCase() || 'WAITING'}
+                {`Round ${gameState.turn ?? 1}`}
             </div>
 
             {/* Match Letter Display */}
             <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-6">
                     <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Match Letter</h2>
-                    <div className="text-8xl font-bold mb-4" style={{ 
+                    <div className="text-8xl font-bold mb-4" style={{
                         color: 'var(--match-letter-color)',
                         textShadow: '0 0 20px var(--text-shadow-cyan)',
                     }}>
@@ -86,10 +86,10 @@ export default function Game(props: props) {
             <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-4">
                     <div className="flex flex-row w-full justify-center items-center gap-4">
-                        <div 
-                            ref={inputKeyDisplayDom} 
-                            className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold" 
-                            style={{ 
+                        <div
+                            ref={inputKeyDisplayDom}
+                            className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold"
+                            style={{
                                 borderColor: 'var(--border-default)',
                                 background: 'var(--gradient-input)',
                                 color: 'var(--text-primary)',
@@ -118,18 +118,18 @@ export default function Game(props: props) {
                             />
                         </div>
                     </div>
-                    
+
                     <button
                         ref={buttonDom}
                         onClick={buttonOnSubmit}
                         disabled={isDisabled}
                         className="btn-fsm mt-4 px-6 py-3 text-base"
-                        style={{ 
+                        style={{
                             opacity: gameState.thisPlayer?.seat !== undefined && isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat) ? 1 : 0.5,
                         }}
-                    > 
-                        <span>▶</span>
-                        Submit Word
+                    >
+                        <span>▶ Submit Word</span>
+                        
                     </button>
                 </div>
             </div>
@@ -143,14 +143,14 @@ export default function Game(props: props) {
                             gameState.players.map((p, i) => {
                                 if (p === null) {
                                     return (
-                                        <div 
-                                            key={i} 
-                                            className="panel w-32 opacity-50" 
+                                        <div
+                                            key={i}
+                                            className="panel w-32 opacity-50"
                                             style={{ backgroundColor: 'var(--bg-secondary-solid)' }}
                                         >
                                             <div className="flex flex-col items-center p-3">
                                                 <div className="avatar placeholder">
-                                                    <div className="flex flex-col justify-center items-center rounded-full w-16 h-16" style={{ 
+                                                    <div className="flex flex-col justify-center items-center rounded-full w-16 h-16" style={{
                                                         background: 'var(--gradient-avatar-empty)',
                                                         border: '1px solid var(--border-default)',
                                                     }}>
@@ -164,10 +164,10 @@ export default function Game(props: props) {
                                 }
                                 const isCurrentPlayer = gameState.thisPlayer?.seat === i;
                                 return (
-                                    <Player 
-                                        key={i} 
-                                        player={p} 
-                                        turn={isPlayerTurn(gameState.turn, gameState.connectedPlayers, i)} 
+                                    <Player
+                                        key={i}
+                                        player={p}
+                                        turn={isPlayerTurn(gameState.turn, gameState.connectedPlayers, i)}
                                         lastWord={p.lastWord}
                                         isCurrentPlayer={isCurrentPlayer}
                                     />
