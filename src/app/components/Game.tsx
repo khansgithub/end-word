@@ -23,7 +23,6 @@ export default function Game(props: props) {
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
     const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
-    const inputHighlightDom = useRef<HTMLInputElement>(null)
     const inputDomText = useRef("");
 
     const socket = useRef(getSocketManager());

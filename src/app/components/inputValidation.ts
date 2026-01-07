@@ -1,6 +1,6 @@
 import { StoreApi } from "zustand";
 import { MatchLetter } from "../../shared/types";
-import { decomposeSyllable } from "../hangul-decomposer";
+import { decomposeSyllable, decomposeSyllableNonRecursive } from "../hangul-decomposer";
 import { InputState } from "../store/userStore";
 
 /**
@@ -97,6 +97,7 @@ export function calculateHighlightText(input: string, matchLetter: MatchLetter):
     const letterIndex = matchLetter.steps.indexOf(input[0]);
     if (letterIndex < 0) return "";
 
+    // Use recursive decomposition - it correctly decomposes double syllables for indexing
     const highlightText = input + (decomposeSyllable(matchLetter.block)[letterIndex + 1] ?? "");
     return highlightText;
 }
@@ -111,6 +112,60 @@ export function clearInput(
     store.setHighlightValue(matchLetter.steps[0] || "");
     prevInputRef.current = "";
     store.setIsError(false);
+}
+
+export function blockInput(
+    useInputStore: StoreApi<InputState>,
+    prevInputRef: React.RefObject<string>,
+){
+    useInputStore.getState().setInputValue(prevInputRef.current);
+}
+
+export function continueInput(
+    useInputStore: StoreApi<InputState>,
+    prevInputRef: React.RefObject<string>,
+    matchLetter: MatchLetter,
+    input: string
+){
+    const store = useInputStore.getState();
+    store.setInputValue(input);
+    prevInputRef.current = input;
+    
+    const highlightText = calculateHighlightText(input, matchLetter);
+    store.setHighlightValue(highlightText);
+}
+
+var actionHandlerMap: Record<ValidationAction["type"], ((...args: any[]) => void) | null> = {
+    CLEAR: null, 
+    BLOCK: null,
+    CONTINUE: null,
+}
+
+/**
+ * Calls the appropriate handler (onClear, onBlock, or onContinue) 
+ * based on the result of validateInput. 
+ * CONTINUE handlers receive the input string as an argument.
+ */
+export function actionHandlers(
+    input: string, 
+    prev: string, 
+    letter: string, 
+    composing: boolean, 
+    matchLetter: MatchLetter,
+    onClear: () => void,
+    onBlock: () => void,
+    onContinue: (input: string) => void,
+){
+    // Always update handlers to ensure they reference the current callbacks
+    actionHandlerMap.CLEAR = onClear;
+    actionHandlerMap.BLOCK = onBlock;
+    actionHandlerMap.CONTINUE = onContinue;
+    
+    const action = validateInput(input, prev, letter, composing, matchLetter);
+    const f = actionHandlerMap[action.type];
+    if (f === null) throw new Error(`unexpected action type: ${action.type}`);
+    const args = action.type === "CONTINUE" ? [action.input] : [];
+    f(...args);
 }
 
 // todo: make a function which does validateInput in inputbox

@@ -9,7 +9,7 @@ import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { ClientPlayers, GameState, GameStateFrozen, GameStatus, MatchLetter, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
-import { getCurrentPlayerIndex, isSuppress, pp } from "./utils";
+import { buildMatchLetter, getCurrentPlayerIndex, isSuppress, pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -201,21 +201,7 @@ function progressNextTurn(state: GameState, block: string, playerLastWord: strin
     return nextState;
 }
 
-function buildMatchLetter(
-    block: string
-): MatchLetter {
-    if (block.length > 1) {
-        throw new Error("Must be 1 syllable");
-    }
 
-    const arr = buildSyllableSteps(block);
-    return {
-        block,
-        steps: [...arr],
-        value: block,
-        next: 0,
-    } satisfies MatchLetter;
-}
 
 // =============================================================================
 // REDUCER

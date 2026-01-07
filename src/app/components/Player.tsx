@@ -10,27 +10,31 @@ interface props {
 export default function ({ player, turn, lastWord, isCurrentPlayer = false }: props) {
     return (
         <div 
-            className="panel w-32 transition-all duration-300 relative" 
+            className="panel w-32 transition-all duration-300 relative flex align-center flex-col" 
             style={{ 
                 backgroundColor: 'var(--bg-secondary-solid)',
-                borderColor: isCurrentPlayer 
-                    ? 'var(--player-border-focus)' 
-                    : turn 
+                // borderColor: isCurrentPlayer 
+                //     ? 'var(--player-border-focus)' 
+                //     : turn 
+                //         ? 'var(--player-border-turn)' 
+                //         : 'var(--border-default)',
+                borderColor: turn 
                         ? 'var(--player-border-turn)' 
                         : 'var(--border-default)',
-                borderWidth: isCurrentPlayer ? '2px' : turn ? '1.5px' : '1px',
+                    // borderWidth: isCurrentPlayer ? '2px' : turn ? '1.5px' : '1px',
+                    borderWidth: turn ? '2px' : '1px',
                 transform: turn ? 'scale(1.05)' : isCurrentPlayer ? 'scale(1.02)' : 'scale(1)',
-                boxShadow: isCurrentPlayer 
-                    ? '0 0 0 1px var(--player-shadow-focus), 0 0 18px var(--interactive-focus-light), 0 20px 40px var(--shadow-color)' 
-                    : turn 
-                        ? '0 0 12px var(--player-shadow-glow), 0 20px 40px var(--shadow-color)' 
-                        : 'var(--shadow-panel)',
+                // boxShadow: isCurrentPlayer 
+                //     ? ''//'0 0 0 1px var(--player-shadow-focus), 0 0 18px var(--interactive-focus-light), 0 20px 40px var(--shadow-color)' 
+                //     : turn 
+                //         ? '0 0 12px var(--player-shadow-glow), 0 20px 40px var(--shadow-color)' 
+                //         : 'var(--shadow-panel)',
             }}
         >
-            {/* Current Player Indicator Badge */}
+            {/* Current Player Indicator Badge
             {isCurrentPlayer && (
                 <div 
-                    className="chip absolute -top-2 -right-2 z-10"
+                    className="chip z-10"
                     style={{ 
                         background: 'var(--gradient-button)',
                         borderColor: 'var(--player-border-focus)',
@@ -39,9 +43,9 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
                         padding: '0.18rem 0.45rem',
                     }}
                 >
-                    YOU
+                    <p className="text-center w-100">YOU</p>
                 </div>
-            )}
+            )} */}
             
             <div className="flex flex-col items-center p-3">
                 <div className="avatar placeholder mb-2">
@@ -75,6 +79,9 @@ export default function ({ player, turn, lastWord, isCurrentPlayer = false }: pr
                     marginTop: '0.25rem',
                 }}>
                     {player.name}
+                    <br />
+                    {isCurrentPlayer && (<span className="text-sm">(you)</span>)}
+
                 </h3>
                 
                 {lastWord && (

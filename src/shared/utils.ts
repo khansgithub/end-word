@@ -1,4 +1,5 @@
-import { ClientPlayers, ClientPlayerSocket, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { buildSyllableSteps } from "../app/hangul-decomposer";
+import { ClientPlayers, ClientPlayerSocket, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
 
 // ============================================================================
 // Core Utilities
@@ -122,6 +123,34 @@ export async function inputIsValid(input: string): Promise<boolean> {
 
     const data = await res.json();
     return Object.keys(data).length > 0;
+}
+
+// ============================================================================
+// Match/Game Utilities
+// ============================================================================
+
+/**
+ * Builds a MatchLetter object from a single syllable block.
+ * Decomposes the syllable into steps for matching logic.
+ *
+ * @param block - A single syllable string (must be length 1)
+ * @returns A MatchLetter object with the syllable and its decomposition steps
+ * @throws Error if block length is greater than 1
+ */
+export function buildMatchLetter(
+    block: string
+): MatchLetter {
+    if (block.length > 1) {
+        throw new Error("Must be 1 syllable");
+    }
+
+    const arr = buildSyllableSteps(block);
+    return {
+        block,
+        steps: [...arr],
+        value: block,
+        next: 0,
+    } satisfies MatchLetter;
 }
 
 // ============================================================================

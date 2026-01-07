@@ -48,16 +48,61 @@ const NUM_VOWELS = VOWELS.length;
 const NUM_FINALS = FINALS.length;
 const SYLLABLES_PER_INITIAL = NUM_VOWELS * NUM_FINALS;
 
+// Mapping of double consonants and vowels to their constituent characters
+const DOUBLE_SYLLABLE_MAP: Record<string, [string, string]> = {
+    // Double initial consonants (same character doubled)
+    "ㄲ": ["ㄱ", "ㄱ"],
+    "ㄸ": ["ㄷ", "ㄷ"],
+    "ㅃ": ["ㅂ", "ㅂ"],
+    "ㅆ": ["ㅅ", "ㅅ"],
+    "ㅉ": ["ㅈ", "ㅈ"],
+    // Complex final consonants (different characters)
+    "ㄳ": ["ㄱ", "ㅅ"],
+    "ㄵ": ["ㄴ", "ㅈ"],
+    "ㄶ": ["ㄴ", "ㅎ"],
+    "ㄺ": ["ㄹ", "ㄱ"],
+    "ㄻ": ["ㄹ", "ㅁ"],
+    "ㄼ": ["ㄹ", "ㅂ"],
+    "ㄽ": ["ㄹ", "ㅅ"],
+    "ㄾ": ["ㄹ", "ㅌ"],
+    "ㄿ": ["ㄹ", "ㅍ"],
+    "ㅀ": ["ㄹ", "ㅎ"],
+    "ㅄ": ["ㅂ", "ㅅ"],
+    // Double vowels (diphthongs)
+    "ㅘ": ["ㅗ", "ㅏ"],
+    "ㅙ": ["ㅗ", "ㅐ"],
+    "ㅚ": ["ㅗ", "ㅣ"],
+    "ㅝ": ["ㅜ", "ㅓ"],
+    "ㅞ": ["ㅜ", "ㅔ"],
+    "ㅟ": ["ㅜ", "ㅣ"],
+    "ㅢ": ["ㅡ", "ㅣ"],
+    // Y-sound vowels (composed vowels)
+    "ㅑ": ["ㅣ", "ㅏ"],
+    "ㅒ": ["ㅣ", "ㅐ"],
+    "ㅕ": ["ㅣ", "ㅓ"],
+    "ㅖ": ["ㅣ", "ㅔ"],
+    "ㅛ": ["ㅣ", "ㅗ"],
+    "ㅠ": ["ㅣ", "ㅜ"],
+};
+
 /**
- * Decomposes a single Hangul syllable into its constituent Jamo.
- * Returns the original character if it is not a Hangul syllable.
+ * Non-recursive decomposition helper. Decomposes a syllable into components without
+ * further decomposing double syllables in those components.
+ * This is useful for functions that need to work with intermediate components.
  * 
  * @param syllable Single character string
- * @returns Array of Jamo characters ([initial, vowel, final?])
+ * @returns Array of Jamo characters ([initial, vowel, final?] for regular syllables, [char1, char2] for double syllables, or [original] for non-Hangul)
  */
-export function decomposeSyllable(syllable: string): DecomposedSyllable {
+export function decomposeSyllableNonRecursive(syllable: string): DecomposedSyllable {
     if (!syllable || syllable.length !== 1) return [syllable];
 
+    // First check for double syllables (fast O(1) map lookup)
+    const doubleDecomp = DOUBLE_SYLLABLE_MAP[syllable];
+    if (doubleDecomp) {
+        return doubleDecomp;
+    }
+
+    // Fall through to regular Hangul syllable decomposition
     const code = syllable.charCodeAt(0);
     if (code < HANGUL_BASE || code > HANGUL_END) return [syllable];
 
@@ -67,6 +112,53 @@ export function decomposeSyllable(syllable: string): DecomposedSyllable {
     const final = FINALS[index % NUM_FINALS];
 
     return final ? [initial, vowel, final] : [initial, vowel];
+}
+
+/**
+ * Decomposes a single Hangul syllable or double syllable into its constituent Jamo.
+ * First checks for double syllables (like "ㄲ", "ㅘ", etc.), then regular Hangul syllables.
+ * Recursively decomposes any double syllables found in the components.
+ * Returns the original character if it is not a Hangul syllable.
+ * 
+ * @param syllable Single character string
+ * @returns Array of Jamo characters (fully decomposed, or [original] for non-Hangul)
+ */
+export function decomposeSyllable(syllable: string): DecomposedSyllable {
+    if (!syllable || syllable.length !== 1) return [syllable];
+
+    // First check for double syllables (fast O(1) map lookup)
+    const doubleDecomp = DOUBLE_SYLLABLE_MAP[syllable];
+    if (doubleDecomp) {
+        return doubleDecomp;
+    }
+
+    // Fall through to regular Hangul syllable decomposition
+    const code = syllable.charCodeAt(0);
+    if (code < HANGUL_BASE || code > HANGUL_END) return [syllable];
+
+    const index = code - HANGUL_BASE;
+    const initial = INITIALS[Math.floor(index / SYLLABLES_PER_INITIAL)];
+    const vowel = VOWELS[Math.floor((index % SYLLABLES_PER_INITIAL) / NUM_FINALS)];
+    const final = FINALS[index % NUM_FINALS];
+
+    // Recursively decompose any double syllables in the components
+    const result: JamoOrOther[] = [];
+    
+    // Decompose initial (may be a double syllable like "ㄲ")
+    const initialDecomp = decomposeSyllable(initial);
+    result.push(...initialDecomp);
+    
+    // Decompose vowel (may be a double syllable like "ㅘ")
+    const vowelDecomp = decomposeSyllable(vowel);
+    result.push(...vowelDecomp);
+    
+    // Decompose final if it exists (may be a double syllable like "ㄳ")
+    if (final) {
+        const finalDecomp = decomposeSyllable(final);
+        result.push(...finalDecomp);
+    }
+    
+    return result;
 }
 
 /**
@@ -98,14 +190,32 @@ export function decomposeWordGrouped(word: string | null | undefined): Decompose
 }
 
 /**
+ * Helper function to build a Hangul syllable from component indices.
+ */
+function buildSyllableFromIndices(
+    initialIndex: number,
+    vowelIndex: number,
+    finalIndex: number = 0
+): string {
+    return String.fromCharCode(
+        HANGUL_BASE +
+        initialIndex * SYLLABLES_PER_INITIAL +
+        vowelIndex * NUM_FINALS +
+        finalIndex
+    );
+}
+
+/**
  * Returns all building steps of a Hangul syllable.
  * For example, '밥' -> ['ㅂ', '바', '밥']
+ * For double syllables, it breaks them down step by step:
+ * '꽂' (ㄲ + ㅗ + ㄳ) -> ['ㄱ', 'ㄲ', '꼬', '꼬', '꼳', '꽂']
  * Non-Hangul characters are returned as-is.
  * 
  * @param syllable Single character string
  */
 export function buildSyllableSteps(syllable: string): string[] {
-    const decomposed = decomposeSyllable(syllable);
+    const decomposed = decomposeSyllableNonRecursive(syllable);
     
     // If it's not a Hangul syllable, return the character itself
     if (decomposed.length === 1 && decomposed[0] === syllable) {
@@ -115,20 +225,75 @@ export function buildSyllableSteps(syllable: string): string[] {
     const [initial, vowel, final] = decomposed as [Initial, Vowel, Final?];
     const steps: string[] = [];
 
-    // Step 1: Initial consonant
-    steps.push(initial);
+    // Check if components are double syllables
+    const initialDecomp = decomposeDoubleSyllable(initial);
+    const vowelDecomp = decomposeDoubleSyllable(vowel);
+    const finalDecomp = final ? decomposeDoubleSyllable(final) : null;
 
-    // Step 2: Initial + vowel
-    const initialVowel = String.fromCharCode(
-        HANGUL_BASE + 
-        INITIALS.indexOf(initial) * SYLLABLES_PER_INITIAL + 
-        VOWELS.indexOf(vowel) * NUM_FINALS
-    );
-    steps.push(initialVowel);
+    // Get indices for building syllables
+    const initialIndex = INITIALS.indexOf(initial);
+    const vowelIndex = VOWELS.indexOf(vowel);
+    const finalIndex = final ? FINALS.indexOf(final) : 0;
 
-    // Step 3: Full syllable (with final if exists)
+    // Step 1: First part of initial (if double) or full initial
+    if (initialDecomp) {
+        steps.push(initialDecomp[0]);
+        steps.push(initial); // Full initial
+    } else {
+        steps.push(initial);
+    }
+
+    // Step 2: Build initial + vowel
+    if (vowelDecomp) {
+        // Find the index of the first part of the vowel
+        const firstVowelIndex = VOWELS.indexOf(vowelDecomp[0] as Vowel);
+        if (firstVowelIndex !== -1) {
+            const partialVowelSyllable = buildSyllableFromIndices(
+                initialIndex,
+                firstVowelIndex
+            );
+            // Only add if it's different from what we already have
+            if (steps[steps.length - 1] !== partialVowelSyllable) {
+                steps.push(partialVowelSyllable);
+            }
+        }
+        // Then full vowel
+        const fullVowelSyllable = buildSyllableFromIndices(
+            initialIndex,
+            vowelIndex
+        );
+        steps.push(fullVowelSyllable);
+    } else {
+        // Just initial + vowel
+        const initialVowel = buildSyllableFromIndices(
+            initialIndex,
+            vowelIndex
+        );
+        steps.push(initialVowel);
+    }
+
+    // Step 3: Add final if it exists
     if (final) {
-        steps.push(syllable);
+        if (finalDecomp) {
+            // First part of final
+            const firstFinalIndex = FINALS.indexOf(finalDecomp[0] as Final);
+            if (firstFinalIndex !== -1) {
+                const partialFinalSyllable = buildSyllableFromIndices(
+                    initialIndex,
+                    vowelIndex,
+                    firstFinalIndex
+                );
+                // Only add if it's different from the previous step
+                if (steps[steps.length - 1] !== partialFinalSyllable) {
+                    steps.push(partialFinalSyllable);
+                }
+            }
+            // Then full final
+            steps.push(syllable);
+        } else {
+            // Just add the full syllable with final
+            steps.push(syllable);
+        }
     }
 
     return steps;
@@ -168,6 +333,33 @@ export function isDoubleLetter(
     }
     // type == "both"
     return doubleInitialConsonants.includes(letter) || doubleFinalConsonants.includes(letter);
+}
+
+/**
+ * Decomposes a double consonant or double vowel (diphthong) into its two constituent characters.
+ * Returns null if the input is not a double consonant or double vowel.
+ * This is a convenience wrapper around decomposeSyllable for backward compatibility.
+ * 
+ * @param doubleSyllable A double consonant or double vowel (e.g., "ㄲ", "ㄸ", "ㅆ", "ㄳ", "ㅘ", "ㅝ", etc.)
+ * @returns A tuple of two characters [char1, char2], or null if not a double syllable
+ * 
+ * @example
+ * decomposeDoubleSyllable("ㄲ") // returns ["ㄱ", "ㄱ"]
+ * decomposeDoubleSyllable("ㄳ") // returns ["ㄱ", "ㅅ"]
+ * decomposeDoubleSyllable("ㅆ") // returns ["ㅅ", "ㅅ"]
+ * decomposeDoubleSyllable("ㅘ") // returns ["ㅗ", "ㅏ"]
+ * decomposeDoubleSyllable("ㅝ") // returns ["ㅜ", "ㅓ"]
+ * decomposeDoubleSyllable("ㅢ") // returns ["ㅡ", "ㅣ"]
+ */
+export function decomposeDoubleSyllable(
+    doubleSyllable: string
+): [string, string] | null {
+    if (doubleSyllable.length !== 1) {
+        return null;
+    }
+
+    // Check directly in the map for efficiency
+    return DOUBLE_SYLLABLE_MAP[doubleSyllable] || null;
 }
 
 

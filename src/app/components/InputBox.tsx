@@ -7,7 +7,10 @@ import {
     validateInput as validateInputLogic,
     calculateHighlightText,
     ValidationAction, 
-    clearInput as _clearInput
+    clearInput as _clearInput,
+    blockInput as _blockInput,
+    continueInput as _continueInput,
+    actionHandlers as validateWrapper,
 } from "./inputValidation";
 import { InputState } from "../store/userStore";
 
@@ -95,26 +98,14 @@ function InputBox({
     }, []);
 
     // Helper functions for input manipulation
-    const clearInput = useCallback(() => _clearInput(useInputStore, prevInputRef, matchLetter), [matchLetter.steps]);
+    const clearInput = useCallback(
+        () => _clearInput(useInputStore, prevInputRef, matchLetter), [matchLetter.steps]);
 
-    const blockInput = useCallback(() => {
-        useInputStore.getState().setInputValue(prevInputRef.current);
-    }, []);
+    const blockInput = useCallback(
+        () => _blockInput(useInputStore, prevInputRef), []);
 
-    const continueInput = useCallback((input: string) => {
-        const store = useInputStore.getState();
-        store.setInputValue(input);
-        prevInputRef.current = input;
-        
-        const highlightText = calculateHighlightText(input, matchLetter);
-        store.setHighlightValue(highlightText);
-    }, [matchLetter]);
-
-    const actionHandlers = useRef<Record<ValidationAction["type"], (...args: any[]) => void>>({
-        CLEAR: clearInput,
-        BLOCK: blockInput,
-        CONTINUE: (input: string) => continueInput(input),
-    });
+    const continueInput = useCallback(
+        (input: string) => _continueInput(useInputStore, prevInputRef, matchLetter, input), [matchLetter]);
 
     const validateInput = useCallback((
         input: string,
@@ -122,9 +113,17 @@ function InputBox({
         letter: string,
         composing: boolean
     ): void => {
-        const action = validateInputLogic(input, prev, letter, composing, matchLetter);        
-        actionHandlers.current[action.type]();
-    }, [matchLetter, clearInput, blockInput, continueInput]);
+        validateWrapper(
+            input,
+            prev,
+            letter,
+            composing,
+            matchLetter,
+            clearInput,
+            blockInput,
+            continueInput
+        );
+    }, [matchLetter]);
 
     // Event handlers
     const handleCompositionStart = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
