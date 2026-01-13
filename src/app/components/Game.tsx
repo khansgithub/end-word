@@ -8,11 +8,10 @@ import { isPlayerTurn } from "../../shared/utils";
 import InputBox from "./InputBox";
 import Player from "./Player";
 import { getSocketManager, handleSocket } from "./socket";
-import { submitButton, submitButton2 } from "./util";
+import { submitButtonForInputBox as submitButton } from "./util";
 
 interface props {
     gameState: Required<GameStateFrozen>,
-    // dispatch: ActionDispatch<[action: GameStateActionsType]>,
 }
 
 export default function Game(props: props) {
@@ -23,17 +22,17 @@ export default function Game(props: props) {
     const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat);
     const buttonDom = useRef<HTMLButtonElement>(null)
     const inputDom = useRef<HTMLInputElement>(null)
-    const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
     const inputDomText = useRef("");
 
     const socket = useRef(getSocketManager());
 
     async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
         e.preventDefault();
-        await submitButton({
-            inputDom: inputDom,
-            inputDomText: inputDomText
-        }, socket.current);
+        await submitButton();
+        // await submitButton({
+        //     inputDom: inputDom,
+        //     inputDomText: inputDomText
+        // }, socket.current);
     }
 
     handleSocket(socket.current, gameState, dispatch);
@@ -75,7 +74,7 @@ export default function Game(props: props) {
                     <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Match Letter</h2>
                     <div className="text-8xl font-bold mb-4" style={{
                         color: 'var(--match-letter-color)',
-                        textShadow: '0 0 20px var(--text-shadow-cyan)',
+                        textShadow: '1px 1px 3px var(--text-shadow-cyan)',
                     }}>
                         {gameState.matchLetter.block}
                     </div>
@@ -86,37 +85,11 @@ export default function Game(props: props) {
             <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-4">
                     <div className="flex flex-row w-full justify-center items-center gap-4">
-                        <div
-                            ref={inputKeyDisplayDom}
-                            className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold"
-                            style={{
-                                borderColor: 'var(--border-default)',
-                                background: 'var(--gradient-input)',
-                                color: 'var(--text-primary)',
-                            }}
-                        />
-                        <div className="flex-1">
-                            {/* <InputBox
-                                inputDomHighlight={inputHighlightDom}
-                                inputDom={inputDom}
-                                onChange={inputHandelers.onChange}
-                                onCompositionStart={inputHandelers.onCompositionStart}
-                                onCompositionUpdate={inputHandelers.onCompositionUpdate}
-                                onCompositionEnd={inputHandelers.onCompositionEnd}
-                                onBeforeInput={inputHandelers.onBeforeInput}
-                                onKeyDown={inputHandelers.onKeyDown}
-                                disabled={gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat)}
-                            /> */}
-                            <InputBox
-                                matchLetter={gameState.matchLetter}
-                                disabled={isDisabled}
-                                onSubmit={submitButton2}
-                                onKeyDisplayChange={(key: string) => {
-                                    if (!inputKeyDisplayDom.current) return;
-                                    inputKeyDisplayDom.current.textContent = key;
-                                }}
-                            />
-                        </div>
+                        <InputBox
+                                    matchLetter={gameState.matchLetter}
+                                    disabled={isDisabled}
+                                    onSubmit={() => submitButton()}
+                                />
                     </div>
 
                     <button

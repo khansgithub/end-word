@@ -1,26 +1,5 @@
-import { RefObject } from "react";
 import { socketEvents } from "../../shared/socket";
-import { ClientPlayerSocket } from "../../shared/types";
-
-export async function submitButton(
-    refs: {
-        inputDom: RefObject<HTMLInputElement | null>,
-        inputDomText: RefObject<string>
-    }, 
-    socket: ClientPlayerSocket
-) {
-    if (!refs.inputDom.current) return;
-    const submittedWord = refs.inputDomText.current;
-    
-    // Validate word is not empty
-    if (submittedWord.length === 0) {
-        refs.inputDom.current?.classList.add("invalid");
-        return
-    }
-
-    // Send word submission to server (server is source of truth)
-    socket.emit(socketEvents.submitWord, submittedWord);
-}
+import { getSocketManager } from "./socket";
 
 /**
  * submitButtonForInputBox:
@@ -31,28 +10,18 @@ export async function submitButton(
  * - If empty, optionally triggers error UI; otherwise, emits to server.
  *   Does NOT manipulate DOM node refs, but fits with InputBox logic/exported hooks.
  */
-import { getInputValue, setInputError, resetInput } from "./InputBox";
-import { getSocketManager } from "./socket";
+import { getInputValue, resetInput, setInputError } from "./InputBox";
 
 export async function submitButtonForInputBox(
-    socket: ClientPlayerSocket,
     onError?: () => void
 ) {
-    const submittedWord = getInputValue();
-    if (!submittedWord || submittedWord.length === 0) {
+    const word = getInputValue();
+    if (!word || word.length === 0) {
         setInputError(true);
         if (onError) onError();
         return;
     }
 
-    // Send word submission to server (server is source of truth)
-    socket.emit(socketEvents.submitWord, submittedWord);
-
-    // Optionally reset input after submission – up to calling code
-    // resetInput();
-}
-
-export function submitButton2(word: string){
-    const socket = getSocketManager();
-    socket.emit(socketEvents.submitWord, word);
+    getSocketManager().emit(socketEvents.submitWord, word);
+    resetInput();
 }

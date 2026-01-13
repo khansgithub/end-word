@@ -15,6 +15,20 @@ export type FixedLengthArray<T, L extends number> = T[] & { length: L };
  */
 export type RunExclusive = (fn: () => Promise<void>) => Promise<void>;
 
+
+/**
+ * Boolean map type.
+ * Used to map boolean values to strings.
+ */
+export type BoolMap = {
+    [key in 0 | 1]: BoolMap | string | boolean | number;
+};
+
+export type PropertyBoolMap = {
+    values: string[];
+    map: BoolMap;
+};
+
 /* --------------------------------------------------
  * Player Types
  * -------------------------------------------------- */
