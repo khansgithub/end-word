@@ -21,7 +21,7 @@ export type RunExclusive = (fn: () => Promise<void>) => Promise<void>;
  * Used to map boolean values to strings.
  */
 export type BoolMap = {
-    [key in 0 | 1]: BoolMap | string | boolean | number;
+    [key in 0 | 1]: BoolMap | string;
 };
 
 export type PropertyBoolMap = {

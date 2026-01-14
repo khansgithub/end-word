@@ -1,5 +1,5 @@
 import { AssertionError } from "assert";
-import { GameState, GameStateFrozen, Player, PlayerWithId, PlayerWithoutId } from "./types";
+import { BoolMap, GameState, GameStateFrozen, Player, PlayerWithId, PlayerWithoutId } from "./types";
 
 function hasPlayerId(player: Player) { return player.uid !== undefined; }
 
@@ -57,4 +57,9 @@ export function assertIsRequiredGameState(state: GameState): asserts state is Re
 
 export function isRequiredGameState(state: GameState): state is Required<GameState> {
     return state.thisPlayer !== undefined;
+}
+
+export function isBoolMap(value: any): value is BoolMap {
+    // TODO: ugly hack lol
+    return typeof value === 'object';
 }
