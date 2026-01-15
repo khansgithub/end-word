@@ -1,10 +1,10 @@
 
 import { Server as SocketServer } from "socket.io";
-import { buildInitialGameState, gameStateReducer, makePlayersArray } from "./GameState";
+import { buildInitialGameState, gameStateReducer } from "./GameState";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
 import { socketEvents } from "./socket";
-import { ClientPlayers, ClientToServerEvents, PlayersArray, PlayerWithoutId, RunExclusive, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
-import { createSocketMutex, pp, cloneServerPlayersToClientPlayers, inputIsValid, isPlayerTurn, isSuppress } from "./utils";
+import { ClientPlayers, ClientToServerEvents, RunExclusive, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
+import { cloneServerPlayersToClientPlayers, createSocketMutex, inputIsValid, isPlayerTurn, isSuppress, pp } from "./utils";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
@@ -26,7 +26,7 @@ function emitWithLogging<E extends keyof ServerToClientEvents>(
     ...args: Parameters<ServerToClientEvents[E]>
 ) {
     logWithContext("emitting: " + event);
-    logWithContext("emitting payload: " + isSuppress() ? "[SUPPRESS=TRUE]" : pp(args));
+    logWithContext("emitting payload: " + pp(args));
     socket.emit(event, ...args);
 }
 
@@ -37,7 +37,7 @@ function broadcastEmitWithLogging<E extends keyof ServerToClientEvents>(
     ...args: Parameters<ServerToClientEvents[E]>
 ) {
     logWithContext("broadcast emitting: " + event);
-    logWithContext("broadcast emitting payload: " + isSuppress() ? "[SUPPRESS=TRUE]" : pp(args));
+    logWithContext("broadcast emitting payload: " + pp(args));
     socket.broadcast.emit(event, ...args);
 }
 
@@ -75,7 +75,6 @@ export function createServerSocketContext(
         logs: [],
     };
 }
-
 
 // ===================================================================
 // SERVER SOCKET EVENT HANDLER
@@ -119,28 +118,38 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             return;
         }
 
-        // TODO: This is inefficient
+        if (!context.io) {
+            logWithContext("Cannot broadcast game state: io server not available");
+            return;
+        }
+
+        const io = context.io; // TypeScript: io is guaranteed to be defined after the check above
+
+        // TODO: This is inefficient - consider maintaining a Map<auth, socket> for O(1) lookup
         // Broadcast to all registered sockets
-        registeredSockets.forEach((player, auth) => {
-            const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
-            clientPlayers[player.seat] = player;
-            
+        // FIXME: On progress next turn, when there's a broadcast update, the lastWord property of 'thisPlayer' is not there for the player who just submitted
+        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
+        registeredSockets.forEach((player, auth) => {            
             const clientState: GameState<ClientPlayers> = {
                 ...state,
-                players: clientPlayers,
+                players: [...clientPlayers.slice(0, player.seat), player] as ClientPlayers,
                 thisPlayer: player
             };
             
             assertIsRequiredGameState(clientState);
 
             // Find the socket for this player and emit to it
-            if (context.io) {
-                context.io.sockets.sockets.forEach((sock) => {
-                    const sockAuth = getClientId(sock as ServerPlayerSocket);
-                    if (sockAuth === auth) {
-                        emitWithLogging(logWithContext, sock as ServerPlayerSocket, socketEvents.gameStateUpdate, clientState);
-                    }
-                });
+            let socketFound = false;
+            io.sockets.sockets.forEach((sock) => {
+                const sockAuth = getClientId(sock as ServerPlayerSocket);
+                if (sockAuth === auth) {
+                    socketFound = true;
+                    emitWithLogging(logWithContext, sock as ServerPlayerSocket, socketEvents.gameStateUpdate, clientState);
+                }
+            });
+            
+            if (!socketFound) {
+                logWithContext(`Warning: Registered player ${auth} (seat ${player.seat}) has no active socket connection`);
             }
         });
     }
@@ -372,7 +381,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
             }
 
             // Validate it's the player's turn
-            if (!isPlayerTurn(state.turn, state.connectedPlayers, player.seat)) {
+            if (!isPlayerTurn(state, player.seat)) {
                 logWithContext(`submitWord: not player's turn. Current turn: ${state.turn}, Player seat: ${player.seat}`);
                 return;
             }

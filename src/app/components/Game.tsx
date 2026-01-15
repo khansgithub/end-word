@@ -5,10 +5,11 @@ import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { GameState, GameStateFrozen } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
-import InputBox from "./InputBox";
+import InputBox, { getInputValue, resetInput, setInputError } from "./InputBox";
 import Player from "./Player";
+import SubmitButton from "./SubmitButton";
 import { getSocketManager, handleSocket } from "./socket";
-import { submitButtonForInputBox as submitButton } from "./util";
+import { socketEvents } from "../../shared/socket";
 
 interface props {
     gameState: Required<GameStateFrozen>,
@@ -19,20 +20,28 @@ export default function Game(props: props) {
         gameStateReducer<GameState>,
         props.gameState
     );
-    const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat);
-    const buttonDom = useRef<HTMLButtonElement>(null)
-    const inputDom = useRef<HTMLInputElement>(null)
-    const inputDomText = useRef("");
+    const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState, gameState.thisPlayer.seat);
 
     const socket = useRef(getSocketManager());
 
-    async function buttonOnSubmit(e: React.FormEvent<HTMLButtonElement>) {
-        e.preventDefault();
-        await submitButton();
-        // await submitButton({
-        //     inputDom: inputDom,
-        //     inputDomText: inputDomText
-        // }, socket.current);
+    async function submitButton(e?: React.FormEvent<HTMLButtonElement>) {
+        if (e) e.preventDefault();
+
+        const word = getInputValue();
+        if (!word || word.length === 0) {
+            setInputError(true);
+            return;
+        }
+
+        if (gameState.thisPlayer) {
+            dispatch({
+                type: "setPlayerLastWord",
+                payload: [gameState, word],
+            });
+            console.log("[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
+        }
+        getSocketManager().emit(socketEvents.submitWord, word);
+        resetInput();
     }
 
     handleSocket(socket.current, gameState, dispatch);
@@ -86,24 +95,17 @@ export default function Game(props: props) {
                 <div className="flex flex-col items-center p-4">
                     <div className="flex flex-row w-full justify-center items-center gap-4">
                         <InputBox
-                                    matchLetter={gameState.matchLetter}
-                                    disabled={isDisabled}
-                                    onSubmit={() => submitButton()}
-                                />
+                            matchLetter={gameState.matchLetter}
+                            disabled={isDisabled}
+                            onSubmit={submitButton}
+                        />
                     </div>
 
-                    <button
-                        ref={buttonDom}
-                        onClick={buttonOnSubmit}
+                    <SubmitButton
+                        onClick={submitButton}
                         disabled={isDisabled}
-                        className="btn-fsm mt-4 px-6 py-3 text-base"
-                        style={{
-                            opacity: gameState.thisPlayer?.seat !== undefined && isPlayerTurn(gameState.turn, gameState.connectedPlayers, gameState.thisPlayer.seat) ? 1 : 0.5,
-                        }}
-                    >
-                        <span>▶ Submit Word</span>
-                        
-                    </button>
+                        opacity={gameState.thisPlayer?.seat !== undefined && isPlayerTurn(gameState, gameState.thisPlayer.seat) ? 1 : 0.5}
+                    />
                 </div>
             </div>
 
@@ -140,7 +142,7 @@ export default function Game(props: props) {
                                     <Player
                                         key={i}
                                         player={p}
-                                        turn={isPlayerTurn(gameState.turn, gameState.connectedPlayers, i)}
+                                        turn={isPlayerTurn(gameState, i)}
                                         lastWord={p.lastWord}
                                         isCurrentPlayer={isCurrentPlayer}
                                     />

@@ -103,25 +103,25 @@ const stylesMap = {
 } satisfies Record<string, PropertyBoolMap>;
 
 
-export default function Player ({ player, turn, lastWord, isCurrentPlayer = false }: props) {
+export default function Player({ player, turn, lastWord, isCurrentPlayer = false }: props) {
     const state = {
         turn,
         isCurrentPlayer,
     };
     console.log('Player turn:', turn);
     const styles = (Object.keys(stylesMap) as Array<keyof typeof stylesMap>).reduce(
-    (acc, property) => {
-        const stateFields = stylesMap[property].values;
-        const boolMap = stylesMap[property].map;
+        (acc, property) => {
+            const stateFields = stylesMap[property].values;
+            const boolMap = stylesMap[property].map;
 
-        const stateValues = stateFields.map(field => state[field as keyof typeof state]);
-        const propertyValue = lookupBoolMap(boolMap, ...stateValues);
+            const stateValues = stateFields.map(field => state[field as keyof typeof state]);
+            const propertyValue = lookupBoolMap(boolMap, ...stateValues);
 
-        acc[property] = propertyValue;
-        return acc;
-    },
-    {} as { [K in keyof typeof stylesMap]: string } // initial value is empty object
-);
+            acc[property] = propertyValue;
+            return acc;
+        },
+        {} as { [K in keyof typeof stylesMap]: string } // initial value is empty object
+    );
     return (
         <div
             className="panel w-32 transition-all duration-300 relative flex align-center flex-col"
@@ -159,11 +159,10 @@ export default function Player ({ player, turn, lastWord, isCurrentPlayer = fals
 
                 </h3>
 
-                {lastWord && (
-                    <p className="text-xs text-center truncate w-full mt-1" style={{ color: 'var(--text-secondary)' }}>
-                        {lastWord}
-                    </p>
-                )}
+                <p className="text-xs text-center truncate w-full mt-1" style={{ color: 'var(--text-secondary)' }}>
+                    {lastWord}
+                </p>
+
 
                 {turn && (
                     <div className="chip mt-1" style={{

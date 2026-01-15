@@ -65,7 +65,7 @@ export function registerClientSocketHandlers(
     socket.on(socketEvents.playerRegistered, (serverState) => {
         log(L, "playerRegistered: dispatch, args:", pp(serverState));
         if (state.thisPlayer !== undefined){
-            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", isSuppress() ? "[SUPPRESS=TRUE]" : pp(state.thisPlayer))
+            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", pp(state.thisPlayer))
             return;
         }
         const player = serverState.thisPlayer;

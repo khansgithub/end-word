@@ -91,13 +91,12 @@ export function getCurrentPlayerIndex(turn: number, connectedPlayers: number): n
 /**
  * Checks if it's a specific player's turn.
  *
- * @param turn - The current turn number
- * @param connectedPlayers - The number of connected players
+ * @param gameState - The current game state
  * @param playerSeat - The seat/index of the player to check
  * @returns True if it's the specified player's turn, false otherwise
  */
-export function isPlayerTurn(turn: number, connectedPlayers: number, playerSeat: number): boolean {
-    return getCurrentPlayerIndex(turn, connectedPlayers) === playerSeat;
+export function isPlayerTurn(gameState: { turn: number; connectedPlayers: number }, playerSeat: number): boolean {
+    return getCurrentPlayerIndex(gameState.turn, gameState.connectedPlayers) === playerSeat;
 }
 
 // ============================================================================

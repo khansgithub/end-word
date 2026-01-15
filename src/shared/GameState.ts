@@ -157,7 +157,7 @@ function addPlayer(
     };
 
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
-    console.log("addPlayer in Reducer: next state is: ", isSuppress() ? "[SUPPRESS=TRUE]" : pp(nextState));
+    console.log("addPlayer in Reducer: next state is: ", pp(nextState));
     return nextState;
 }
 

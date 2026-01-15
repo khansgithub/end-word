@@ -62,7 +62,7 @@ const useInputStore = create<InputState>((set) => ({
 interface InputBoxProps {
     matchLetter: MatchLetter;
     disabled: boolean;
-    onSubmit?: (word: string) => void;
+    onSubmit: (...args: any[]) => void;
 }
 
 function InputBox({
@@ -72,7 +72,6 @@ function InputBox({
 }: InputBoxProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const prevInputRef = useRef<string>("");
-    const inputKeyDisplayDom = useRef<HTMLDivElement>(null)
 
     // Zustand selectors - only re-render when specific values change
     const inputValue = useInputStore((state) => state.inputValue);
@@ -187,8 +186,9 @@ function InputBox({
         if (e.key === "Enter") {
             e.preventDefault();
             e.stopPropagation();
+            
             if (onSubmit && inputValue) {
-                onSubmit(inputValue);
+                onSubmit();
                 clearInput();
             }
             return;
