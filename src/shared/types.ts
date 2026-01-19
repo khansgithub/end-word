@@ -61,31 +61,31 @@ export type SharedSocketEvents = {
     text: (text: string) => void;
 };
 
+// Acknowledgement function types
+export type AckGetPlayerCount = (count: number) => void;
+export type AckRegisterPlayerResponse =
+    | { success: true; gameState: GameStateClient }
+    | { success: false; reason: string };
+
+export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
+export type AckUnregisterPlayer = (response: { success: boolean }) => void;
+export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
+export type AckSubmitWord = (response: { success: boolean; gameState?: GameStateClient; reason?: string }) => void;
+export type AckRequestFullState = (gameState: GameStateClient) => void;
+
 export type ClientToServerEvents = SharedSocketEvents & {
-    getPlayerCount: (
-        ack:(count: number) => void) => void;
-    registerPlayer: (
-        playerProfile: PlayerWithId,
-        ack: ( response:
-            | { success: true; gameState: GameState<ClientPlayers> }
-            | { success: false; reason: string }
-        ) => void ) => void;
-    unregisterPlayer: (
-        playerProfile: PlayerWithId,
-        ack: ( response: { success: boolean }) => void) => void; // maybe this can be just the id?
-    isReturningPlayer: (
-        clientId: string,
-        ack: (response: { found: boolean; player?: PlayerWithId }) => void) => void;
-    submitWord: (
-        word: string,
-        ack: (response: { success: boolean; gameState?: Required<GameState<ClientPlayers>>; reason?: string }) => void) => void;
-    requestFullState: (
-        ack: (gameState: Required<GameState<ClientPlayers>>) => void) => void;
+    getPlayerCount: (ack: AckGetPlayerCount) => void;
+    registerPlayer: (playerProfile: PlayerWithId, ack: AckRegisterPlayer) => void;
+    unregisterPlayer: (playerProfile: PlayerWithId, ack: AckUnregisterPlayer) => void; // maybe this can be just the id?
+    isReturningPlayer: (clientId: string, ack: AckIsReturningPlayer) => void;
+    submitWord: (word: string, ack: AckSubmitWord) => void;
+    requestFullState: (ack: AckRequestFullState) => void;
     disconnect: (reason: string) => void;
 };
 
+
 export type ServerToClientEvents = SharedSocketEvents & {
-    gameStateUpdate: (gameState: Required<GameState<ClientPlayers>>) => void;
+    gameStateUpdate: (gameState: GameStateClient) => void;
 };
 
 /**
@@ -118,14 +118,36 @@ export type MatchLetter = {
     next: number
 }
 
-export type GameState<T extends PlayersArray = PlayersArray> = {
-    thisPlayer?: Required<PlayerWithId>, // optional for the server
+// export type GameState<T extends PlayersArray = PlayersArray> = {
+//     thisPlayer?: Required<PlayerWithId>, // optional for the server
+//     matchLetter: MatchLetter,
+//     status: GameStatus,
+//     players: T,
+//     connectedPlayers: number
+//     turn: number,
+//     socketPlayerMap?: WeakMap<String, Player>, // only on server
+// };
+
+
+export type GameStateServer = {
     matchLetter: MatchLetter,
     status: GameStatus,
-    players: T,
+    players: ServerPlayers,
     connectedPlayers: number
     turn: number,
-    socketPlayerMap?: WeakMap<String, Player>, // only on server
+    socketPlayerMap: WeakMap<String, Player>, // only on server
 };
 
-export type GameStateFrozen = Readonly<GameState<PlayersArray>>
+export type GameStateClient = {
+    thisPlayer: PlayerWithId,
+    matchLetter: MatchLetter,
+    status: GameStatus,
+    players: ClientPlayers,
+    connectedPlayers: number
+    turn: number,
+};
+
+export type GameState = GameStateServer | GameStateClient;
+
+export type GameStateFrozen = Readonly<GameState>;
+// export type GameStateFrozen = Readonly<GameState<PlayersArray>>

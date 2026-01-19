@@ -1,18 +1,18 @@
-import { gameStateReducer } from "../shared/GameState";
-import { ClientPlayers, ClientToServerEvents, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
+import { addPlayer } from "../shared/GameState";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, ClientPlayers, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { getGameState, setGameState } from "./serverGameState";
 
 export function fml(socket: ServerPlayerSocket) {
-    socket.on("getPlayerCount", (ack: (count: number) => void) => {
+    socket.on("getPlayerCount", (ack: AckGetPlayerCount) => {
         ack(getPlayerCount());
     });
 
-    socket.on("isReturningPlayer", (clientId: string, ack: (response: { found: boolean; player?: PlayerWithId }) => void) => {
+    socket.on("isReturningPlayer", (clientId: string, ack: AckIsReturningPlayer) => {
         ack(isReturningPlayer(clientId));
     });
 
 
-    socket.on("registerPlayer", (player: PlayerWithId, ack: (response: { success: true; gameState: Required<GameState<ClientPlayers>> } | { success: false; reason: string }) => void) => {
+    socket.on("registerPlayer", (player: PlayerWithId, ack: AckRegisterPlayer) => {
         ack(registerPlayer(player));
     });
 
@@ -23,13 +23,11 @@ export function fml(socket: ServerPlayerSocket) {
 const registerPlayer = (player: PlayerWithId): (
     | { success: true; gameState: GameState<ClientPlayers> }
     | { success: false; reason: string }) => {
-    const newState = gameStateReducer(getGameState(), {
-        type: "addPlayer",
-        payload: [getGameState(), player] as const,
-    });
+    const newState = addPlayer(getGameState(), player);
     setGameState(newState);
     return { success: true, gameState: newState };
 };
+
 const getPlayerCount = () => getGameState().connectedPlayers;
 
 const isReturningPlayer = (clientId: string) => {

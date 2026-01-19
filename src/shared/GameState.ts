@@ -25,7 +25,7 @@ export type GameStateActionsType = {
 // =============================================================================
 // REDUCER MAP
 // =============================================================================
-function replaceGameState(state: GameState, newState: GameState): GameState {
+export function replaceGameState(state: GameState, newState: GameState): GameState {
     return { ...newState };
 }
 
@@ -46,14 +46,14 @@ const GameStateActions = {
 // =============================================================================
 // REDUCER FUNCTIONS
 // =============================================================================
-function updateConnectedPlayersCount(state: GameState, count: number): GameState {
+export function updateConnectedPlayersCount(state: GameState, count: number): GameState {
     return {
         ...state,
         connectedPlayers: count
     }
 }
 
-function nextTurn(state: GameState): GameState {
+export function nextTurn(state: GameState): GameState {
     return {
         ...state,
         turn: state.turn + 1,
@@ -64,8 +64,7 @@ function _postPlayerCountUpdateState(state: GameState): GameState {
     /**
      * This function will update values which depend on the number of players connected to the game.
      */
-    const players = state.players;
-    const connectedPlayers = players.filter((p) => p != null).length;
+    const connectedPlayers = state.players.filter((p) => p != null).length;
     const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
     return {
         ...state,
@@ -74,7 +73,7 @@ function _postPlayerCountUpdateState(state: GameState): GameState {
     };
 }
 
-function removePlayer(
+export function removePlayer(
     state: GameState,
     profile: Player
 ): GameState {
@@ -94,15 +93,17 @@ function removePlayer(
     };
 }
 
-function registerPlayer(
+export function registerPlayer(
     state: GameState,
     player: PlayerWithId
-): GameState {
+): GameState & { thisPlayer: PlayerWithId} {
     assertIsRequiredPlayerWithId(player);
-    return { ...state, thisPlayer: player }
+    const seat = findAvailableSeat(state);
+    const updatedPlayers = insertPlayerIntoArray(state, player, seat);
+    return { ...state, thisPlayer: { ...player, seat: seat }, players: updatedPlayers }
 }
 
-function addPlayerToArray(
+export function addPlayerToArray(
     state: GameState,
     player: Player
 ): GameState {
@@ -129,45 +130,29 @@ function addPlayerToArray(
  * @param player 
  * @returns 
  */
-function addPlayer(
-    state: GameState,
+export function addPlayer<T extends PlayersArray>(
+    state: GameState<T>,
     player: PlayerWithId,
-): GameState {
-    const availableI = state.players.findIndex((v) => v === null);
-
-    if (availableI < 0) {
-        console.error("state.players.findIndex((v) => v === null); == < 0");
-        console.error(state.players);
-        throw new Error("unexpected error");
-    }
-
+): GameState<T> {
     if (!player.name) {
         console.error("addPlayer: profile.name is undefined")
         throw new Error("unexpected error");
     }
-
-    const updatedPlayers = clonePlayersArray(state.players);
-
-
-    updatedPlayers[availableI] = {
-        ...player,
-        seat: availableI,
-        ...(state.thisPlayer ? { uid: state.thisPlayer.uid } : {}),
-    };
-
+    const seat = findAvailableSeat(state);
+    const updatedPlayers = insertPlayerIntoArray(state, player, seat);
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
     console.log("addPlayer in Reducer: next state is: ", pp(nextState));
-    return nextState;
+    return nextState as GameState<T>;
 }
 
-function addAndRegisterPlayer(
+export function addAndRegisterPlayer(
     state: GameState,
     player: PlayerWithId
 ): GameState {
     return registerPlayer(addPlayer(state, player), player);
 }
 
-function setPlayerLastWord(
+export function setPlayerLastWord(
     state: GameState,
     playerLastWord: string
 ): GameState {
@@ -189,7 +174,7 @@ function setPlayerLastWord(
     };
 }
 
-function progressNextTurn(state: GameState, block: string, playerLastWord: string) {
+export function progressNextTurn(state: GameState, block: string, playerLastWord: string) {
     let nextState: GameState = state;
     nextState = {
         ...nextState,
@@ -261,6 +246,25 @@ export function isRequiredGameState(state: GameState): state is Required<GameSta
         console.warn("isRequiredGameState guard failed", err);
         return false;
     }
+}
+
+function findAvailableSeat(state: GameState): number {
+    const availableI = state.players.findIndex((v) => v === null);
+    if (availableI < 0) {
+        console.error("state.players.findIndex((v) => v === null); == < 0");
+        console.error(state.players);
+        throw new Error("unexpected error");
+    }
+    return availableI;
+}
+
+function insertPlayerIntoArray(state: GameState, player: PlayerWithId, seat: number): PlayersArray {
+    if (seat < 0 || seat >= state.players.length) {
+        throw new Error(`Seat index ${seat} out of bounds`);
+    }
+    const updatedPlayers = clonePlayersArray(state.players);
+    updatedPlayers[seat] = { ...player, seat: seat };
+    return updatedPlayers;
 }
 
 export type { GameState };

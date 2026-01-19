@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from '../../shared/GameState';
 import { assertIsRequiredGameState } from '../../shared/guards';
-import { ClientPlayerSocket, GameState, PlayerWithId } from '../../shared/types';
+import { AckRegisterPlayerResponse, ClientPlayerSocket, GameState, PlayerWithId } from '../../shared/types';
 import { makeNewPlayer } from '../../shared/utils';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
@@ -37,24 +37,6 @@ function GameContainer() {
     // derived data
     const player: PlayerWithId = makeNewPlayer(playerName, playerId);
 
-    // handlers
-    const playerRegisterHandler = (state_: GameState) => {
-        log(L, "playerRegisteredHandler");
-        state.current = state_;
-        setUserIsConnected(CONNECTED);
-    };
-    const playerRegisterFailHandlers = () => setUserIsConnected(FAILED);
-
-    function loadHandlers(socket: ClientPlayerSocket) {
-        socket.once("playerRegistered", playerRegisterHandler);
-        socket.once("playerNotRegistered", playerRegisterFailHandlers);
-    }
-
-    function unloadHandlers(socket: ClientPlayerSocket) {
-        socket.off("playerRegistered", playerRegisterHandler);
-        socket.off("playerNotRegistered", playerRegisterFailHandlers);
-    }
-
     if (socket === null || socket.disconnected) {
         unloadPage(socket);
         console.warn(`Socket is disconnected or has not be created yet: ${socket}`);
@@ -77,13 +59,18 @@ function GameContainer() {
         if (userIsConnected === null) {
             console.count("EMIT: REGISTER PLAYER");
             log(L, 'Register player;', player, socket.auth);
-            loadHandlers(socket);
-            socket.emit("registerPlayer", player);
+            socket.emit("registerPlayer", player, (response: AckRegisterPlayerResponse) => {
+                if (response.success) {
+                    state.current = response.gameState;
+                    setUserIsConnected(CONNECTED);
+                } else {
+                    setUserIsConnected(FAILED);
+                }
+            });
             setUserIsConnected(CONNECTING);
         }
 
         return () => {
-            unloadHandlers(socket);
         };
 
     }, []);
