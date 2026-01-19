@@ -1,5 +1,5 @@
 import { AssertionError } from "assert";
-import { BoolMap, GameState, GameStateFrozen, Player, PlayerWithId, PlayerWithoutId } from "./types";
+import { BoolMap, GameState, GameStateClient, GameStateFrozen, GameStateServer, Player, PlayerWithId, PlayerWithoutId } from "./types";
 
 function hasPlayerId(player: Player) { return player.uid !== undefined; }
 
@@ -32,7 +32,7 @@ export function assertIsPlayerWithoutId(player: Player): asserts player is Playe
     if (hasPlayerId(player)) throw new AssertionError({ message: "Player is expected to be PlayerWithoutId" });
 }
 
-export function assertIsRequiredPlayerWithId(player: PlayerWithId): asserts player is Required<PlayerWithId> {
+export function assertIsRequiredPlayerWithId(player: Player): asserts player is Required<PlayerWithId> {
     assertIsPlayerWithId(player);
     if (!hasPlayerId(player)) throw new AssertionError({ message: `Player is expected to be concrete, missing uid: ${JSON.stringify(player)}` });
 }
@@ -53,6 +53,15 @@ export function assertIsRequiredGameState(state: GameState): asserts state is Re
     }
 
     assertIsRequiredPlayerWithId(thisPlayer!);
+}
+
+export function assertIsGameStateClient(state: GameState): asserts state is GameStateClient {
+    if (!(state as GameStateClient).thisPlayer) {
+        throw new AssertionError({ message: "GameState is expected to be GameStateClient, missing thisPlayer" });
+    }
+    if ((state as GameStateServer).socketPlayerMap !== undefined) {
+        throw new AssertionError({ message: "GameState is expected to be GameStateClient, should not have socketPlayerMap" });
+    }
 }
 
 export function isRequiredGameState(state: GameState): state is Required<GameState> {

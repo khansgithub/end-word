@@ -1,12 +1,11 @@
 import { buildInitialGameState, GameState } from "../shared/GameState";
-import { ServerPlayers } from "../shared/types";
 
-let gameState = buildInitialGameState({server:true});
+let gameState = buildInitialGameState();
 
 export function getGameState() {
     return gameState;
 }
 
-export function setGameState(state: GameState<ServerPlayers>) {
+export function setGameState(state: GameState) {
     gameState = state;
 }

@@ -1,5 +1,5 @@
-import { addPlayer } from "../shared/GameState";
-import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, ClientPlayers, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
+import { registerPlayer as registerPlayerToState, toGameStateClient } from "../shared/GameState";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckRegisterPlayerResponse, ClientPlayers, GameState, GameStateClient, GameStateServer, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { getGameState, setGameState } from "./serverGameState";
 
 export function fml(socket: ServerPlayerSocket) {
@@ -13,19 +13,22 @@ export function fml(socket: ServerPlayerSocket) {
 
 
     socket.on("registerPlayer", (player: PlayerWithId, ack: AckRegisterPlayer) => {
-        ack(registerPlayer(player));
+        const newState = registerPlayer(player);
+        const thisPlayer = newState.thisPlayer;
+        if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
+        newState.socketPlayerMap?.set(`${socket.id}`, thisPlayer);
+        ack({ success: true, gameState: toGameStateClient(newState) });
     });
 
     socket.onAny(event => console.log(event));
 };
 
 
-const registerPlayer = (player: PlayerWithId): (
-    | { success: true; gameState: GameState<ClientPlayers> }
-    | { success: false; reason: string }) => {
-    const newState = addPlayer(getGameState(), player);
+const registerPlayer = (player: PlayerWithId): GameState => {
+    const newState = registerPlayerToState(getGameState(), player);
     setGameState(newState);
-    return { success: true, gameState: newState };
+    return newState;
+    // return { success: true, gameState: newState };
 };
 
 const getPlayerCount = () => getGameState().connectedPlayers;

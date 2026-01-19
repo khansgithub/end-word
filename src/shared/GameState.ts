@@ -7,7 +7,7 @@ Notes from gpt:
 
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { ClientPlayers, GameState, GameStateFrozen, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
+import { ClientPlayers, GameState, GameStateClient, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
 import { buildMatchLetter, getCurrentPlayerIndex, pp } from "./utils";
 
 export type GameStateActionsType = {
@@ -96,11 +96,18 @@ export function removePlayer(
 export function registerPlayer(
     state: GameState,
     player: PlayerWithId
-): GameState & { thisPlayer: PlayerWithId} {
+): GameState {
     assertIsRequiredPlayerWithId(player);
     const seat = findAvailableSeat(state);
-    const updatedPlayers = insertPlayerIntoArray(state, player, seat);
-    return { ...state, thisPlayer: { ...player, seat: seat }, players: updatedPlayers }
+    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
+    const newPlayer = updatedPlayers[seat];
+    if (newPlayer === null) throw new Error("newPlayer cannot be null here");
+    assertIsRequiredPlayerWithId(newPlayer);
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers, thisPlayer: newPlayer });
+
+    console.log("registerPlayer in Reducer: next state is: ", pp(nextState));
+
+    return nextState
 }
 
 export function addPlayerToArray(
@@ -130,19 +137,19 @@ export function addPlayerToArray(
  * @param player 
  * @returns 
  */
-export function addPlayer<T extends PlayersArray>(
-    state: GameState<T>,
+export function addPlayer(
+    state: GameStateServer,
     player: PlayerWithId,
-): GameState<T> {
+): GameState {
     if (!player.name) {
         console.error("addPlayer: profile.name is undefined")
         throw new Error("unexpected error");
     }
     const seat = findAvailableSeat(state);
-    const updatedPlayers = insertPlayerIntoArray(state, player, seat);
+    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
     console.log("addPlayer in Reducer: next state is: ", pp(nextState));
-    return nextState as GameState<T>;
+    return nextState;
 }
 
 export function addAndRegisterPlayer(
@@ -210,19 +217,16 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 // OTHER FUNCTIONS
 // =============================================================================
-export function buildInitialGameState(options: { server: true }): GameState<ServerPlayers>;
-export function buildInitialGameState(options?: { server?: false }): GameState<ClientPlayers>;
-export function buildInitialGameState(options: { server?: boolean } = {}): GameState {
-    const { server = false } = options;
-    const players = server ? makePlayersArray<ServerPlayers>() : makePlayersArray<ClientPlayers>();
-    
+export function buildInitialGameState(): GameState {
+    const players = makePlayersArray<ServerPlayers>();
+    const socketPlayerMap = new WeakMap<String, Player>();
     return {
         matchLetter: buildMatchLetter("값"),
         status: null,
         players: players,
         turn: 0,
         connectedPlayers: 0,
-        socketPlayerMap: server ? new WeakMap<String, Player>() : undefined
+        socketPlayerMap: socketPlayerMap,
     }
 }
 
@@ -230,8 +234,8 @@ export function makePlayersArray<T extends PlayersArray>(): T {
     return Array(MAX_PLAYERS).fill(null) as T;
 }
 
-export function clonePlayersArray<T extends PlayersArray>(cloneFrom: T): T {
-    const cloneArray = makePlayersArray<T>();
+export function clonePlayersArray(cloneFrom: PlayersArray): PlayersArray {
+    const cloneArray = makePlayersArray();
     cloneFrom.forEach((v, i) => {
         cloneArray[i] = v === null ? null : { ...v };
     });
@@ -248,6 +252,25 @@ export function isRequiredGameState(state: GameState): state is Required<GameSta
     }
 }
 
+export function toGameStateClient(state: GameState): GameStateClient {
+    const thisPlayer = state.thisPlayer;
+    if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
+    const { socketPlayerMap, ...rest } = state;
+    return {
+        ...rest,
+        thisPlayer: thisPlayer,
+    };
+}
+export function toGameStateServer(state: GameState): GameStateServer {
+    const socketPlayerMap = state.socketPlayerMap;
+    if (socketPlayerMap === undefined) throw new Error("socketPlayerMap cannot be undefined here");
+    const { thisPlayer, ...rest } = state;
+    return {
+        ...rest,
+        socketPlayerMap: socketPlayerMap,
+    };
+}
+
 function findAvailableSeat(state: GameState): number {
     const availableI = state.players.findIndex((v) => v === null);
     if (availableI < 0) {
@@ -258,13 +281,13 @@ function findAvailableSeat(state: GameState): number {
     return availableI;
 }
 
-function insertPlayerIntoArray(state: GameState, player: PlayerWithId, seat: number): PlayersArray {
-    if (seat < 0 || seat >= state.players.length) {
+function insertPlayerIntoArray<T extends PlayersArray>(players: T, player: PlayerWithId, seat: number): T {
+    if (seat < 0 || seat >= players.length) {
         throw new Error(`Seat index ${seat} out of bounds`);
     }
-    const updatedPlayers = clonePlayersArray(state.players);
+    const updatedPlayers = clonePlayersArray(players);
     updatedPlayers[seat] = { ...player, seat: seat };
-    return updatedPlayers;
+    return updatedPlayers as T;
 }
 
 export type { GameState };

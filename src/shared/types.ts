@@ -129,25 +129,18 @@ export type MatchLetter = {
 // };
 
 
-export type GameStateServer = {
+export type GameState = {
+    thisPlayer?: PlayerWithId,
     matchLetter: MatchLetter,
     status: GameStatus,
-    players: ServerPlayers,
+    players: PlayersArray,
     connectedPlayers: number
     turn: number,
-    socketPlayerMap: WeakMap<String, Player>, // only on server
-};
+    socketPlayerMap?: WeakMap<String, Player>, // only on server
+}
 
-export type GameStateClient = {
-    thisPlayer: PlayerWithId,
-    matchLetter: MatchLetter,
-    status: GameStatus,
-    players: ClientPlayers,
-    connectedPlayers: number
-    turn: number,
-};
-
-export type GameState = GameStateServer | GameStateClient;
+export type GameStateServer = Omit<GameState, "thisPlayer"> & Required<Pick<GameState, "socketPlayerMap">>;
+export type GameStateClient = Omit<GameState, "socketPlayerMap"> & Required<Pick<GameState, "thisPlayer">>;
 
 export type GameStateFrozen = Readonly<GameState>;
 // export type GameStateFrozen = Readonly<GameState<PlayersArray>>

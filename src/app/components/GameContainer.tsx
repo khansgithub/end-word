@@ -3,8 +3,8 @@
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from '../../shared/GameState';
-import { assertIsRequiredGameState } from '../../shared/guards';
-import { AckRegisterPlayerResponse, ClientPlayerSocket, GameState, PlayerWithId } from '../../shared/types';
+import { assertIsGameStateClient, assertIsRequiredGameState } from '../../shared/guards';
+import { AckRegisterPlayerResponse, ClientPlayerSocket, GameState, GameStateClient, PlayerWithId } from '../../shared/types';
 import { makeNewPlayer } from '../../shared/utils';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
@@ -31,8 +31,8 @@ function GameContainer() {
     const { socket } = useSocketStore.getState();
 
     // React state
-    const [userIsConnected, setUserIsConnected] = useState<ConnectionState>(null);
-    const state = useRef(buildInitialGameState());
+    const [userIsConnected, setUserIsConnected] = useState<ConnectionState>(CONNECTING);
+    const state = useRef<GameStateClient>(null);
 
     // derived data
     const player: PlayerWithId = makeNewPlayer(playerName, playerId);
@@ -56,7 +56,7 @@ function GameContainer() {
             useIsConencted: ${userIsConnected}
         `);
 
-        if (userIsConnected === null) {
+        if (userIsConnected !== CONNECTED) {
             console.count("EMIT: REGISTER PLAYER");
             log(L, 'Register player;', player, socket.auth);
             socket.emit("registerPlayer", player, (response: AckRegisterPlayerResponse) => {
@@ -67,11 +67,9 @@ function GameContainer() {
                     setUserIsConnected(FAILED);
                 }
             });
-            setUserIsConnected(CONNECTING);
         }
 
-        return () => {
-        };
+        return () => {};
 
     }, []);
     
@@ -91,7 +89,7 @@ function GameContainer() {
     switch (userIsConnected ?? CONNECTING) {
         case CONNECTED:
             log(L, "CONNECTED", CONNECTED);
-            assertIsRequiredGameState(state.current);
+            assertIsGameStateClient(state.current!);
             // unloadHandlers(socket);
             // log(L, pp(state));
             return (

@@ -2,7 +2,7 @@
 
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
-import { GameState, GameStateFrozen } from "../../shared/types";
+import { GameState, GameStateClient, GameStateFrozen } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
 import InputBox, { getInputValue, resetInput, setInputError } from "./InputBox";
 import Player from "./Player";
@@ -11,14 +11,15 @@ import { getSocketManager, handleSocket } from "./socket";
 import { socketEvents } from "../../shared/socket";
 
 interface props {
-    gameState: Required<GameStateFrozen>,
+    gameState: GameStateClient,
 }
 
 export default function Game(props: props) {
     const [gameState, dispatch] = useReducer(
-        gameStateReducer<GameState>,
+        gameStateReducer<GameStateClient>,
         props.gameState
     );
+    
     const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState, gameState.thisPlayer.seat);
 
     const socket = useRef(getSocketManager());
