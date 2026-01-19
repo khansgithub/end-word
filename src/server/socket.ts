@@ -2,6 +2,8 @@ import http from "http";
 import { Server as SocketServer } from "socket.io";
 import { createServerConnectionHandler, createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
+import { fml } from "./fml";
+import { GameState } from "../shared/types";
 
 let activeServerContext: ServerSocketContext | null = null;
 
@@ -23,13 +25,7 @@ export function createIOServer(server: http.Server): SocketServer {
 }
 
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
-    const serverSocketContext = createServerSocketContext(undefined, {
-        countEvent: countSocketEvent,
-        setRegisteredClients,
-    }, socketServer);
-    
-    activeServerContext = serverSocketContext;
-    socketServer.on("connection", createServerConnectionHandler(serverSocketContext));
+    socketServer.on("connection", fml);
     return socketServer;
 }
   

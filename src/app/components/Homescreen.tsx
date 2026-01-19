@@ -4,6 +4,8 @@ import { MAX_PLAYERS } from "../../shared/consts";
 import { useSocketStore, useUserStore } from "../store/userStore";
 import { getSocketManager } from './socket';
 import { ClientPlayerSocket, Player, ServerToClientEvents } from '../../shared/types';
+import { socketGetPlayerCount, socketSetReturningPlayer } from '../../shared/socketClient';
+
 
 export function Homescreen() {
     const [playerCount, setPlayerCount] = useState(0);
@@ -16,26 +18,6 @@ export function Homescreen() {
     const { setSocket } = useSocketStore.getState();
     let { socket } = useSocketStore.getState();
 
-    // --- handlers -------------------------------------------------------
-    const playerCountHandler = (count: number) => setPlayerCount(count);
-    const returningPlayerHandler = (player: Player) => setReturningPlayer(player);
-    const playerJoinNotificationHandler = () => setPlayerCount(c => c + 1);
-    const playerLeaveNotificationHandler = () => setPlayerCount(c => c - 1);
-    const handlers = {
-        playerCount: playerCountHandler,
-        returningPlayer: returningPlayerHandler,
-        playerJoinNotification: playerJoinNotificationHandler,
-        playerLeaveNotification: playerLeaveNotificationHandler,
-    } satisfies Partial<ServerToClientEvents>;
-
-    function socketHandlers(socket: ClientPlayerSocket, apply = true) {
-        Object.keys(handlers).forEach(k => {
-            const event = k as keyof typeof handlers;
-            const handler = handlers[event];
-            if (apply) socket.on(event, handler);
-            else socket.off(event, handler);
-        });
-    }
     // --------------------------------------------------------------------
 
     function onClick(event: React.MouseEvent) {
@@ -67,7 +49,8 @@ export function Homescreen() {
             socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
-        socket.emit("isReturningPlayer", clientId);
+        socketSetReturningPlayer(socket, clientId, setReturningPlayer)
+
         return () => { };
     }, []);
 
@@ -80,14 +63,12 @@ export function Homescreen() {
             return
         }
 
-        socketHandlers(socket);
         // check if there exists a player with the socket.id
-        socket.emit("isReturningPlayer", clientId);
-        socket.emit("getPlayerCount");
+        socketSetReturningPlayer(socket, clientId, setReturningPlayer)
+        socketGetPlayerCount(socket, setPlayerCount);
         console.log(`Connected to socket after ${retryCount} attempts.`);
         return () => {
             if (!socket) return;
-            socketHandlers(socket, false);
         }
     }, [retryCount]);
 
@@ -98,15 +79,8 @@ export function Homescreen() {
         }
     }, [returningPlayer]);
 
-
-    // function foo() {
-    //     if (!socket) return;
-    //     const text = document.querySelector(".foo")?.value || "cat";
-    //     socket.emit("foo", text);
-    // }
-
     return (
-        <div className="flex flex-col w-full h-full min-h-screen justify-center items-center p-3" style={{ 
+        <div className="flex flex-col w-full h-full min-h-screen justify-center items-center p-3" style={{
             background: 'var(--bg-primary)',
         }}>
             {/* Header */}
@@ -147,7 +121,7 @@ export function Homescreen() {
 
             <div className="panel w-full max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center text-center p-6">
-                    <div className="stats stats-horizontal mb-4 w-full" style={{ 
+                    <div className="stats stats-horizontal mb-4 w-full" style={{
                         background: 'var(--gradient-chip)',
                         border: '1px solid var(--border-default)',
                         borderRadius: '0.55rem',
@@ -164,16 +138,16 @@ export function Homescreen() {
                         <label className="label" htmlFor="name">
                             <span className="label-text text-base" style={{ color: 'var(--text-primary)' }}>Your Name</span>
                         </label>
-                        <input 
-                            ref={inputRef} 
+                        <input
+                            ref={inputRef}
                             id="name"
-                            name="name" 
-                            type="text" 
-                            placeholder="Enter your name" 
-                            required={true} 
-                            onKeyDown={onKeyDown} 
-                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]" 
-                            style={{ 
+                            name="name"
+                            type="text"
+                            placeholder="Enter your name"
+                            required={true}
+                            onKeyDown={onKeyDown}
+                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]"
+                            style={{
                                 background: 'var(--input-bg-solid)',
                                 boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                                 color: 'var(--text-primary)',
@@ -183,11 +157,11 @@ export function Homescreen() {
                             }}
                         />
                     </div>
-                    
-                    <button 
-                        className="btn-fsm px-6 py-3 text-base" 
+
+                    <button
+                        className="btn-fsm px-6 py-3 text-base"
                         onClick={onClick}
-                    > 
+                    >
                         <span>▶</span>
                         Join Game
                     </button>

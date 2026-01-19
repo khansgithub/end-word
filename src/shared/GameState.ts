@@ -230,13 +230,14 @@ export function buildInitialGameState(options?: { server?: false }): GameState<C
 export function buildInitialGameState(options: { server?: boolean } = {}): GameState {
     const { server = false } = options;
     const players = server ? makePlayersArray<ServerPlayers>() : makePlayersArray<ClientPlayers>();
-    const emptyGameState = {} as unknown as GameState;
+    
     return {
         matchLetter: buildMatchLetter("값"),
         status: null,
         players: players,
         turn: 0,
         connectedPlayers: 0,
+        socketPlayerMap: server ? new WeakMap<String, Player>() : undefined
     }
 }
 

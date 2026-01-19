@@ -1,8 +1,8 @@
 import type { ActionDispatch } from "react";
 import { GameStateActionsType } from "./GameState";
 import { socketEvents } from "./socket";
-import type { ClientPlayerSocket, GameState } from "./types";
-import { isSuppress, pp} from "./utils";
+import type { ClientPlayerSocket, GameState, Player } from "./types";
+import { isSuppress, pp } from "./utils";
 
 const L = "socketClient: "
 const log = console.log;
@@ -25,10 +25,10 @@ export function registerClientSocketHandlers(
     if (clientSocketsWithHandlers.has(socket)) {
         return;
     }
-    
+
     clientSocketsWithHandlers.add(socket);
 
-    socket.onAny(( e => {
+    socket.onAny((e => {
         log(L, "event: ", e);
     }))
 
@@ -36,48 +36,53 @@ export function registerClientSocketHandlers(
         log(L, `Connected to socket: ${socket.id}, ${socket.auth}`);
         // Request full state sync on reconnection to ensure we're in sync
         if (state.thisPlayer) {
-            socket.emit(socketEvents.requestFullState);
+            socket.emit(socketEvents.requestFullState, (state) => {
+                dispatch({
+                    type: "replaceGameState",
+                    payload: [state, state],
+                });
+            });
         }
     });
 
-    socket.on(socketEvents.playerCount, (count) => {
-        dispatch({
-            type: "updateConnectedPlayersCount",
-            payload: [state, count],
-        });
-    });
+    // socket.on(socketEvents.playerCount, (count) => {
+    //     dispatch({
+    //         type: "updateConnectedPlayersCount",
+    //         payload: [state, count],
+    //     });
+    // });
 
-    socket.on(socketEvents.playerJoinNotification, (newPlayer) => {
-        log(L, "playerJoinNotification event received");
-        dispatch({
-            type: "addPlayerToArray",
-            payload: [state, newPlayer],
-        });
-    });
+    // socket.on(socketEvents.playerJoinNotification, (newPlayer) => {
+    //     log(L, "playerJoinNotification event received");
+    //     dispatch({
+    //         type: "addPlayerToArray",
+    //         payload: [state, newPlayer],
+    //     });
+    // });
 
-    socket.on(socketEvents.playerLeaveNotification, (player) => {
-        dispatch({
-            type: "removePlayer",
-            payload: [state, player],
-        });
-    });
+    // socket.on(socketEvents.playerLeaveNotification, (player) => {
+    //     dispatch({
+    //         type: "removePlayer",
+    //         payload: [state, player],
+    //     });
+    // });
 
-    socket.on(socketEvents.playerRegistered, (serverState) => {
-        log(L, "playerRegistered: dispatch, args:", pp(serverState));
-        if (state.thisPlayer !== undefined){
-            console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", pp(state.thisPlayer))
-            return;
-        }
-        const player = serverState.thisPlayer;
-        dispatch({
-            type: "addAndRegisterPlayer",
-            payload: [state, player],
-        });
-    });
+    // socket.on(socketEvents.playerRegistered, (serverState) => {
+    //     log(L, "playerRegistered: dispatch, args:", pp(serverState));
+    //     if (state.thisPlayer !== undefined){
+    //         console.warn("socketClient - on playerRegistered event; skipping because state.thisPlayer is not empty", pp(state.thisPlayer))
+    //         return;
+    //     }
+    //     const player = serverState.thisPlayer;
+    //     dispatch({
+    //         type: "addAndRegisterPlayer",
+    //         payload: [state, player],
+    //     });
+    // });
 
-    socket.on(socketEvents.playerNotRegistered, (reason) => {
-        throw new Error("handle when room is full: " + reason);
-    });
+    // socket.on(socketEvents.playerNotRegistered, (reason) => {
+    //     throw new Error("handle when room is full: " + reason);
+    // });
 
     // Handle game state updates from server (source of truth)
     socket.on(socketEvents.gameStateUpdate, (serverState) => {
@@ -96,24 +101,55 @@ export function registerClientSocketHandlers(
         }
     });
 
-    // Handle full state sync (e.g., on reconnection)
-    socket.on(socketEvents.fullStateSync, (serverState) => {
-        log(L, "fullStateSync received from server:", pp(serverState));
-        // Replace entire local state with server state
-        if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
-            dispatch({
-                type: "replaceGameState",
-                payload: [state, serverState],
-            });
-        } else {
-            console.warn("fullStateSync: thisPlayer mismatch or missing", {
-                server: serverState.thisPlayer,
-                local: state.thisPlayer
-            });
-        }
-    });
+    // // Handle full state sync (e.g., on reconnection)
+    // socket.on(socketEvents.fullStateSync, (serverState) => {
+    //     log(L, "fullStateSync received from server:", pp(serverState));
+    //     // Replace entire local state with server state
+    //     if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
+    //         dispatch({
+    //             type: "replaceGameState",
+    //             payload: [state, serverState],
+    //         });
+    //     } else {
+    //         console.warn("fullStateSync: thisPlayer mismatch or missing", {
+    //             server: serverState.thisPlayer,
+    //             local: state.thisPlayer
+    //         });
+    //     }
+    // });
 
     socket.on(socketEvents.text, (text) => {
         log(L, `Text from server: ${text}`);
+    });
+}
+
+
+// export function redirectReturningPlayer(
+//     socket: ClientPlayerSocket,
+//     clientId: string,
+//     redirectToRoom: (name: string) => void) {
+
+//     socket.emit("isReturningPlayer", clientId, (({ found, player }) => {
+//         log(L, "isReturningPlayer: ", found, player);
+//         if (found && player) redirectToRoom(player.name);
+//     }))
+// }
+
+export function socketSetReturningPlayer(
+    socket: ClientPlayerSocket,
+    clientId: string,
+    setReturningPlayer: (player: Player) => void) {
+    socket.emit("isReturningPlayer", clientId, (({ found, player }) => {
+        log(L, "isReturningPlayer: ", found, player);
+        if (found && player) setReturningPlayer(player);
+    }));
+}
+
+export function socketGetPlayerCount(
+    socket: ClientPlayerSocket,
+    setPlayerCount: (count: number) => void) {
+    socket.emit("getPlayerCount", (count) => {
+        log(L, "getPlayerCount: ", count);
+        setPlayerCount(count);
     });
 }

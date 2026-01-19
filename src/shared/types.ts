@@ -62,24 +62,30 @@ export type SharedSocketEvents = {
 };
 
 export type ClientToServerEvents = SharedSocketEvents & {
-    getPlayerCount: () => void;
-    registerPlayer: (playerProfile: PlayerWithId) => void;
-    unregisterPlayer: (playerProfile: PlayerWithId) => void; // maybe this can be just the id?
-    isReturningPlayer: (clientId: string) => void;
-    submitWord: (word: string) => void;
-    requestFullState: () => void;
+    getPlayerCount: (
+        ack:(count: number) => void) => void;
+    registerPlayer: (
+        playerProfile: PlayerWithId,
+        ack: ( response:
+            | { success: true; gameState: GameState<ClientPlayers> }
+            | { success: false; reason: string }
+        ) => void ) => void;
+    unregisterPlayer: (
+        playerProfile: PlayerWithId,
+        ack: ( response: { success: boolean }) => void) => void; // maybe this can be just the id?
+    isReturningPlayer: (
+        clientId: string,
+        ack: (response: { found: boolean; player?: PlayerWithId }) => void) => void;
+    submitWord: (
+        word: string,
+        ack: (response: { success: boolean; gameState?: Required<GameState<ClientPlayers>>; reason?: string }) => void) => void;
+    requestFullState: (
+        ack: (gameState: Required<GameState<ClientPlayers>>) => void) => void;
     disconnect: (reason: string) => void;
 };
 
 export type ServerToClientEvents = SharedSocketEvents & {
-    playerCount: (count: number) => void;
-    playerJoinNotification: (newPlayer: PlayerWithoutId) => void;
-    playerLeaveNotification: (player: PlayerWithoutId) => void;
-    playerRegistered: (gameState: Required<GameState<ClientPlayers>>) => void;
-    playerNotRegistered: (reason: string) => void;
-    returningPlayer: (player: PlayerWithId) => void;
     gameStateUpdate: (gameState: Required<GameState<ClientPlayers>>) => void;
-    fullStateSync: (gameState: Required<GameState<ClientPlayers>>) => void;
 };
 
 /**
@@ -119,6 +125,7 @@ export type GameState<T extends PlayersArray = PlayersArray> = {
     players: T,
     connectedPlayers: number
     turn: number,
+    socketPlayerMap?: WeakMap<String, Player>, // only on server
 };
 
 export type GameStateFrozen = Readonly<GameState<PlayersArray>>

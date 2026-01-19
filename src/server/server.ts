@@ -4,6 +4,7 @@ import next from "next";
 import { createServer } from "node:http";
 import { createIOServer, getServerSocketContext } from "./socket";
 import { registry } from "./metrics";
+import { buildInitialGameState } from "../shared/GameState";
 
 const app = next({ dev: true, dir: "src" });
 const express_app = express();
