@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useReducer, useRef } from "react";
@@ -45,11 +44,6 @@ export default function Game(props: props) {
     }
 
     handleSocket(socket.current, gameState, dispatch);
-    // console.log(`
-    //         Game Component
-    //         gameState: ${pp(gameState)}
-    //         clientId: ${pp(socket.current.auth)}
-    //     `);
 
     useEffect(() => {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");

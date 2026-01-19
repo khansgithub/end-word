@@ -1,0 +1,375 @@
+import { Server as SocketServer } from "socket.io";
+import { gameStateReducer } from "./GameState";
+import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
+import { socketEvents } from "./socket";
+import { ServerSocketContext } from "./socketServer";
+import {
+    ClientPlayers,
+    ClientToServerEvents,
+    GameState,
+    Player,
+    PlayerWithId,
+    RunExclusive,
+    ServerPlayers,
+    ServerPlayerSocket,
+    ServerToClientEvents,
+} from "./types";
+import { cloneServerPlayersToClientPlayers, inputIsValid, isPlayerTurn, pp } from "./utils";
+
+type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
+
+// ===================================================================
+// HANDLER DEPENDENCIES
+// ===================================================================
+export type HandlerDependencies = {
+    context: ServerSocketContext;
+    getState: () => GameState<ServerPlayers>;
+    setState: (nextState: GameState<ServerPlayers>) => void;
+    registeredSockets: Map<PlayerUid, Required<PlayerWithId>>;
+    runExclusive: RunExclusive;
+    socketServer?: SocketServer;
+    metrics: {
+        countEvent: (event: string) => void;
+        setRegisteredClients: (count: number) => void;
+        incrementConnections: () => void;
+        recordGetPlayerCountRequest: () => void;
+    };
+};
+
+// ===================================================================
+// STANDALONE UTILITIES
+// ===================================================================
+export function getClientId(socket: ServerPlayerSocket) {
+    return socket.handshake.auth.clientId;
+}
+
+function emitWithLogging<E extends keyof ServerToClientEvents>(
+    logFn: (message: string) => void,
+    socket: ServerPlayerSocket,
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+) {
+    logFn("emitting: " + event);
+    logFn("emitting payload: " + pp(args));
+    socket.emit(event, ...args);
+}
+
+function broadcastEmitWithLogging<E extends keyof ServerToClientEvents>(
+    logFn: (message: string) => void,
+    socket: ServerPlayerSocket,
+    event: E,
+    ...args: Parameters<ServerToClientEvents[E]>
+) {
+    logFn("broadcast emitting: " + event);
+    logFn("broadcast emitting payload: " + pp(args));
+    socket.broadcast.emit(event, ...args);
+}
+
+// ===================================================================
+// SOCKET HANDLERS CLASS
+// ===================================================================
+export class SocketHandlers {
+    private context: ServerSocketContext;
+    private getState: () => GameState<ServerPlayers>;
+    private setState: (nextState: GameState<ServerPlayers>) => void;
+    private registeredSockets: Map<PlayerUid, Required<PlayerWithId>>;
+    private runExclusive: RunExclusive;
+    private socketServer?: SocketServer;
+    private metrics: HandlerDependencies["metrics"];
+
+    constructor(deps: HandlerDependencies) {
+        this.context = deps.context;
+        this.getState = deps.getState;
+        this.setState = deps.setState;
+        this.registeredSockets = deps.registeredSockets;
+        this.runExclusive = deps.runExclusive;
+        this.socketServer = deps.socketServer;
+        this.metrics = deps.metrics;
+    }
+
+    // ===================================================================
+    // LOGGING
+    // ===================================================================
+    private log(message: string) {
+        const entry = { ts: Date.now(), msg: `[socket] ${message}` };
+        this.context.logs.push(entry);
+        if (this.context.logs.length > 500) this.context.logs.shift();
+        console.log(new Date(entry.ts).toISOString(), entry.msg);
+    }
+
+    // ===================================================================
+    // REGISTER WITH MUTEX
+    // ===================================================================
+    registerWithMutex<E extends keyof ClientToServerEvents>(
+        socket: ServerPlayerSocket,
+        event: E,
+        listener: (...args: Parameters<ClientToServerEvents[E]>) => ReturnType<ClientToServerEvents[E]>
+    ) {
+        type Args = Parameters<ClientToServerEvents[E]>;
+        const wrappedListener: (...args: Args) => void = (...args) => {
+            void this.runExclusive(() => Promise.resolve(listener(...args))).catch((err) => {
+                this.log(`handler for ${event} failed: ${err instanceof Error ? err.stack : err}`);
+                throw err;
+            });
+        };
+
+        socket.on(event, wrappedListener as any);
+    }
+
+    // ===================================================================
+    // BROADCAST GAME STATE
+    // ===================================================================
+    private broadcastGameStateUpdate() {
+        const state = this.getState();
+        
+        if (!isRequiredGameState(state)) {
+            this.log("Cannot broadcast game state: state is not complete");
+            return;
+        }
+
+        if (!this.socketServer) {
+            this.log("Cannot broadcast game state: io server not available");
+            return;
+        }
+
+        const io = this.socketServer;
+        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
+        
+        this.registeredSockets.forEach((player, auth) => {
+            // const clientState: GameState<ClientPlayers> = {
+            //     ...state,
+            //     players: [...clientPlayers.slice(0, player.seat), player] as ClientPlayers,
+            //     thisPlayer: player
+            // };
+
+            // assertIsRequiredGameState(clientState);
+
+            // let socketFound = false;
+            // io.sockets.sockets.forEach((sock) => {
+            //     const sockAuth = getClientId(sock as ServerPlayerSocket);
+            //     if (sockAuth === auth) {
+            //         socketFound = true;
+            //         emitWithLogging(this.log.bind(this), sock as ServerPlayerSocket, socketEvents.gameStateUpdate, clientState);
+            //     }
+            // });
+
+            // if (!socketFound) {
+            //     this.log(`Warning: Registered player ${auth} (seat ${player.seat}) has no active socket connection`);
+            // }
+        });
+    }
+
+    // ===================================================================
+    // REGISTER PLAYER
+    // ===================================================================
+    private registerPlayer(socket: ServerPlayerSocket, player: PlayerWithId, auth: string) {
+        const state = this.getState();
+        const seat = state.players.findIndex((v) => v === null);
+        const availableSeat = seat === -1 ? null : seat;
+
+        if (availableSeat === null) {
+            emitWithLogging(this.log.bind(this), socket, socketEvents.playerNotRegistered, "room is full");
+            return;
+        }
+
+        const playerWithSeat: PlayerWithId = { ...player, seat };
+        assertIsRequiredPlayerWithId(playerWithSeat);
+
+        const nextState = gameStateReducer(state, {
+            type: "addPlayer",
+            payload: [{
+                ...state,
+                thisPlayer: playerWithSeat
+            }, playerWithSeat] as const,
+        });
+
+        this.setState(nextState);
+        this.registeredSockets.set(auth, playerWithSeat);
+        this.metrics.setRegisteredClients(this.registeredSockets.size);
+
+        this.log(`assigning seat to ${auth} ${JSON.stringify(playerWithSeat)} seat=${availableSeat}`);
+        if (!isRequiredGameState(nextState)) {
+            throw new Error("Expected thisPlayer to be set before emitting playerRegistered");
+        }
+
+        const clientPlayers = cloneServerPlayersToClientPlayers(nextState.players);
+        clientPlayers[nextState.thisPlayer.seat] = nextState.thisPlayer;
+
+        const clientState: GameState<ClientPlayers> = {
+        ...nextState,
+            players: clientPlayers,
+        };
+
+        assertIsRequiredGameState(clientState);
+
+        const playerWithNoId: Player = { ...nextState.thisPlayer };
+        delete playerWithNoId.uid;
+
+        emitWithLogging(this.log.bind(this), socket, socketEvents.playerRegistered, clientState);
+        broadcastEmitWithLogging(this.log.bind(this), socket, socketEvents.playerJoinNotification, playerWithNoId);
+        this.log(JSON.stringify(Array.from(this.registeredSockets.entries())));
+
+        this.broadcastGameStateUpdate();
+    }
+
+    // ===================================================================
+    // RETURN EXISTING PLAYER
+    // ===================================================================
+    private returnExistingPlayer(socket: ServerPlayerSocket, existingPlayer: PlayerWithId) {
+        const state = this.getState();
+        assertIsRequiredPlayerWithId(existingPlayer);
+
+        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
+        clientPlayers[existingPlayer.seat] = existingPlayer;
+
+        const clientState: GameState<ClientPlayers> = {
+            ...state,
+            players: clientPlayers,
+            thisPlayer: existingPlayer
+        };
+
+        assertIsRequiredGameState(clientState);
+
+        emitWithLogging(this.log.bind(this), socket, socketEvents.playerRegistered, clientState);
+    }
+
+    // ===================================================================
+    // PUBLIC HANDLERS
+    // ===================================================================
+
+    handleDisconnect(socket: ServerPlayerSocket, reason: string) {
+        this.log(`disconnect ${socket.id} reason=${reason}`);
+        this.metrics.countEvent("disconnect");
+        const auth = getClientId(socket);
+        const player = this.registeredSockets.get(auth);
+        if (player === undefined) {
+            this.log(`no player with client id: ${auth}`);
+            return;
+        }
+
+        const state = this.getState();
+        const nextState = gameStateReducer(state, {
+            type: "removePlayer",
+            payload: [state, player],
+        });
+
+        this.setState(nextState);
+        this.registeredSockets.delete(auth);
+        this.metrics.setRegisteredClients(this.registeredSockets.size);
+        broadcastEmitWithLogging(this.log.bind(this), socket, socketEvents.playerLeaveNotification, player);
+
+        this.broadcastGameStateUpdate();
+    }
+
+    handleGetPlayerCount(socket: ServerPlayerSocket) {
+        this.metrics.recordGetPlayerCountRequest();
+        const state = this.getState();
+        this.log(`getPlayerCount -> ${state.connectedPlayers}`);
+        emitWithLogging(this.log.bind(this), socket, socketEvents.playerCount, state.connectedPlayers);
+    }
+
+    handleRegisterPlayer(socket: ServerPlayerSocket, player: PlayerWithId) {
+        this.log(`registerPlayer ${JSON.stringify(player)}`);
+        this.metrics.countEvent("registerPlayer");
+
+        const auth = getClientId(socket);
+        const existingPlayer = this.registeredSockets.get(auth);
+        if (existingPlayer) {
+            this.log(`Skipping player because already registered clientId=${auth} socketId=${socket.id}`);
+            this.returnExistingPlayer(socket, existingPlayer);
+        } else {
+            this.registerPlayer(socket, player, auth);
+        }
+    }
+
+    handleIsReturningPlayer(socket: ServerPlayerSocket, clientId: string) {
+        this.log("registeredSockets keys: " + JSON.stringify(Array.from(this.registeredSockets.keys())));
+        const player = this.registeredSockets.get(clientId);
+        this.log("clientId: " + clientId);
+        this.log("player: " + JSON.stringify(player));
+        this.log("registeredSockets keys" + JSON.stringify(Array.from(this.registeredSockets.keys())));
+        if (player === undefined) return;
+        emitWithLogging(this.log.bind(this), socket, socketEvents.returningPlayer, player);
+    }
+
+    async handleSubmitWord(socket: ServerPlayerSocket, word: string) {
+        this.log(`submitWord from ${getClientId(socket)}: ${word}`);
+        this.metrics.countEvent("submitWord");
+
+        this.log("Current game state: " + pp(this.getState()));
+
+        const auth = getClientId(socket);
+        const player = this.registeredSockets.get(auth);
+
+        if (!player) {
+            this.log(`submitWord: player not found for ${auth}`);
+            return;
+        }
+
+        const state = this.getState();
+
+        // Validate it's the player's turn
+        if (!isPlayerTurn(state, player.seat)) {
+            this.log(`submitWord: not player's turn. Current turn: ${state.turn}, Player seat: ${player.seat}`);
+            return;
+        }
+
+        // Validate word matches the match letter
+        const currentMatchLetter = state.matchLetter.block;
+        if (word.length === 0 || word[0] !== currentMatchLetter) {
+            this.log(`submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}`);
+            return;
+        }
+
+        // Validate word is valid
+        const validWord = await inputIsValid(word);
+        if (!validWord) {
+            this.log(`submitWord: word is not valid`);
+            return;
+        }
+
+        // Update game state on server (source of truth)
+        const block = word.slice(-1);
+        const nextState = gameStateReducer(state, {
+            type: "progressNextTurn",
+            payload: [state, block, word],
+        });
+
+        this.setState(nextState);
+        this.log(`Game state updated. New turn: ${nextState.turn}, New match letter: ${nextState.matchLetter.block}`);
+
+        this.broadcastGameStateUpdate();
+    }
+
+    handleRequestFullState(socket: ServerPlayerSocket) {
+        this.log(`requestFullState from ${getClientId(socket)}`);
+        this.metrics.countEvent("requestFullState");
+
+        const auth = getClientId(socket);
+        const player = this.registeredSockets.get(auth);
+
+        if (!player) {
+            this.log(`requestFullState: player not found for ${auth}`);
+            return;
+        }
+
+        const state = this.getState();
+
+        if (!isRequiredGameState(state)) {
+            this.log("requestFullState: state is not complete");
+            return;
+        }
+
+        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
+        clientPlayers[player.seat] = player;
+
+        const clientState: GameState<ClientPlayers> = {
+            ...state,
+            players: clientPlayers,
+            thisPlayer: player
+        };
+
+        assertIsRequiredGameState(clientState);
+        emitWithLogging(this.log.bind(this), socket, socketEvents.fullStateSync, clientState);
+    }
+}

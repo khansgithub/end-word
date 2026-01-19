@@ -1,45 +1,18 @@
 
 import { Server as SocketServer } from "socket.io";
-import { buildInitialGameState, gameStateReducer } from "./GameState";
-import { assertIsRequiredGameState, assertIsRequiredPlayerWithId, isRequiredGameState } from "./guards";
+import { buildInitialGameState } from "./GameState";
 import { socketEvents } from "./socket";
-import { ClientPlayers, ClientToServerEvents, RunExclusive, type GameState, type Player, type PlayerWithId, type ServerPlayers, type ServerPlayerSocket, type ServerToClientEvents } from "./types";
-import { cloneServerPlayersToClientPlayers, createSocketMutex, inputIsValid, isPlayerTurn, isSuppress, pp } from "./utils";
+import {
+    type GameState,
+    type PlayerWithId,
+    type ServerPlayers,
+    type ServerPlayerSocket,
+    RunExclusive,
+} from "./types";
+import { createSocketMutex } from "./utils";
+import { SocketHandlers, HandlerDependencies } from "./socketHandlers";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
-
-function log(context: ServerSocketContext, message: string) {
-    const entry = { ts: Date.now(), msg: `[socket] ${message}` };
-    context.logs.push(entry);
-    if (context.logs.length > 500) context.logs.shift();
-    console.log(new Date(entry.ts).toISOString(), entry.msg);
-}
-
-function getClientId(socket: ServerPlayerSocket) {
-    return socket.handshake.auth.clientId;
-}
-
-function emitWithLogging<E extends keyof ServerToClientEvents>(
-    logWithContext: (message: string) => void,
-    socket: ServerPlayerSocket,
-    event: E,
-    ...args: Parameters<ServerToClientEvents[E]>
-) {
-    logWithContext("emitting: " + event);
-    logWithContext("emitting payload: " + pp(args));
-    socket.emit(event, ...args);
-}
-
-function broadcastEmitWithLogging<E extends keyof ServerToClientEvents>(
-    logWithContext: (message: string) => void,
-    socket: ServerPlayerSocket,
-    event: E,
-    ...args: Parameters<ServerToClientEvents[E]>
-) {
-    logWithContext("broadcast emitting: " + event);
-    logWithContext("broadcast emitting payload: " + pp(args));
-    socket.broadcast.emit(event, ...args);
-}
 
 export type ServerSocketContext = {
     state: GameState<ServerPlayers>;
@@ -80,8 +53,9 @@ export function createServerSocketContext(
 // SERVER SOCKET EVENT HANDLER
 // ===================================================================
 export function createServerConnectionHandler(context: ServerSocketContext) {
-    const { runExclusive, registeredSockets, stats } = context;
+    const { runExclusive, registeredSockets, stats } = context; // shared amongst all connections
     const countEvent = context.instrumentation?.countEvent ?? (() => { });
+    
     const metrics = {
         countEvent,
         setRegisteredClients: context.instrumentation?.setRegisteredClients ?? (() => { }),
@@ -99,194 +73,30 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
 
     let state = context.state;
 
-    function logWithContext(message: string) {
-        log(context, message);
-    }
-
+    const getState = () => state;
     function setState(nextState: GameState<ServerPlayers>) {
         state = nextState;
         context.state = nextState;
     }
 
-    /**
-     * Broadcasts the current game state to all connected clients.
-     * Each client receives a version with their own thisPlayer set.
-     */
-    function broadcastGameStateUpdate() {
-        if (!isRequiredGameState(state)) {
-            logWithContext("Cannot broadcast game state: state is not complete");
-            return;
-        }
-
-        if (!context.io) {
-            logWithContext("Cannot broadcast game state: io server not available");
-            return;
-        }
-
-        const io = context.io; // TypeScript: io is guaranteed to be defined after the check above
-
-        // TODO: This is inefficient - consider maintaining a Map<auth, socket> for O(1) lookup
-        // Broadcast to all registered sockets
-        // FIXME: On progress next turn, when there's a broadcast update, the lastWord property of 'thisPlayer' is not there for the player who just submitted
-        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
-        registeredSockets.forEach((player, auth) => {            
-            const clientState: GameState<ClientPlayers> = {
-                ...state,
-                players: [...clientPlayers.slice(0, player.seat), player] as ClientPlayers,
-                thisPlayer: player
-            };
-            
-            assertIsRequiredGameState(clientState);
-
-            // Find the socket for this player and emit to it
-            let socketFound = false;
-            io.sockets.sockets.forEach((sock) => {
-                const sockAuth = getClientId(sock as ServerPlayerSocket);
-                if (sockAuth === auth) {
-                    socketFound = true;
-                    emitWithLogging(logWithContext, sock as ServerPlayerSocket, socketEvents.gameStateUpdate, clientState);
-                }
-            });
-            
-            if (!socketFound) {
-                logWithContext(`Warning: Registered player ${auth} (seat ${player.seat}) has no active socket connection`);
-            }
-        });
-    }
-
-    function registerWithMutex<E extends keyof ClientToServerEvents>(
-        socket: ServerPlayerSocket,
-        event: E,
-        listener: (...args: Parameters<ClientToServerEvents[E]>) => ReturnType<ClientToServerEvents[E]>
-    ) {
-        type Args = Parameters<ClientToServerEvents[E]>;
-        const wrappedListener: (...args: Args) => void = (...args) => {
-            void runExclusive(() => Promise.resolve(listener(...args))).catch((err) => {
-                logWithContext(`handler for ${event} failed: ${err instanceof Error ? err.stack : err}`);
-                throw err;
-            });
-        };
-
-        // cast keeps typed listener while satisfying socket.io overload resolution
-        socket.on(event, wrappedListener as any);
-    }
-
-    function _registerPlayer(
-        socket: ServerPlayerSocket,
-        player: PlayerWithId,
-        auth: string
-    ) {
-        const seat = state.players.findIndex((v) => v === null);
-        const availableSeat = seat === -1 ? null : seat;
-
-        if (availableSeat === null) {
-            emitWithLogging(logWithContext, socket, socketEvents.playerNotRegistered, "room is full");
-            return;
-        }
-
-        const playerWithSeat: PlayerWithId = { ...player, seat };
-        assertIsRequiredPlayerWithId(playerWithSeat);
-
-        const nextState = gameStateReducer(state, {
-            type: "addPlayer",
-            payload: [{
-                ...state,
-                thisPlayer: playerWithSeat
-            }, playerWithSeat] as const,
-        });
-
-        setState(nextState);
-        registeredSockets.set(auth, playerWithSeat);
-        metrics.setRegisteredClients(registeredSockets.size);
-
-        logWithContext(`assigning seat to ${auth} ${JSON.stringify(playerWithSeat)} seat=${availableSeat}`);
-        if (!isRequiredGameState(nextState)) {
-            throw new Error("Expected thisPlayer to be set before emitting playerRegistered");
-        }
-
-        const clientPlayers = cloneServerPlayersToClientPlayers(nextState.players);
-        clientPlayers[nextState.thisPlayer.seat] = nextState.thisPlayer;
-
-        const clientState: GameState<ClientPlayers> = {
-            ...state, players: clientPlayers
-        };
-
-        assertIsRequiredGameState(clientState);
-
-        // // ---------------------------------------------------------------------
-        // clientState.players.forEach((v, i) => {
-        //     if (v === null) return;
-        //     if (v.seat !== clientState.thisPlayer.seat){
-        //         console.log("DEBUG - ", v);
-        //         console.log("v.seat !== clientState.thisPlayer.seat ::", `${v.seat} !== ${clientState.thisPlayer.seat}`)
-        //         console.log(`${Object.keys(v)}`);
-        //         if (Object.keys(v).includes("uid")){
-        //             throw new Error(`${v} should not have UID`);
-        //         }
-        //     }
-        //     if (v.seat == clientState.thisPlayer.seat){
-        //         if (v.uid !== clientState.thisPlayer.uid) throw new Error(`${v} should have the UID of ${clientState.thisPlayer.uid}`)
-        //     }
-        // })
-        // // ---------------------------------------------------------------------
-        const playerWithNoId: Player = {...nextState.thisPlayer};
-        delete playerWithNoId.uid;
-        
-        emitWithLogging(logWithContext, socket, socketEvents.playerRegistered, clientState);
-        broadcastEmitWithLogging(logWithContext, socket, socketEvents.playerJoinNotification, playerWithNoId); //BUG: compiler didn't raise an error when playerWithNoId was infact of type PlayerWithId
-        logWithContext(JSON.stringify(Array.from(registeredSockets.entries())));
-        
-        // Broadcast updated state after player joins
-        broadcastGameStateUpdate();
-    };
-    function _returnExistingPlayer(socket: ServerPlayerSocket, existingPlayer: PlayerWithId) {
-        assertIsRequiredPlayerWithId(existingPlayer);
-
-        const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
-        clientPlayers[existingPlayer.seat] = existingPlayer;
-
-        const clientState: GameState<ClientPlayers> = {
-            ...state,
-            players: clientPlayers,
-            thisPlayer: existingPlayer
-        };
-
-        assertIsRequiredGameState(clientState);
-
-        emitWithLogging(logWithContext, socket, socketEvents.playerRegistered, clientState);
+    // Create dependencies object and handlers instance
+    const deps: HandlerDependencies = {
+        context,
+        getState,
+        setState,
+        registeredSockets,
+        runExclusive,
+        socketServer: context.io,
+        metrics,
     };
 
-    function handleDisconnect(socket: ServerPlayerSocket, reason: string) {
-        logWithContext(`disconnect ${socket.id} reason=${reason}`);
-        metrics.countEvent("disconnect");
-        const auth = getClientId(socket);
-        const player = registeredSockets.get(auth);
-        if (player === undefined) {
-            logWithContext(`no player with client id: ${auth}`);
-            return;
-        }
-
-        // Remove the player and notify remaining clients.
-        const nextState = gameStateReducer(state, {
-            type: "removePlayer",
-            payload: [state, player],
-        });
-
-        setState(nextState);
-        registeredSockets.delete(auth);
-        metrics.setRegisteredClients(registeredSockets.size);
-        broadcastEmitWithLogging(logWithContext, socket, socketEvents.playerLeaveNotification, player);
-        
-        // Broadcast updated state after player removal
-        broadcastGameStateUpdate();
-
-    }
+    const handlers = new SocketHandlers(deps);
 
     // ===================================================================
     // EVENT HANDLER REGISTRATION 
     // ===================================================================
     function handler(socket: ServerPlayerSocket) {
-        logWithContext(`Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
+        console.log(`[socket] Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
         metrics.incrementConnections();
         metrics.countEvent("connect");
 
@@ -294,11 +104,10 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         * ===================================================================
         * DISCONNECT HANDLER
         * ===================================================================
-        * This is the handler for the disconnect event.
-        * It removes the player from the game state.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.disconnect, (reason) => handleDisconnect(socket, reason));
+        handlers.registerWithMutex(socket, socketEvents.disconnect, (reason) => 
+            handlers.handleDisconnect(socket, reason)
+        );
 
         socket.on(socketEvents.text, (text: string) => {
             console.log("text", text);
@@ -309,151 +118,49 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
         * ===================================================================
         * GET PLAYER COUNT HANDLER
         * ===================================================================
-        * This is the handler for the getPlayerCount event.
-        * It returns the number of players in the game.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.getPlayerCount, async () => {
-            metrics.recordGetPlayerCountRequest();
-            logWithContext(`getPlayerCount -> ${state.connectedPlayers}`);
-            emitWithLogging(logWithContext, socket, socketEvents.playerCount, state.connectedPlayers);
+        handlers.registerWithMutex(socket, socketEvents.getPlayerCount, async () => {
+            handlers.handleGetPlayerCount(socket);
         });
 
         /*
         * ===================================================================
         * REGISTER PLAYER HANDLER
         * ===================================================================
-        * This is the handler for the registerPlayer event.
-        * It registers the player to the game state.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.registerPlayer, (player) => {
-            logWithContext(`registerPlayer ${JSON.stringify(player)}`);
-            metrics.countEvent("registerPlayer");
-
-            const auth = getClientId(socket);
-            const existingPlayer = registeredSockets.get(auth);
-            if (existingPlayer) {
-                logWithContext(`Skipping player because already registered clientId=${auth} socketId=${socket.id}`);
-                _returnExistingPlayer(socket, existingPlayer);
-            } else {
-                _registerPlayer(socket, player, auth);
-            }
+        handlers.registerWithMutex(socket, socketEvents.registerPlayer, (player) => {
+            handlers.handleRegisterPlayer(socket, player);
         });
 
         /*
         * ===================================================================
         * RETURNING PLAYER HANDLER
         * ===================================================================
-        * This is the handler for the isReturningPlayer event.
-        * It returns the player to the client.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.isReturningPlayer, async (clientId) => {
-            logWithContext("registeredSockets keys: " + JSON.stringify(Array.from(registeredSockets.keys())));
-            const player = registeredSockets.get(clientId);
-            logWithContext("clientId: " + clientId);
-            logWithContext("player: " + JSON.stringify(player));
-            logWithContext("registeredSockets keys" + JSON.stringify(Array.from(registeredSockets.keys())));
-            if (player === undefined) return;
-            emitWithLogging(logWithContext, socket, socketEvents.returningPlayer, player);
+        handlers.registerWithMutex(socket, socketEvents.isReturningPlayer, async (clientId) => {
+            handlers.handleIsReturningPlayer(socket, clientId);
         });
 
         /*
         * ===================================================================
         * WORD SUBMISSION HANDLER
         * ===================================================================
-        * This is the handler for the submitWord event.
-        * It validates the word, checks if it's the player's turn, and updates the game state.
-        * It then broadcasts the updated game state to all clients.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.submitWord, async (word: string) => {
-            logWithContext(`submitWord from ${getClientId(socket)}: ${word}`);
-            metrics.countEvent("submitWord");
-
-            const auth = getClientId(socket);
-            const player = registeredSockets.get(auth);
-            
-            if (!player) {
-                logWithContext(`submitWord: player not found for ${auth}`);
-                return;
-            }
-
-            // Validate it's the player's turn
-            if (!isPlayerTurn(state, player.seat)) {
-                logWithContext(`submitWord: not player's turn. Current turn: ${state.turn}, Player seat: ${player.seat}`);
-                return;
-            }
-
-            // Validate word matches the match letter
-            const currentMatchLetter = state.matchLetter.block;
-            if (word.length === 0 || word[0] !== currentMatchLetter) {
-                logWithContext(`submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}`);
-                return;
-            }
-
-            // Validate word is valid
-            const validWord = await inputIsValid(word);
-            if (!validWord) {
-                logWithContext(`submitWord: word is not valid`);
-                return;
-            }
-
-            // Update game state on server (source of truth)
-            const block = word.slice(-1); // Last character becomes next match letter
-            const nextState = gameStateReducer(state, {
-                type: "progressNextTurn",
-                payload: [state, block, word],
-            });
-
-            setState(nextState);
-            logWithContext(`Game state updated. New turn: ${nextState.turn}, New match letter: ${nextState.matchLetter.block}`);
-
-            // Broadcast updated state to all clients (server is source of truth)
-            broadcastGameStateUpdate();
+        handlers.registerWithMutex(socket, socketEvents.submitWord, async (word: string) => {
+            await handlers.handleSubmitWord(socket, word);
         });
 
         /*
         * ===================================================================
         * REQUEST FULL STATE HANDLER
         * ===================================================================
-        * This is the handler for the requestFullState event.
-        * It returns the full game state to the client.
-        * ===================================================================
         */
-        registerWithMutex(socket, socketEvents.requestFullState, () => {
-            logWithContext(`requestFullState from ${getClientId(socket)}`);
-            metrics.countEvent("requestFullState");
-
-            const auth = getClientId(socket);
-            const player = registeredSockets.get(auth);
-            
-            if (!player) {
-                logWithContext(`requestFullState: player not found for ${auth}`);
-                return;
-            }
-
-            if (!isRequiredGameState(state)) {
-                logWithContext("requestFullState: state is not complete");
-                return;
-            }
-
-            const clientPlayers = cloneServerPlayersToClientPlayers(state.players);
-            clientPlayers[player.seat] = player;
-            
-            const clientState: GameState<ClientPlayers> = {
-                ...state,
-                players: clientPlayers,
-                thisPlayer: player
-            };
-            
-            assertIsRequiredGameState(clientState);
-            emitWithLogging(logWithContext, socket, socketEvents.fullStateSync, clientState);
+        handlers.registerWithMutex(socket, socketEvents.requestFullState, () => {
+            handlers.handleRequestFullState(socket);
         });
 
         socket.onAny((eventName) => {
-            logWithContext(`got event -> ${eventName}`);
+            console.log(`[socket] got event -> ${eventName}`);
         });
 
     }

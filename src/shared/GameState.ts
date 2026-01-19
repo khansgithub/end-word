@@ -5,11 +5,10 @@ Notes from gpt:
 - use simple objects rather than classes (Player type vs Player class)
 ***/
 
-import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { ClientPlayers, GameState, GameStateFrozen, GameStatus, MatchLetter, Player, PlayersArray, PlayerWithId, PlayerWithoutId, ServerPlayers } from "./types";
-import { buildMatchLetter, getCurrentPlayerIndex, isSuppress, pp } from "./utils";
+import { ClientPlayers, GameState, GameStateFrozen, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
+import { buildMatchLetter, getCurrentPlayerIndex, pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:

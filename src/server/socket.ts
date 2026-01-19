@@ -22,13 +22,14 @@ export function createIOServer(server: http.Server): SocketServer {
     return setUpIOServer(io);
 }
 
-export function setUpIOServer(io: SocketServer): SocketServer {
+export function setUpIOServer(socketServer: SocketServer): SocketServer {
     const serverSocketContext = createServerSocketContext(undefined, {
         countEvent: countSocketEvent,
         setRegisteredClients,
-    }, io);
+    }, socketServer);
     
     activeServerContext = serverSocketContext;
-    io.on("connection", createServerConnectionHandler(serverSocketContext));
-    return io;
+    socketServer.on("connection", createServerConnectionHandler(serverSocketContext));
+    return socketServer;
 }
+  

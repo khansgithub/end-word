@@ -4,10 +4,10 @@ import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from '../../shared/GameState';
 import { assertIsRequiredGameState } from '../../shared/guards';
-import { ClientPlayerSocket, GameState, Player, PlayerWithId } from '../../shared/types';
+import { ClientPlayerSocket, GameState, PlayerWithId } from '../../shared/types';
+import { makeNewPlayer } from '../../shared/utils';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
-import { makeNewPlayer } from '../../shared/utils';
 
 const L = "Game Container: "
 const log = console.log;
@@ -33,10 +33,6 @@ function GameContainer() {
     // React state
     const [userIsConnected, setUserIsConnected] = useState<ConnectionState>(null);
     const state = useRef(buildInitialGameState());
-    // const [state, dispatch] = useReducer(
-    //     gameStateReducer<GameState>,
-    //     buildInitialGameState()
-    // );
 
     // derived data
     const player: PlayerWithId = makeNewPlayer(playerName, playerId);
