@@ -1,78 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# End Word
 
-## Getting Started
+Building a prototype games based on 끝말잇기 / word chains.
+Multiplayer game where each player has to write a word, starting with the last letter of the previously submitted word, by the previous player.
 
-First, run the development server:
+caT > taP > pooL > linK ...
+
+## Technologies
+
+I’m using this project to learn:
+
+- **React** + **Next.js**
+- **Socket.IO** (real-time multiplayer)
+- Desinging multiplayer games + UI/UX
+- A little bit about **lookup trees** (MARISA trie) for dictionary-style word checks
+- This is my **first project** where I’m leveraging **Cursor / AI** for code generation
+
+## Running locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:4000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Dictionary
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+There’s a small Python project in `dictionary/` that uses a **MARISA trie** and a FastAPI lookup endpoint (`GET /lookup/{word}`), which the app will call for word validation.
 
 ## Testing
+Using AI to help me with different kinds of testing:
+- playwright for testing user scenarios
+- vitest for unittests
 
-This project uses [Vitest](https://vitest.dev/) for unit tests and [Playwright](https://playwright.dev/) for end-to-end tests.
-
-### Unit Tests (Vitest)
-
-- **`npm run test`** - Run all unit tests once and exit. Tests are located in `src/test/**/*.test.ts`.
-- **`npm run test:watch`** - Run unit tests in watch mode, automatically re-running tests when files change. Useful during development.
-
-### End-to-End Tests (Playwright)
-
-- **`npm run test:e2e`** - Run all Playwright e2e tests. Tests are located in `tests/e2e/`. This command automatically starts the dev server on port 4000 if it's not already running.
-- **`npm run test:e2e:custom`** - Run custom e2e test script (`tests/e2e/run-tests.ts`). This is an alternative test runner for specific e2e scenarios.
-
-### Running All Tests
-
-- **`npm run test:all`** - Run both unit tests and e2e tests sequentially, saving results to JSON files:
-  - Unit test results: `test-results/unit-tests.json`
-  - E2e test results: `test-results/e2e-tests.json`
-  
-  This command is useful for CI/CD pipelines or when you need a complete test run with saved results.
-
-### Development Server for E2E Tests
-
-- **`npm run dev:e2e`** - Start the development server configured for e2e testing (runs on port 4000 with test environment variables). This is automatically started by `test:e2e` if the server isn't already running.
-
-## MSW testing setup
-
-- `msw` is installed as a dev dependency and the worker script lives at `public/mockServiceWorker.js` (generated via `npx msw init public/ --save`).
-- Default handlers in `src/mocks/handlers.ts` stub both `/dictionary/word/:word` and `http://localhost:8000/lookup/:word`, returning mock dictionary data.
-- For node-based tests, call `startMswTestServer()`/`resetMswHandlers()`/`stopMswTestServer()` from `src/mocks/test-server.ts` inside your test hooks.
-- For browser/dev usage, start the worker once on the client (guarded by an env flag if you like):
-
-```ts
-if (process.env.NEXT_PUBLIC_API_MOCKING === "enabled" && typeof window !== "undefined") {
-  const { worker } = await import("../mocks/browser");
-  await worker.start({ onUnhandledRequest: "bypass" });
-}
+```bash
+npm run test
 ```
 
-- The dev entry point is `npm run dev` (`tsx watch src/server/server.ts`), which serves `public/mockServiceWorker.js` automatically.
+```bash
+npm run test:playwright
+```
