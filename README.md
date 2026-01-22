@@ -1,78 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# End Word
 
-## Getting Started
+A small **multiplayer word-chain game** prototype built to learn:
 
-First, run the development server:
+- **React + Next.js (App Router)** UI patterns and state management
+- **Socket.IO** for real-time multiplayer
+- **Designing multiplayer game loops** (turn-taking, sync, validation, reconnection)
+- A bit of **dictionary / lookup-tree** work using a **MARISA trie** (Python side project)
+
+The UI is titled **“End Word”** and is currently set up for **Hangul-friendly input** (IME composition handling + syllable decomposition utilities).
+
+## What you do in the game
+
+- Enter a name on the home screen and join the room.
+- Players take turns submitting a word that **starts with the current match syllable**.
+- The **last syllable** of the submitted word becomes the next match syllable for the next player.
+
+There are hooks for dictionary validation, but in the current code path word validation is **temporarily bypassed for dev** (see `src/shared/utils.ts` `inputIsValid()`).
+
+## Tech stack
+
+- **Next.js** (App Router) in `src/app/`
+- **React 19**
+- **Express** custom server (hosts Next + other endpoints)
+- **Socket.IO** (server + client)
+- **Zustand** for small client-side stores (`src/app/store/`)
+- **Tailwind + daisyUI** for styling
+- **Vitest** (unit tests) + **Playwright** (e2e)
+- **MSW** for test/dev mocking of dictionary endpoints
+
+## Repo tour
+
+- **`src/app/`**: Next.js UI (home screen, room, game UI)
+  - `src/app/components/Homescreen.tsx`: join flow + socket bootstrap
+  - `src/app/components/GameContainer.tsx`: registers player via socket
+  - `src/app/components/Game.tsx`: main gameplay UI (match letter, input, players)
+  - `src/app/components/InputBox.tsx`: Hangul-aware input + validation feedback
+  - `src/app/dictionary/word/[word]/route.ts`: Next route that proxies dictionary lookup
+- **`src/server/`**: custom Node server + socket setup
+  - `src/server/server.ts`: Express + Next server entrypoint
+  - `src/server/socket.ts`: Socket.IO wiring for the Node server
+  - `src/server/metrics.ts`: Prometheus metrics (`/metrics`)
+- **`src/shared/`**: shared types + game logic used by both client/server
+  - `src/shared/GameState.ts`: reducer + game state helpers
+  - `src/shared/socket.ts`: canonical event names
+  - `src/shared/socketClient.ts`: client listeners for server-pushed state
+  - `src/shared/socketHandlers.ts` + `src/shared/socketServer.ts`: newer/structured server handler code (mutex + broadcast helpers; still WIP/integration)
+- **`dictionary/`**: Python experiments for fast dictionary lookup using **MARISA trie**
+  - `dictionary/build_trie.py`: parse XML data → build `dict.marisa` + `metadata.jsonl`
+  - `dictionary/load_trie.py`: load trie + metadata and expose lookup methods
+  - `dictionary/main.py`: FastAPI service exposing `GET /lookup/{word}`
+
+## Running locally
+
+### Prereqs
+
+- Node.js + npm
+
+### Start the dev server
+
+This repo uses a **custom server entrypoint** (Express + Next) so the default port is **4000**.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open `http://localhost:4000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can change the port with `PORT=3000 npm run dev` (the server reads `process.env.PORT`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Optional: dictionary validation service (Python)
 
-## Learn More
+The Next route `GET /dictionary/word/:word` calls `src/shared/api.ts`, which fetches from a local FastAPI service at `http://localhost:8000/lookup/:word`.
 
-To learn more about Next.js, take a look at the following resources:
+To run the Python service:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd dictionary
+python -m venv .venv
+source .venv/bin/activate
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# If you prefer, install only what you need instead of the full requirements file:
+pip install fastapi uvicorn marisa-trie orjson
 
-## Deploy on Vercel
+python main.py
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Notes:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The trie file is expected at `dictionary/data/dict.marisa` with metadata at `dictionary/data/metadata.jsonl`.
+- To rebuild those artifacts from the XML files in `dictionary/data/*.xml`, run:
+
+```bash
+cd dictionary
+python build_trie.py
+```
 
 ## Testing
 
-This project uses [Vitest](https://vitest.dev/) for unit tests and [Playwright](https://playwright.dev/) for end-to-end tests.
+- **Unit tests**:
 
-### Unit Tests (Vitest)
-
-- **`npm run test`** - Run all unit tests once and exit. Tests are located in `src/test/**/*.test.ts`.
-- **`npm run test:watch`** - Run unit tests in watch mode, automatically re-running tests when files change. Useful during development.
-
-### End-to-End Tests (Playwright)
-
-- **`npm run test:e2e`** - Run all Playwright e2e tests. Tests are located in `tests/e2e/`. This command automatically starts the dev server on port 4000 if it's not already running.
-- **`npm run test:e2e:custom`** - Run custom e2e test script (`tests/e2e/run-tests.ts`). This is an alternative test runner for specific e2e scenarios.
-
-### Running All Tests
-
-- **`npm run test:all`** - Run both unit tests and e2e tests sequentially, saving results to JSON files:
-  - Unit test results: `test-results/unit-tests.json`
-  - E2e test results: `test-results/e2e-tests.json`
-  
-  This command is useful for CI/CD pipelines or when you need a complete test run with saved results.
-
-### Development Server for E2E Tests
-
-- **`npm run dev:e2e`** - Start the development server configured for e2e testing (runs on port 4000 with test environment variables). This is automatically started by `test:e2e` if the server isn't already running.
-
-## MSW testing setup
-
-- `msw` is installed as a dev dependency and the worker script lives at `public/mockServiceWorker.js` (generated via `npx msw init public/ --save`).
-- Default handlers in `src/mocks/handlers.ts` stub both `/dictionary/word/:word` and `http://localhost:8000/lookup/:word`, returning mock dictionary data.
-- For node-based tests, call `startMswTestServer()`/`resetMswHandlers()`/`stopMswTestServer()` from `src/mocks/test-server.ts` inside your test hooks.
-- For browser/dev usage, start the worker once on the client (guarded by an env flag if you like):
-
-```ts
-if (process.env.NEXT_PUBLIC_API_MOCKING === "enabled" && typeof window !== "undefined") {
-  const { worker } = await import("../mocks/browser");
-  await worker.start({ onUnhandledRequest: "bypass" });
-}
+```bash
+npm run test
 ```
 
-- The dev entry point is `npm run dev` (`tsx watch src/server/server.ts`), which serves `public/mockServiceWorker.js` automatically.
+- **E2E tests (Playwright)**:
+
+```bash
+npm run test:playwright
+```
+
+- **Run all tests (Vitest JSON + Playwright JSON)**:
+
+```bash
+npm run test:all
+```
+
+## MSW mocking
+
+Mock Service Worker is set up to stub dictionary lookups in tests/dev:
+
+- Worker script: `public/mockServiceWorker.js`
+- Handlers: `src/mocks/handlers.ts` (stubs both `/dictionary/word/:word` and `http://localhost:8000/lookup/:word`)
+- Node test server utilities: `src/mocks/test-server.ts`
+
+## State synchronization notes
+
+There’s an architectural note in `STATE_SYNC_IMPLEMENTATION.md` describing a **server-authoritative** model where clients submit actions and the server broadcasts `gameStateUpdate`.
+
+The codebase currently contains both:
+
+- a simpler socket handler path in `src/server/` (used by `src/server/socket.ts`), and
+- a more structured handler implementation in `src/shared/socketHandlers.ts` / `src/shared/socketServer.ts`.
+
+If you’re reading the project to learn, treat the shared handler approach as the “direction of travel” and the server handler as the current wired implementation.
+
+## Observability
+
+- `GET /metrics` exposes Prometheus metrics via `prom-client` (see `src/server/metrics.ts`).
