@@ -7,15 +7,24 @@ caT > taP > pooL > linK ...
 
 Project is WIP and primarily for learning and experimentation.
 
-## Technologies
-
-I’m using this project to learn:
+## Technologies / Learning
 
 - **React** + **Next.js**
 - **Socket.IO** (real-time multiplayer)
 - Designing multiplayer games + UI/UX
 - A little bit about **lookup trees** (MARISA trie) for dictionary-style word checks
-- This is my **first project** where I’m leveraging **Cursor / AI** for code generation
+- **First project** where I’m leveraging **Cursor / AI** for code generation
+
+## Progress
+- **Provides a dictionary endpoint which queries a large dataset of korean words**
+- **Hosts a basic worflow, from landing page, to player room page**
+- **Implments funamental game mechanics of submitting a word and turn rotation**
+- **Provides strong client / server communication thorugh Socket.io**
+  - Currently refactoring this, requirements for the client/server architecture become clear the futher this progresses, which often warrants rethinking the initial design.
+  - The client only event requests state from the server
+  - Focusing on strong type-saftey, which requires have a clear understanding of all the use cases
+- **Strong end-to-end and unittests**
+  - Tests need to be updated however the current framework provides strong startpoint - tests were generated mostly with AI.
 
 ## Running locally
 
