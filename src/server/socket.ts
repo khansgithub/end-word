@@ -6,6 +6,7 @@ import { fml } from "./fml";
 import { GameState } from "../shared/types";
 
 let activeServerContext: ServerSocketContext | null = null;
+let socketServer: SocketServer | null = null;
 
 export function getServerSocketContext(): ServerSocketContext {
     if (activeServerContext === null) {
@@ -15,17 +16,21 @@ export function getServerSocketContext(): ServerSocketContext {
 }
 
 export function createIOServer(server: http.Server): SocketServer {
-    const io = new SocketServer(server, {
+    socketServer = new SocketServer(server, {
         cors: { origin: "*" },
         pingInterval: 2000,
         pingTimeout: 5000,
     });
 
-    return setUpIOServer(io);
+    return setUpIOServer(socketServer);
 }
 
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
     socketServer.on("connection", fml);
     return socketServer;
 }
-  
+
+function broadcastGameState(gameState: GameState){
+    if (!socketServer) return;
+    socketServer.emit("broadcast game state test", "test");
+}

@@ -13,19 +13,51 @@ export function fml(socket: ServerPlayerSocket) {
 
 
     socket.on("registerPlayer", (player: PlayerWithId, ack: AckRegisterPlayer) => {
-        const newState = registerPlayer(player);
-        const thisPlayer = newState.thisPlayer;
-        if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
-        newState.socketPlayerMap?.set(`${socket.id}`, thisPlayer);
-        ack({ success: true, gameState: toGameStateClient(newState) });
+        registerPlayerSocket(socket, player, ack);
     });
 
     socket.onAny(event => console.log(event));
 };
 
+function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, ack: AckRegisterPlayer) {
+    const isReturningPlayer = getGameState().socketPlayerMap?.has(`${socket.id}`);
+    // const isReturningPlayer = reconnectingPlayerSocket(socket, ack);
+    if (isReturningPlayer){
+        return reconnectingPlayerSocket(socket, ack);
+    };
+
+    const newState = registerPlayer(player);
+    setGameState(newState);
+
+    const {thisPlayer} = newState;
+    const clientGameState = toGameStateClient(newState);
+    if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
+    newState.socketPlayerMap?.set(`${socket.id}`, thisPlayer);
+
+    if(newState.connectedPlayers > 1){
+        broadcastGameState(socket, newState);
+    }
+
+    ack({ success: true, gameState: clientGameState });
+}
+
+function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPlayer): boolean {
+    if (getGameState().socketPlayerMap?.has(`${socket.id}`)) {
+        const newState = getGameState();
+        newState.thisPlayer = newState.socketPlayerMap?.get(`${socket.id}`);
+        ack({success: true, gameState: toGameStateClient(newState)});
+        return true;
+    }
+    return false;
+}
+
+function broadcastGameState(socket: ServerPlayerSocket, gameState: GameState){
+    socket.broadcast.emit("gameStateUpdate", toGameStateClient(gameState));
+}
 
 const registerPlayer = (player: PlayerWithId): GameState => {
     const newState = registerPlayerToState(getGameState(), player);
+
     setGameState(newState);
     return newState;
     // return { success: true, gameState: newState };

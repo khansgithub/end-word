@@ -136,7 +136,9 @@ export type GameState = {
     players: PlayersArray,
     connectedPlayers: number
     turn: number,
-    socketPlayerMap?: WeakMap<String, Player>, // only on server
+    // socketPlayerMap?: WeakMap<string, Player>, // only on server - don't really know if using a weakmap is necessary here
+    // socketPlayerMap?: Map<string, Player>,
+    socketPlayerMap?: Map<string, PlayerWithId>,
 }
 
 export type GameStateServer = Omit<GameState, "thisPlayer"> & Required<Pick<GameState, "socketPlayerMap">>;

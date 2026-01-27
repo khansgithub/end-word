@@ -219,7 +219,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 export function buildInitialGameState(): GameState {
     const players = makePlayersArray<ServerPlayers>();
-    const socketPlayerMap = new WeakMap<String, Player>();
+    const socketPlayerMap = new Map<string, Player>();
     return {
         matchLetter: buildMatchLetter("값"),
         status: null,
@@ -253,6 +253,14 @@ export function isRequiredGameState(state: GameState): state is Required<GameSta
 }
 
 export function toGameStateClient(state: GameState): GameStateClient {
+    /**
+     * Requires that state.thisPlayer is defined.
+     * Removes the socketPlayerMap from the state.
+     * This function is used to convert a GameStateServer to a GameStateClient.
+     * It is used to send the game state to the client.
+     * @param state 
+     * @returns 
+     */
     const thisPlayer = state.thisPlayer;
     if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
     const { socketPlayerMap, ...rest } = state;
