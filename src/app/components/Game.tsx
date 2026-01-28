@@ -2,7 +2,7 @@
 
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
-import { GameState, GameStateClient, GameStateFrozen } from "../../shared/types";
+import { AckSubmitWord, AckSubmitWordParams, GameState, GameStateClient, GameStateFrozen } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
 import InputBox, { getInputValue, resetInput, setInputError } from "./InputBox";
 import Player from "./Player";
@@ -40,7 +40,9 @@ export default function Game(props: props) {
             });
             console.log("[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
         }
-        getSocketManager().emit(socketEvents.submitWord, word);
+        getSocketManager().emit(socketEvents.submitWord, word, (response: AckSubmitWordParams) => {
+            console.log("ack submit word")
+        });
         resetInput();
     }
 
@@ -52,6 +54,7 @@ export default function Game(props: props) {
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <p>Game State: {JSON.stringify(gameState)}</p>
             {/* Waiting Overlay */}
             {gameState.status === 'waiting' && (
                 <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>

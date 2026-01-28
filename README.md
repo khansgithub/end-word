@@ -50,4 +50,5 @@ npm run test
 
 ```bash
 npm run test:playwright
+npm run test:playwright:grep <name of test from roomFlowTestNames> // specific test
 ```

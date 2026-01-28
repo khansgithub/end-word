@@ -1,5 +1,5 @@
-import { buildInitialGameState, makePlayersArray } from "../shared/GameState";
-import { ClientPlayers, GameState, Player, PlayerWithId } from "../shared/types";
+import { buildInitialGameState, makePlayersArray } from "../../src/shared/GameState";
+import { ClientPlayers, GameState, Player, PlayerWithId } from "../../src/shared/types";
 
 // =============================================================================
 // TEST HELPERS
@@ -53,4 +53,3 @@ export function createGameStateWithPlayers(players: (Player | null)[]): GameStat
         players: playersArray,
     };
 }
-

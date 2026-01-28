@@ -5,7 +5,7 @@ const defaultTest: RoomFlowTestName = roomFlowTestNames.dualBrowserJoin;
 const requested: RoomFlowTestName | undefined = process.argv[2] as RoomFlowTestName | undefined;
 let testName = requested ?? defaultTest;
 
-testName = "separate browsers join room and render five player slots"
+testName = roomFlowTestNames.dualBrowserJoin;
 
 const args = ["playwright", "test", "tests/e2e/room-flow.spec.ts", "-g", testName];
 const child = spawn("npx", args, { stdio: "inherit", shell: process.platform === "win32" });

@@ -4,9 +4,9 @@ import {
     clonePlayersArray,
     isRequiredGameState,
     makePlayersArray,
-} from "../shared/GameState";
-import { MAX_PLAYERS } from "../shared/consts";
-import { ClientPlayers, ServerPlayers } from "../shared/types";
+} from "../../src/shared/GameState";
+import { MAX_PLAYERS } from "../../src/shared/consts";
+import { ClientPlayers, ServerPlayers } from "../../src/shared/types";
 import {
     createGameStateWithPlayers,
     createRequiredPlayerWithId,
@@ -119,4 +119,3 @@ describe("isRequiredGameState", () => {
         expect(isRequiredGameState(state)).toBe(false);
     });
 });
-

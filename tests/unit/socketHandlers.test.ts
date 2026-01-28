@@ -3,15 +3,15 @@ import { Server as SocketServer } from "socket.io";
 import {
     SocketHandlers,
     HandlerDependencies,
-} from "../shared/socketHandlers";
-import { ServerSocketContext } from "../shared/socketServer";
-import { buildInitialGameState, makePlayersArray } from "../shared/GameState";
+} from "../../src/shared/socketHandlers";
+import { ServerSocketContext } from "../../src/shared/socketServer";
+import { buildInitialGameState, makePlayersArray } from "../../src/shared/GameState";
 import {
     GameState,
     PlayerWithId,
     ServerPlayers,
     ServerPlayerSocket,
-} from "../shared/types";
+} from "../../src/shared/types";
 import {
     createRequiredPlayerWithId,
     createTestGameState,

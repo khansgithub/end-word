@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../shared/GameState";
-import { GameState } from "../shared/types";
+import { gameStateReducer } from "../../src/shared/GameState";
+import { GameState } from "../../src/shared/types";
 import {
     createGameStateWithPlayers,
     createTestGameState,
@@ -211,4 +211,3 @@ describe("gameStateReducer", () => {
         expect(result).not.toBe(state);
     });
 });
-

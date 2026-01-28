@@ -25,8 +25,8 @@ export type GameStateActionsType = {
 // =============================================================================
 // REDUCER MAP
 // =============================================================================
-export function replaceGameState(state: GameState, newState: GameState): GameState {
-    return { ...newState };
+export function replaceGameState(newState: GameState): GameState {
+    return newState;
 }
 
 const GameStateActions = {
@@ -83,7 +83,7 @@ export function removePlayer(
     }
 
     // const updatedPlayers = state.players.slice();
-    const updatedPlayers = clonePlayersArray<typeof state.players>(state.players);
+    const updatedPlayers = clonePlayersArray(state.players);
     updatedPlayers[playerId] = null;
 
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
@@ -164,16 +164,17 @@ export function setPlayerLastWord(
     playerLastWord: string
 ): GameState {
     const currentPlayerIndex = getCurrentPlayerIndex(state.turn, state.connectedPlayers);
-    const player = state.players[currentPlayerIndex];
-    if (!player) {
-        throw new Error("unexpected error");
-    }
+    const updatedPlayers = clonePlayersArray(state.players);
+    const player = updatedPlayers[currentPlayerIndex];
 
-    const updatedPlayers = clonePlayersArray<typeof state.players>(state.players);
-    updatedPlayers[currentPlayerIndex] = {
+    if (!player) throw new Error("unexpected error");
+
+    const updatedPlayer = {
         ...player,
         lastWord: playerLastWord,
     };
+
+    updatedPlayers[currentPlayerIndex] = updatedPlayer;
 
     return {
         ...state,
@@ -181,7 +182,11 @@ export function setPlayerLastWord(
     };
 }
 
-export function progressNextTurn(state: GameState, block: string, playerLastWord: string) {
+export function progressNextTurn(
+    state: GameState,
+    block: string,
+    playerLastWord: string
+): GameState {
     let nextState: GameState = state;
     nextState = {
         ...nextState,
@@ -219,9 +224,9 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 export function buildInitialGameState(): GameState {
     const players = makePlayersArray<ServerPlayers>();
-    const socketPlayerMap = new Map<string, Player>();
+    const socketPlayerMap = new Map<string, PlayerWithId>();
     return {
-        matchLetter: buildMatchLetter("값"),
+        matchLetter: buildMatchLetter("다"),
         status: null,
         players: players,
         turn: 0,
@@ -269,6 +274,7 @@ export function toGameStateClient(state: GameState): GameStateClient {
         thisPlayer: thisPlayer,
     };
 }
+
 export function toGameStateServer(state: GameState): GameStateServer {
     const socketPlayerMap = state.socketPlayerMap;
     if (socketPlayerMap === undefined) throw new Error("socketPlayerMap cannot be undefined here");

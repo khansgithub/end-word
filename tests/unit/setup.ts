@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { afterAll, afterEach, beforeAll } from "vitest";
-import { resetMswHandlers, startMswTestServer, stopMswTestServer } from "../mocks/test-server";
+import { resetMswHandlers, startMswTestServer, stopMswTestServer } from "../../src/mocks/test-server";
 import { setResetLocalStorageAfterEach, shouldResetLocalStorageAfterEach } from "./storage-control";
 
 beforeAll(() => startMswTestServer());

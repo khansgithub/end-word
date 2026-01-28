@@ -70,7 +70,8 @@ export type AckRegisterPlayerResponse =
 export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
 export type AckUnregisterPlayer = (response: { success: boolean }) => void;
 export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
-export type AckSubmitWord = (response: { success: boolean; gameState?: GameStateClient; reason?: string }) => void;
+export type AckSubmitWordParams = { success: true; gameState: GameStateClient } | { success: false; reason: string };
+export type AckSubmitWord = (response: AckSubmitWordParams) => void;
 export type AckRequestFullState = (gameState: GameStateClient) => void;
 
 export type ClientToServerEvents = SharedSocketEvents & {

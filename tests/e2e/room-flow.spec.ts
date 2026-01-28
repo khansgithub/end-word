@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext, CDPSession, BrowserContext, Page, Locator } from "@playwright/test";
+import type { APIRequestContext, CDPSession, BrowserContext, Page, Locator, Browser } from "@playwright/test";
 import { roomFlowTestNames } from "./test-names";
 import { decomposeSyllable } from "../../src/app/hangul-decomposer";
+import { error, log } from "node:console";
 
 async function scrapeMetric(request: APIRequestContext, name: string, label?: string): Promise<number> {
     try {
@@ -285,6 +286,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         if (!currentMatchLetterDisplay) throw new Error("No match letter found");
         const highlightInputValue = await highlightInputLocator.inputValue();
         const highlightExpectValue = decomposeSyllable(currentMatchLetterDisplay)[0];
+        log(`assertHighlightValue: highlightInputValue: ${highlightInputValue}, highlightExpectValue: ${highlightExpectValue}`);
         expect(highlightInputValue).toBe(highlightExpectValue);
         return highlightExpectValue;
     }
@@ -295,37 +297,17 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         return r;
     }
 
-    const baseURL = "http://localhost:4000";
-    const clientLogs: LogEntry[] = [];
-    const log = (message: string) => {
-        const ts = Date.now();
-        const entry: LogEntry = { ts, msg: `[client] ${message}`, source: "client" };
-        clientLogs.push(entry);
-        console.log(new Date(ts).toISOString(), entry.msg);
-    };
+    function randomHangulBlock() {
+        // Hangul syllables range: U+AC00 (44032) to U+D7A3 (55203)
+        const start = 0xac00;
+        const end = 0xd7a3;
+        const code = Math.floor(Math.random() * (end - start + 1)) + start;
+        return String.fromCharCode(code);
+    }
 
-    let contextA: BrowserContext | null = null;
-    let contextB: BrowserContext | null = null;
+    const { pageA, pageB, contextA, contextB, clientLogs, log } = await setupPages(browser);
 
     try {
-        contextA = await browser.newContext({ baseURL });
-        contextB = await browser.newContext({ baseURL });
-
-        const pageA = await contextA.newPage();
-        const pageB = await contextB.newPage();
-
-        const attachConsole = (pageLabel: string, page: typeof pageA) => {
-            page.on("console", (msg) => {
-                const ts = Date.now();
-                const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
-                clientLogs.push({ ts, msg: line, source: "browser" });
-                console.log(new Date(ts).toISOString(), line);
-            });
-        };
-
-        attachConsole("A", pageA);
-        attachConsole("B", pageB);
-
         const dom = {
             pageA: {
                 input: pageA.getByRole("textbox", { name: /name/i }),
@@ -384,15 +366,20 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         // For example, if matchLetter is "가", type "가나다"
         // Map Korean initial consonant (choseong) or first letter to a sample word
         // For testing, provide a few sample mappings
-        const firstLetterToWord: Record<string, string> = {
-            "가": "가나다",
-            "나": "나비",
-            "다": "다람쥐",
-            "마": "마을",
-            "바": "바다",
-            "사": "사과",
-        };
-        const wordToSubmit = firstLetterToWord[await getMatchLetterDisplay(pageA)];
+        // const firstLetterToWord: Record<string, string> = {
+        //     "가": "가나다",
+        //     "나": "나비",
+        //     "다": "다람쥐",
+        //     "마": "마을",
+        //     "바": "바다",
+        //     "사": "사과",
+        // };
+        // const firstLetter = await getMatchLetterDisplay(pageA);
+        // if (!(firstLetter in firstLetterToWord)) {
+        //     throw new Error(`No word found for first letter: ${firstLetter}`);
+        // }
+        // const wordToSubmit = firstLetterToWord[firstLetter];
+        const wordToSubmit = (await getMatchLetterDisplay(pageA)) + randomHangulBlock();
         log(`typing word: ${wordToSubmit}`);
         await dom.pageA.wordInput.fill(wordToSubmit, { timeout: 1_000 });
 
@@ -452,3 +439,117 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         await collectAndPrintMergedLogs(clientLogs, request);
     }
 });
+
+
+test(roomFlowTestNames.foo, async ({ browser, request }) => {
+    const TIMEOUT = 5000;
+    const { pageA, pageB, contextA, contextB, clientLogs, log } = await setupPages(browser);
+    try {
+        const dom = {
+            pageA: {
+                input: pageA.getByRole("textbox", { name: /name/i }),
+                highlightInput: pageA.locator('input[aria-hidden="true"]').first(),
+                wordInput: pageA.locator("input:not([readonly])"),
+                submitButton: pageA.getByRole("button", { name: /submit word/i }),
+                loadingBlur: pageA.locator("div.backdrop-blur-sm"),
+            },
+            pageB: {
+                input: pageB.getByRole("textbox", { name: /name/i }),
+                highlightInput: pageB.locator('input[aria-hidden="true"]').first(),
+                wordInput: pageB.locator("input:not([readonly])"),
+                submitButton: pageB.getByRole("button", { name: /submit word/i }),
+                loadingBlur: pageB.locator("div.backdrop-blur-sm"),
+            },
+        };
+
+        // Go to the home page
+        log("goto / on both pages");
+        await Promise.all([pageA.goto("/"), pageB.goto("/")]);
+
+        // Fill in the names
+        log('fill name "Player1" on A');
+        await dom.pageA.input.fill("Player1");
+        log('fill name "Player2" on B');
+        await dom.pageB.input.fill("Player2");
+
+        // join page one (A) by pressing Enter
+        log('press Enter on A to join room');
+        await dom.pageA.input.press("Enter");
+
+        // wait for the loading screen to appear on page one (A)
+        log('wait for loading blur to appear on A');
+        await dom.pageA.loadingBlur.first().waitFor({ state: "visible", timeout: TIMEOUT });
+
+        // join page two (B) by pressing Enter
+        log('press Enter on B to join room');
+        await dom.pageB.input.press("Enter");
+
+        // wait for the loading screen to disappear on page one (A)
+        log('wait for loading blur to disappear on A');
+        await dom.pageA.loadingBlur.first().waitFor({ state: "detached", timeout: TIMEOUT });
+
+        log('wait for loading blur to disappear on B');
+        await dom.pageB.loadingBlur.first().waitFor({ state: "detached", timeout: TIMEOUT });
+
+        log('pause 5 seconds');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+    } catch(err) {
+        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
+    }finally {
+        // Always close contexts, even on failure
+        const closePromises: Promise<void>[] = [];
+        if (contextA) {
+            closePromises.push(
+                contextA.close().catch((err) => {
+                    log(`Failed to close contextA: ${err}`);
+                })
+            );
+        }
+        if (contextB) {
+            closePromises.push(
+                contextB.close().catch((err) => {
+                    log(`Failed to close contextB: ${err}`);
+                })
+            );
+        }
+        await Promise.all(closePromises);
+
+        // Always collect logs for debugging, even on failure
+        await collectAndPrintMergedLogs(clientLogs, request);
+    }
+});
+
+async function setupPages(browser: Browser){
+    const baseURL = "http://localhost:4000";
+    const clientLogs: LogEntry[] = [];
+    const log = (message: string) => {
+        const ts = Date.now();
+        const entry: LogEntry = { ts, msg: `[client] ${message}`, source: "client" };
+        clientLogs.push(entry);
+        console.log(new Date(ts).toISOString(), entry.msg);
+    };
+
+    let contextA: BrowserContext | null = null;
+    let contextB: BrowserContext | null = null;
+
+    contextA = await browser.newContext({ baseURL });
+    contextB = await browser.newContext({ baseURL });
+
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
+
+    const attachConsole = (pageLabel: string, page: typeof pageA) => {
+        page.on("console", (msg) => {
+            const ts = Date.now();
+            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
+            clientLogs.push({ ts, msg: line, source: "browser" });
+            console.log(new Date(ts).toISOString(), line);
+        });
+    };
+
+    attachConsole("A", pageA);
+    attachConsole("B", pageB);
+
+    return { pageA, pageB, contextA, contextB, clientLogs, log };
+}

@@ -15,7 +15,7 @@ import { SocketHandlers, HandlerDependencies } from "./socketHandlers";
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
 export type ServerSocketContext = {
-    state: GameState<ServerPlayers>;
+    state: GameState;
     runExclusive: RunExclusive;
     registeredSockets: Map<PlayerUid, Required<PlayerWithId>>;
     io?: SocketServer; // Socket.IO server instance for broadcasting
@@ -31,12 +31,12 @@ export type ServerSocketContext = {
 };
 
 export function createServerSocketContext(
-    initialState?: GameState<ServerPlayers>,
+    initialState?: GameState,
     instrumentation?: ServerSocketContext["instrumentation"],
     io?: SocketServer
 ): ServerSocketContext {
     return {
-        state: initialState ?? buildInitialGameState({ server: true }),
+        state: initialState ?? buildInitialGameState(),
         runExclusive: createSocketMutex(),
         registeredSockets: new Map<PlayerUid, Required<PlayerWithId>>(),
         io,
@@ -74,7 +74,7 @@ export function createServerConnectionHandler(context: ServerSocketContext) {
     let state = context.state;
 
     const getState = () => state;
-    function setState(nextState: GameState<ServerPlayers>) {
+    function setState(nextState: GameState) {
         state = nextState;
         context.state = nextState;
     }

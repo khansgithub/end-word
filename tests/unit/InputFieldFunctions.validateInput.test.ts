@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { MatchLetter } from "../shared/types";
-import { validateInput } from "../app/components/inputValidation";
+import { MatchLetter } from "../../src/shared/types";
+import { validateInput } from "../../src/app/components/inputValidation";
 
 // TODO: Look over these tests
 describe("validateInput", () => {
@@ -176,4 +176,3 @@ describe("validateInput", () => {
         });
     });
 });
-

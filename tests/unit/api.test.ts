@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { inputIsValid } from "../app/components/util";
-import { lookUpWord } from "../shared/api";
+import { inputIsValid } from "../../src/app/components/util";
+import { lookUpWord } from "../../src/shared/api";
 
 describe("dictionary APIs (msw)", () => {
     it("mocks external lookup API via http://localhost:8000/lookup/:word", async () => {

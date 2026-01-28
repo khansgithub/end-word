@@ -3,10 +3,11 @@ import { Server as SocketServer } from "socket.io";
 import { createServerConnectionHandler, createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { fml } from "./fml";
-import { GameState } from "../shared/types";
+import { GameState, ServerPlayerSocket } from "../shared/types";
 
 let activeServerContext: ServerSocketContext | null = null;
 let socketServer: SocketServer | null = null;
+const socketContext = createServerSocketContext();
 
 export function getServerSocketContext(): ServerSocketContext {
     if (activeServerContext === null) {
@@ -26,7 +27,10 @@ export function createIOServer(server: http.Server): SocketServer {
 }
 
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
-    socketServer.on("connection", fml);
+    const socketConextWrapper = (socket: ServerPlayerSocket) => {
+        fml(socket, socketContext);
+    };
+    socketServer.on("connection", socketConextWrapper);
     return socketServer;
 }
 

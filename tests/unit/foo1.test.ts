@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { StoreApi } from "zustand";
-import { MatchLetter } from "../shared/types";
-import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers, ValidationAction } from "../app/components/inputValidation";
-import { decomposeSyllable, buildSyllableSteps } from "../app/hangul-decomposer";
-import { InputState } from "../app/store/userStore";
+import { MatchLetter } from "../../src/shared/types";
+import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers, ValidationAction } from "../../src/app/components/inputValidation";
+import { decomposeSyllable, buildSyllableSteps } from "../../src/app/hangul-decomposer";
+import { InputState } from "../../src/app/store/userStore";
 
 describe("actionHandlers", () => {
     const createMatchLetter = (block: string, steps: string[]): MatchLetter => ({

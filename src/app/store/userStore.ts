@@ -1,4 +1,5 @@
 import { createStore } from "zustand";
+import { persist } from "zustand/middleware";
 import { ClientPlayerSocket } from "../../shared/types";
 
 interface PlayerSession {
@@ -33,7 +34,7 @@ const _userStore = (set: any) => ({
 });
 
 export const useUserStore = createStore<PlayerSession>()(
-    // persist(_userStore, { name: "user-storage" });
+    // persist(_userStore, { name: "user-storage" })
     _userStore
 );
 

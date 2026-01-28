@@ -36,10 +36,10 @@ export function registerClientSocketHandlers(
         log(L, `Connected to socket: ${socket.id}, ${socket.auth}`);
         // Request full state sync on reconnection to ensure we're in sync
         if (state.thisPlayer) {
-            socket.emit(socketEvents.requestFullState, (state) => {
+            socket.emit(socketEvents.requestFullState, (serverState) => {
                 dispatch({
                     type: "replaceGameState",
-                    payload: [state, state],
+                    payload: [{...serverState, thisPlayer: state.thisPlayer}],
                 });
             });
         }
@@ -87,18 +87,24 @@ export function registerClientSocketHandlers(
     // Handle game state updates from server (source of truth)
     socket.on(socketEvents.gameStateUpdate, (serverState) => {
         log(L, "gameStateUpdate received from server:", pp(serverState));
+
+        // always replace the thisPlayer in the serverState with the local state thisPlayer
         // Replace local state with server state (server is source of truth)
-        if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
-            dispatch({
-                type: "replaceGameState",
-                payload: [state, serverState],
-            });
-        } else {
-            console.warn("gameStateUpdate: thisPlayer mismatch or missing", {
-                server: serverState.thisPlayer,
-                local: state.thisPlayer
-            });
-        }
+        dispatch({
+            type: "replaceGameState",
+            payload: [{ ...serverState, thisPlayer: state.thisPlayer }],
+        });
+        // if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
+        //     dispatch({
+        //         type: "replaceGameState",
+        //         payload: [state, serverState],
+        //     });
+        // } else {
+        //     console.warn("gameStateUpdate: thisPlayer mismatch or missing", {
+        //         server: JSON.stringify(serverState.thisPlayer),
+        //         local: JSON.stringify(state.thisPlayer)
+        //     });
+        // }
     });
 
     // // Handle full state sync (e.g., on reconnection)

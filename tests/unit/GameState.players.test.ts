@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../shared/GameState";
-import { MAX_PLAYERS } from "../shared/consts";
-import { GameState, Player, PlayerWithId } from "../shared/types";
+import { gameStateReducer } from "../../src/shared/GameState";
+import { MAX_PLAYERS } from "../../src/shared/consts";
+import { GameState, Player, PlayerWithId } from "../../src/shared/types";
 import {
     createGameStateWithPlayers,
     createRequiredPlayerWithId,
@@ -276,4 +276,3 @@ describe("addAndRegisterPlayer", () => {
         expect(result.thisPlayer).toEqual(player);
     });
 });
-

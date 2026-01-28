@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../shared/GameState";
-import { GameState, PlayerWithId } from "../shared/types";
+import { gameStateReducer } from "../../src/shared/GameState";
+import { GameState, PlayerWithId } from "../../src/shared/types";
 import {
     createGameStateWithPlayers,
     createTestGameState,
@@ -117,4 +117,3 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
         expect(result.status).toBe("playing");
     });
 });
-

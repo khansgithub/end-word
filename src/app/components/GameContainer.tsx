@@ -8,6 +8,8 @@ import { AckRegisterPlayerResponse, ClientPlayerSocket, GameState, GameStateClie
 import { makeNewPlayer } from '../../shared/utils';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
+import { socketEvents } from '../../shared/socket';
+import { socketRegisterPlayer } from './socket';
 
 const L = "Game Container: "
 const log = console.log;
@@ -59,25 +61,25 @@ function GameContainer() {
         if (userIsConnected !== CONNECTED) {
             console.count("EMIT: REGISTER PLAYER");
             log(L, 'Register player;', player, socket.auth);
-            socket.emit("registerPlayer", player, (response: AckRegisterPlayerResponse) => {
-                if (response.success) {
-                    state.current = response.gameState;
-                    setUserIsConnected(CONNECTED);
-                } else {
-                    setUserIsConnected(FAILED);
-                }
-            });
         }
 
-        return () => {};
+        socketRegisterPlayer(socket, player, (response: AckRegisterPlayerResponse) => {
+            if (response.success) {
+                state.current = response.gameState;
+                setUserIsConnected(CONNECTED);
+            } else {
+                setUserIsConnected(FAILED);
+            }
+        });
+        return () => { };
 
     }, []);
-    
+
     console.count("GameContainer");
-    
+
     const StatusPanel = ({ children, hasError = false }: { children: React.ReactNode; hasError?: boolean }) => (
         <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'transparent' }}>
-            <div className="panel max-w-md" style={{ 
+            <div className="panel max-w-md" style={{
                 backgroundColor: 'var(--bg-secondary-solid)',
                 ...(hasError && { borderColor: 'var(--border-error)' }),
             }}>
@@ -85,7 +87,7 @@ function GameContainer() {
             </div>
         </div>
     );
-    
+
     switch (userIsConnected ?? CONNECTING) {
         case CONNECTED:
             log(L, "CONNECTED", CONNECTED);
@@ -110,7 +112,7 @@ function GameContainer() {
                 <StatusPanel hasError>
                     <div className="flex flex-col items-start p-6 gap-3">
                         <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full" style={{ 
+                            <div className="w-6 h-6 rounded-full" style={{
                                 background: 'var(--text-error-dark)',
                                 boxShadow: '0 0 8px var(--error-glow)',
                             }}></div>
