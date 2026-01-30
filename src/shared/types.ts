@@ -64,15 +64,15 @@ export type SharedSocketEvents = {
 // Acknowledgement function types
 export type AckGetPlayerCount = (count: number) => void;
 export type AckRegisterPlayerResponse =
-    | { success: true; gameState: GameStateClient }
+    | { success: true; gameState: GameStateEmit, player: PlayerWithId }
     | { success: false; reason: string };
 
 export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
 export type AckUnregisterPlayer = (response: { success: boolean }) => void;
 export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
-export type AckSubmitWordParams = { success: true; gameState: GameStateClient } | { success: false; reason: string };
+export type AckSubmitWordParams = { success: true; gameState: GameStateEmit } | { success: false; reason: string };
 export type AckSubmitWord = (response: AckSubmitWordParams) => void;
-export type AckRequestFullState = (gameState: GameStateClient) => void;
+export type AckRequestFullState = (gameState: GameStateEmit) => void;
 
 export type ClientToServerEvents = SharedSocketEvents & {
     getPlayerCount: (ack: AckGetPlayerCount) => void;
@@ -86,7 +86,7 @@ export type ClientToServerEvents = SharedSocketEvents & {
 
 
 export type ServerToClientEvents = SharedSocketEvents & {
-    gameStateUpdate: (gameState: GameStateClient) => void;
+    gameStateUpdate: (gameState: GameStateEmit) => void;
 };
 
 /**
@@ -142,8 +142,15 @@ export type GameState = {
     socketPlayerMap?: Map<string, PlayerWithId>,
 }
 
+export type GameStateEmit = (
+    Omit<GameState, "thisPlayer" | "socketPlayerMap">
+    & {players: ClientPlayers}
+);
 export type GameStateServer = Omit<GameState, "thisPlayer"> & Required<Pick<GameState, "socketPlayerMap">>;
-export type GameStateClient = Omit<GameState, "socketPlayerMap"> & Required<Pick<GameState, "thisPlayer">>;
+export type GameStateClient = (
+    Omit<GameState, "socketPlayerMap">
+    & {thisPlayer: PlayerWithId}
+)
 
 export type GameStateFrozen = Readonly<GameState>;
 // export type GameStateFrozen = Readonly<GameState<PlayersArray>>

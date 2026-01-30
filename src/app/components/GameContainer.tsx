@@ -65,7 +65,11 @@ function GameContainer() {
 
         socketRegisterPlayer(socket, player, (response: AckRegisterPlayerResponse) => {
             if (response.success) {
-                state.current = response.gameState;
+                const nextState: GameStateClient = {
+                    ...response.gameState,
+                    thisPlayer: response.player
+                }
+                state.current = nextState;
                 setUserIsConnected(CONNECTED);
             } else {
                 setUserIsConnected(FAILED);

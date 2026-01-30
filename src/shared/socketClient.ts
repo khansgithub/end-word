@@ -38,8 +38,8 @@ export function registerClientSocketHandlers(
         if (state.thisPlayer) {
             socket.emit(socketEvents.requestFullState, (serverState) => {
                 dispatch({
-                    type: "replaceGameState",
-                    payload: [{...serverState, thisPlayer: state.thisPlayer}],
+                    type: "gameStateUpdateClient",
+                    payload: [{...serverState}],
                 });
             });
         }
@@ -85,14 +85,14 @@ export function registerClientSocketHandlers(
     // });
 
     // Handle game state updates from server (source of truth)
-    socket.on(socketEvents.gameStateUpdate, (serverState) => {
-        log(L, "gameStateUpdate received from server:", pp(serverState));
+    socket.on(socketEvents.gameStateUpdate, (stateEmit) => {
+        log(L, "gameStateUpdate received from server:", pp(stateEmit));
 
         // always replace the thisPlayer in the serverState with the local state thisPlayer
         // Replace local state with server state (server is source of truth)
         dispatch({
             type: "replaceGameState",
-            payload: [{ ...serverState, thisPlayer: state.thisPlayer }],
+            payload: [{ ...stateEmit, thisPlayer: state.thisPlayer }],
         });
         // if (serverState.thisPlayer && (!state.thisPlayer || state.thisPlayer.uid === serverState.thisPlayer.uid)) {
         //     dispatch({

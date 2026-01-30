@@ -9,6 +9,7 @@ import Player from "./Player";
 import SubmitButton from "./SubmitButton";
 import { getSocketManager, handleSocket } from "./socket";
 import { socketEvents } from "../../shared/socket";
+import { gameStrings } from "./gameStrings";
 
 interface props {
     gameState: GameStateClient,
@@ -54,14 +55,14 @@ export default function Game(props: props) {
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <p>Game State: {JSON.stringify(gameState)}</p>
+            <p>{gameStrings.gameState}{JSON.stringify(gameState)}</p>
             {/* Waiting Overlay */}
             {gameState.status === 'waiting' && (
                 <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
                     <div className="panel" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                         <div className="flex flex-col items-center p-6">
                             <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Waiting for game to start...</p>
+                            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{gameStrings.waitingForGameToStart}</p>
                         </div>
                     </div>
                 </div>
@@ -72,13 +73,13 @@ export default function Game(props: props) {
                 borderColor: 'var(--border-accent)',
                 color: 'var(--text-secondary)',
             }}>
-                {`Round ${gameState.turn ?? 1}`}
+                {`${gameStrings.round}${gameState.turn ?? 1}`}
             </div>
 
             {/* Match Letter Display */}
             <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-6">
-                    <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Match Letter</h2>
+                    <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{gameStrings.matchLetter}</h2>
                     <div className="text-8xl font-bold mb-4" style={{
                         color: 'var(--match-letter-color)',
                         textShadow: '1px 1px 3px var(--text-shadow-cyan)',
@@ -110,7 +111,7 @@ export default function Game(props: props) {
             {/* Players Section */}
             <div className="panel w-full max-w-4xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="p-4">
-                    <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>Players</h3>
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{gameStrings.players}</h3>
                     <div className="flex flex-row flex-wrap gap-4 justify-center items-start" id="players">
                         {
                             gameState.players.map((p, i) => {
@@ -127,10 +128,10 @@ export default function Game(props: props) {
                                                         background: 'var(--gradient-avatar-empty)',
                                                         border: '1px solid var(--border-default)',
                                                     }}>
-                                                        <span className="text-2xl" style={{ color: 'var(--text-secondary)' }}>?</span>
+                                                        <span className="text-2xl" style={{ color: 'var(--text-secondary)' }}>{gameStrings.emptySeat}</span>
                                                     </div>
                                                 </div>
-                                                <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Empty</p>
+                                                <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>{gameStrings.empty}</p>
                                             </div>
                                         </div>
                                     );

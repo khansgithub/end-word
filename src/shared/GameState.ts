@@ -7,8 +7,8 @@ Notes from gpt:
 
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { ClientPlayers, GameState, GameStateClient, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
-import { buildMatchLetter, getCurrentPlayerIndex, pp } from "./utils";
+import { ClientPlayers, GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
+import { buildMatchLetter, cloneServerPlayersToClientPlayers, getCurrentPlayerIndex, pp } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -25,9 +25,7 @@ export type GameStateActionsType = {
 // =============================================================================
 // REDUCER MAP
 // =============================================================================
-export function replaceGameState(newState: GameState): GameState {
-    return newState;
-}
+
 
 const GameStateActions = {
     nextTurn,
@@ -41,19 +39,33 @@ const GameStateActions = {
     progressNextTurn,
     updateConnectedPlayersCount,
     replaceGameState,
+    gameStateUpdateClient,
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
 // =============================================================================
 // REDUCER FUNCTIONS
 // =============================================================================
-export function updateConnectedPlayersCount(state: GameState, count: number): GameState {
+
+export function replaceGameState(newState: GameState, currentState?: GameState): GameState {
+    return newState;
+}
+
+export function gameStateUpdateClient(newState: GameStateEmit, currentState?: GameStateClient): GameStateClient {
+    if (!currentState) throw new Error("currentState needs to be passed");
+    return {
+        ...newState,
+        thisPlayer: currentState.thisPlayer
+    };
+}
+
+export function updateConnectedPlayersCount(state: GameState, count: number, currentState?: GameState): GameState {
     return {
         ...state,
         connectedPlayers: count
     }
 }
 
-export function nextTurn(state: GameState): GameState {
+export function nextTurn(state: GameState, currentState?: GameState): GameState {
     return {
         ...state,
         turn: state.turn + 1,
@@ -75,7 +87,8 @@ function _postPlayerCountUpdateState(state: GameState): GameState {
 
 export function removePlayer(
     state: GameState,
-    profile: Player
+    profile: Player,
+    currentState?: GameState
 ): GameState {
     const playerId = profile.seat;
     if (playerId === undefined) {
@@ -85,7 +98,7 @@ export function removePlayer(
     // const updatedPlayers = state.players.slice();
     const updatedPlayers = clonePlayersArray(state.players);
     updatedPlayers[playerId] = null;
-
+    // TODO: Remove player from map!!
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
 
     return {
@@ -95,7 +108,8 @@ export function removePlayer(
 
 export function registerPlayer(
     state: GameState,
-    player: PlayerWithId
+    player: PlayerWithId,
+    currentState?: GameState
 ): GameState {
     assertIsRequiredPlayerWithId(player);
     const seat = findAvailableSeat(state);
@@ -112,15 +126,16 @@ export function registerPlayer(
 
 export function addPlayerToArray(
     state: GameState,
-    player: Player
+    player: PlayerWithId,
+    currentState?: GameState
 ): GameState {
     const updatedPlayers = clonePlayersArray(state.players);
     if (player.seat === undefined) throw new Error(`Player ${pp(player)} must have a seat`)
     updatedPlayers[player.seat] = { ...player };
-    if (state.thisPlayer) {
-        const thisPlayer = updatedPlayers[state.thisPlayer.seat] as PlayerWithId;
-        thisPlayer.uid = state.thisPlayer.uid;
-    }
+    // if (state.thisPlayer) {
+    //     const thisPlayer = updatedPlayers[state.thisPlayer.seat] as PlayerWithId;
+    //     thisPlayer.uid = state.thisPlayer.uid;
+    // }
 
     const nextState = _postPlayerCountUpdateState({
         ...state,
@@ -138,8 +153,9 @@ export function addPlayerToArray(
  * @returns 
  */
 export function addPlayer(
-    state: GameStateServer,
+    state: GameState,
     player: PlayerWithId,
+    currentState?: GameState
 ): GameState {
     if (!player.name) {
         console.error("addPlayer: profile.name is undefined")
@@ -154,14 +170,16 @@ export function addPlayer(
 
 export function addAndRegisterPlayer(
     state: GameState,
-    player: PlayerWithId
+    player: PlayerWithId,
+    currentState?: GameState
 ): GameState {
     return registerPlayer(addPlayer(state, player), player);
 }
 
 export function setPlayerLastWord(
     state: GameState,
-    playerLastWord: string
+    playerLastWord: string,
+    currentState?: GameState
 ): GameState {
     const currentPlayerIndex = getCurrentPlayerIndex(state.turn, state.connectedPlayers);
     const updatedPlayers = clonePlayersArray(state.players);
@@ -185,7 +203,8 @@ export function setPlayerLastWord(
 export function progressNextTurn(
     state: GameState,
     block: string,
-    playerLastWord: string
+    playerLastWord: string,
+    currentState?: GameState
 ): GameState {
     let nextState: GameState = state;
     nextState = {
@@ -216,7 +235,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
     // const f = GameStateActions[action.type] as (state: GameState, ...args: any[]) => GameState;
     const f = GameStateActions[action.type] as (state: GameState, ...args: unknown[]) => GameState;
     const params = action.payload as Parameters<typeof f>;
-    return f(...params) as T;//ClientOrServerReturn<T>;
+    return f(...params, state) as T;//ClientOrServerReturn<T>;
 }
 
 // =============================================================================
@@ -257,23 +276,30 @@ export function isRequiredGameState(state: GameState): state is Required<GameSta
     }
 }
 
-export function toGameStateClient(state: GameState): GameStateClient {
-    /**
-     * Requires that state.thisPlayer is defined.
-     * Removes the socketPlayerMap from the state.
-     * This function is used to convert a GameStateServer to a GameStateClient.
-     * It is used to send the game state to the client.
-     * @param state 
-     * @returns 
-     */
-    const thisPlayer = state.thisPlayer;
-    if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
-    const { socketPlayerMap, ...rest } = state;
-    return {
-        ...rest,
-        thisPlayer: thisPlayer,
-    };
+export function toGameStateEmit(state: GameState): GameStateEmit {
+    let { thisPlayer, socketPlayerMap, ...stateEmit } = state;
+    stateEmit.players = cloneServerPlayersToClientPlayers(stateEmit.players as ServerPlayers); // hacky
+    return stateEmit;
 }
+
+// export function toGameStateClient(state: GameState): GameStateClient {
+//     /**
+//      * Requires that state.thisPlayer is defined.
+//      * Removes the socketPlayerMap from the state.
+//      * This function is used to convert a GameStateServer to a GameStateClient.
+//      * It is used to send the game state to the client.
+//      * @param state 
+//      * @returns 
+//      */
+//     // const thisPlayer = state.thisPlayer;
+//     // if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
+//     const { socketPlayerMap, thisPlayer, ...clientState } = state;
+//     return clientState;
+//     // return {
+//     //     ...rest,
+//     //     // thisPlayer: thisPlayer,
+//     // };
+// }
 
 export function toGameStateServer(state: GameState): GameStateServer {
     const socketPlayerMap = state.socketPlayerMap;

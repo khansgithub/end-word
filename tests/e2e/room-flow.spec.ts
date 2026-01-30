@@ -1,8 +1,7 @@
+import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext, CDPSession, BrowserContext, Page, Locator, Browser } from "@playwright/test";
-import { roomFlowTestNames } from "./test-names";
 import { decomposeSyllable } from "../../src/app/hangul-decomposer";
-import { error, log } from "node:console";
+import { roomFlowTestNames } from "./test-names";
 
 async function scrapeMetric(request: APIRequestContext, name: string, label?: string): Promise<number> {
     try {
@@ -104,42 +103,57 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
             .poll(() => scrapeMetric(request, "socket_event_total", 'event="connect"'), { timeout: 15_000, intervals: [500, 750, 1000] })
             .toBeGreaterThan(0);
 
-        log("wait for playerCount event (server stats)");
+        log("wait for getPlayerCount event (server stats)");
         await expect
             .poll(() => scrapeMetric(request, "socket_event_total", 'event="getPlayerCount"'), { timeout: 15_000, intervals: [500, 750, 1000] })
             .toBeGreaterThan(0);
 
-        let roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
+        let roomCount = page.getByText('/5');
+        
         log("wait for Room heading text");
-        await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 5_000 });
+        await expect(roomCount).toHaveText("0/5", { timeout: 5_000 });
 
         const nameInput = page.getByRole("textbox", { name: /name/i });
+        
         log('fill name "Foo"');
         await nameInput.fill("Foo");
+        
         log("press Enter to join room");
         await nameInput.press("Enter");
 
         log("wait for navigation to /room");
         await page.waitForURL("**/room", { timeout: 15_000 });
+        
         log("wait for Match text");
-        await expect(page.getByText(/Match:/)).toBeVisible({ timeout: 5_000 });
+        await expect(page.getByText('Waiting for game to start...')).toBeVisible({ timeout: 5_000 });
+
+        log("Check stat to see if the player has been registered");
+        await expect
+            .poll(() => scrapeMetric(request, "socket_registered_clients"), {
+                timeout: 8_000,
+                intervals: [500, 1000],
+            })
+            .toBe(1);
 
         log("hard reload (ignore cache)");
         cdp = await page.context().newCDPSession(page);
         await cdp.send("Network.clearBrowserCache");
         await cdp.send("Network.clearBrowserCookies");
         await cdp.send("Page.reload", { ignoreCache: true });
+        
         log("wait for redirect back to /");
         await page.waitForURL("http://localhost:4000/", { timeout: 15_000 });
 
-        roomHeading = page.getByRole("heading", { level: 1, name: /Room:/i });
-        log(`check to see if the previous session has been terminated: [${await roomHeading.textContent()}]`);
-        await expect(roomHeading).toHaveText("Room: 0/5", { timeout: 5_000 });
+        roomCount = page.getByText('/5');
+        
+        log(`Check to see if the previous session has been terminated: [${await roomCount.textContent()}]`);
+        await expect(roomCount).toHaveText("0/5", { timeout: 5_000 });
 
+        log("Check stats to see if the previous session has been terminated");
         await expect
             .poll(() => scrapeMetric(request, "socket_registered_clients"), {
                 timeout: 8_000,
-                intervals: [500, 1000, 1500, 2000],
+                intervals: [500, 1000],
             })
             .toBe(0);
 

@@ -33,7 +33,6 @@ export function setUpIOServer(socketServer: SocketServer): SocketServer {
     socketServer.on("connection", socketConextWrapper);
     return socketServer;
 }
-
 function broadcastGameState(gameState: GameState){
     if (!socketServer) return;
     socketServer.emit("broadcast game state test", "test");
