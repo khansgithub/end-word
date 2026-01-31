@@ -1,8 +1,8 @@
 import { StoreApi } from "zustand";
-import { MatchLetter } from "../shared/types";
-import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers } from "./components/inputValidation";
-import { decomposeSyllable } from "./hangul-decomposer";
-import { InputState } from "./store/userStore";
+import { MatchLetter } from "../../shared/types";
+import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers } from "../components/inputValidation";
+import { decomposeSyllable } from "../hangul-decomposer";
+import { InputState } from "../store/userStore";
 
 const log = console.log;
 const L = "Mock Logging: ";
