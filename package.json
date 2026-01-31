@@ -11,7 +11,7 @@
     "dev:e2e": "cross-env NODE_ENV=test PLAYWRIGHT_TEST=1 PORT=4000 tsx src/server/server.ts",
     "test": "vitest --run",
     "test:watch": "vitest",
-    "test:playwright": "playwright test --workers=4",
+    "test:playwright": "playwright test --workers 4",
     "test:playwright:ui": "playwright test --ui",
     "test:playwright:grep": "cross-env SUPPRESS=true playwright test --grep",
     "test:playwright:grep:ui": "cross-env SUPPRESS=true playwright test --ui --grep",

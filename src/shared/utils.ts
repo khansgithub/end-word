@@ -32,8 +32,8 @@ export function createSocketMutex(): RunExclusive {
  */
 export function pp(obj: any): string {
     // if (isSuppress()) return "[SUPPRESS=TRUE]";
-    return "[SUPPRESS=TRUE]";
-    // return JSON.stringify(obj, null, '\t');
+    // return "[SUPPRESS=TRUE]";
+    return JSON.stringify(obj, null, '\t');
 }
 
 // ============================================================================

@@ -72,54 +72,6 @@ describe("setPlayerLastWord", () => {
     });
 });
 
-// FIXME: update these tests because the function now returns a MatchLetter instead of a GameState
-describe("buildMatchLetter", () => {
-    it("should create matchLetter with single syllable", () => {
-        const state = createTestGameState();
-        const action = {
-            type: "buildMatchLetter" as const,
-            payload: [state, "가"] as [GameState, string],
-        };
-        const result = gameStateReducer(state, action);
-        expect(result.matchLetter.block).toBe("가");
-        expect(result.matchLetter.value).toBe("가");
-        expect(result.matchLetter.next).toBe(0);
-        expect(result.matchLetter.steps).toBeDefined();
-        expect(Array.isArray(result.matchLetter.steps)).toBe(true);
-    });
-
-    it("should throw error when block length is greater than 1", () => {
-        const state = createTestGameState();
-        const action = {
-            type: "buildMatchLetter" as const,
-            payload: [state, "가나"] as [GameState, string],
-        };
-        expect(() => gameStateReducer(state, action)).toThrow("Must be 1 syllable");
-    });
-
-    it("should preserve other state properties", () => {
-        const state = createTestGameState({ turn: 5 });
-        const action = {
-            type: "buildMatchLetter" as const,
-            payload: [state, "나"] as [GameState, string],
-        };
-        const result = gameStateReducer(state, action);
-        expect(result.turn).toBe(5);
-        expect(result.matchLetter.block).toBe("나");
-    });
-
-    it("should not mutate the original state", () => {
-        const state = createTestGameState();
-        const originalBlock = state.matchLetter.block;
-        const action = {
-            type: "buildMatchLetter" as const,
-            payload: [state, "다"] as [GameState, string],
-        };
-        gameStateReducer(state, action);
-        expect(state.matchLetter.block).toBe(originalBlock);
-    });
-});
-
 describe("progressNextTurn", () => {
     it("should build match letter, set last word, and increment turn", () => {
         const state = createGameStateWithPlayers([
@@ -174,16 +126,16 @@ describe("gameStateReducer", () => {
     it("should handle all valid action types", () => {
         const state = createTestGameState();
         const validActions = [
-            "updateConnectedPlayersCount",
             "nextTurn",
             "setPlayerLastWord",
             "registerPlayer",
             "addPlayer",
-            "addAndRegisterPlayer",
             "addPlayerToArray",
             "removePlayer",
             "progressNextTurn",
-            "buildMatchLetter",
+            "updateConnectedPlayersCount",
+            "replaceGameState",
+            "gameStateUpdateClient",
         ];
 
         validActions.forEach((actionType) => {

@@ -33,7 +33,6 @@ const GameStateActions = {
     // fullUpdateGameState,
     registerPlayer,
     addPlayer,
-    addAndRegisterPlayer,
     addPlayerToArray,
     removePlayer,
     progressNextTurn,
@@ -87,10 +86,10 @@ function _postPlayerCountUpdateState(state: GameState): GameState {
 
 export function removePlayer(
     state: GameState,
-    profile: Player,
+    player: Player,
     currentState?: GameState
 ): GameState {
-    const playerId = profile.seat;
+    const playerId = player.seat;
     if (playerId === undefined) {
         throw new Error("unexpected error");
     }
@@ -99,6 +98,10 @@ export function removePlayer(
     const updatedPlayers = clonePlayersArray(state.players);
     updatedPlayers[playerId] = null;
     // TODO: Remove player from map!!
+    const playerUid = player.uid;
+    if (playerUid === undefined) throw new Error("unexpected error");
+    state.socketPlayerMap?.delete(playerUid);
+
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
 
     return {
@@ -166,14 +169,6 @@ export function addPlayer(
     const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
     console.log("addPlayer in Reducer: next state is: ", pp(nextState));
     return nextState;
-}
-
-export function addAndRegisterPlayer(
-    state: GameState,
-    player: PlayerWithId,
-    currentState?: GameState
-): GameState {
-    return registerPlayer(addPlayer(state, player), player);
 }
 
 export function setPlayerLastWord(

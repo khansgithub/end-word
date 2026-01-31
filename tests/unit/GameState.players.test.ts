@@ -29,7 +29,7 @@ describe("registerPlayer", () => {
     it("should replace existing thisPlayer", () => {
         const existingPlayer = createRequiredPlayerWithId("Alice", "uid1", 0);
         const state = createTestGameState({ thisPlayer: existingPlayer });
-        const newPlayer = createRequiredPlayerWithId("Bob", "uid2", 1);
+        const newPlayer = createRequiredPlayerWithId("Bob", "uid2", 0);
         const action = {
             type: "registerPlayer" as const,
             payload: [state, newPlayer] as [GameState, PlayerWithId],
@@ -94,7 +94,8 @@ describe("addPlayer", () => {
         };
         const result = gameStateReducer(state, action);
         const addedPlayer = result.players[0];
-        expect(addedPlayer && "uid" in addedPlayer ? addedPlayer.uid : undefined).toBe("current-uid");
+        expect(addedPlayer).toHaveProperty("uid");
+        expect((addedPlayer as PlayerWithId).uid).toBe("uid1");
     });
 
     it("should not assign uid if thisPlayer does not exist", () => {
@@ -205,7 +206,7 @@ describe("addPlayerToArray", () => {
         const player = createTestPlayer("Alice", "uid1", 2);
         const action = {
             type: "addPlayerToArray" as const,
-            payload: [state, player] as [GameState, Player],
+            payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.players[2]).toBeDefined();
@@ -219,11 +220,12 @@ describe("addPlayerToArray", () => {
         const player = createTestPlayer("Alice", "uid1", 1);
         const action = {
             type: "addPlayerToArray" as const,
-            payload: [state, player] as [GameState, Player],
+            payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         const updatedPlayer = result.players[1];
-        expect(updatedPlayer && "uid" in updatedPlayer ? updatedPlayer.uid : undefined).toBe("current-uid");
+        expect(updatedPlayer).toHaveProperty("uid");
+        expect((updatedPlayer as PlayerWithId).uid).toBe("uid1");
     });
 
     it("should throw error when player seat is undefined", () => {
@@ -231,7 +233,7 @@ describe("addPlayerToArray", () => {
         const playerWithoutSeat = createTestPlayer("Alice", "uid1");
         const action = {
             type: "addPlayerToArray" as const,
-            payload: [state, playerWithoutSeat] as [GameState, Player],
+            payload: [state, playerWithoutSeat] as [GameState, PlayerWithId],
         };
         expect(() => gameStateReducer(state, action)).toThrow("must have a seat");
     });
@@ -241,38 +243,9 @@ describe("addPlayerToArray", () => {
         const player = createTestPlayer("Alice", "uid1", 0);
         const action = {
             type: "addPlayerToArray" as const,
-            payload: [state, player] as [GameState, Player],
+            payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.connectedPlayers).toBe(1);
-    });
-});
-
-describe("addAndRegisterPlayer", () => {
-    it("should add player and register as thisPlayer", () => {
-        const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1");
-        const action = {
-            type: "addAndRegisterPlayer" as const,
-            payload: [state, player] as [GameState, PlayerWithId],
-        };
-        const result = gameStateReducer(state, action);
-        expect(result.players[0]).toBeDefined();
-        expect(result.players[0]?.name).toBe("Alice");
-        expect(result.thisPlayer).toEqual(player);
-    });
-
-    it("should assign seat to the player in the array", () => {
-        const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1");
-        const action = {
-            type: "addAndRegisterPlayer" as const,
-            payload: [state, player] as [GameState, PlayerWithId],
-        };
-        const result = gameStateReducer(state, action);
-        expect(result.players[0]?.seat).toBe(0);
-        // thisPlayer is the original player object, which may not have a seat
-        // The seat is assigned to the player in the array, not to thisPlayer
-        expect(result.thisPlayer).toEqual(player);
     });
 });

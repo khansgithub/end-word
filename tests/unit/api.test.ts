@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inputIsValid } from "../../src/app/components/util";
+import { inputIsValid } from "../../src/shared/utils";
 import { lookUpWord } from "../../src/shared/api";
 
 describe("dictionary APIs (msw)", () => {

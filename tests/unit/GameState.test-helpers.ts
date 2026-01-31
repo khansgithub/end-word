@@ -51,5 +51,6 @@ export function createGameStateWithPlayers(players: (Player | null)[]): GameStat
     return {
         ...state,
         players: playersArray,
+        connectedPlayers: players.filter(player => player !== null).length,
     };
 }
