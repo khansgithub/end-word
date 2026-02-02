@@ -8,5 +8,6 @@
             "rule": "no-explicit-any",
             "severity": "off"
         }
-    ]
+    ],
+    "cursorpyright.analysis.stubPath": "dictionary/stubs"
 }

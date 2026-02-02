@@ -62,6 +62,8 @@ def parse_entries() -> list:
                     "definition": eng_def.attrib.get("val") or "Error"
                 })
 
+                print(f"adding the word <{lemma}>")
+
                 senses.append(english_definition)      
 
             entries.append({"key": lemma, "data": senses})
@@ -98,7 +100,8 @@ def build():
 
 def rebuild_entries(trie: marisa_trie.Trie, enteries: list[Entry]) -> list[Entry]:
     '''
-    Rebuild the metadata, in the order that the marisa-trie ordered them. The `sort` used by marisa-trie internally is not the same as the python `sort`.
+    Rebuild the metadata, in the order that the marisa-trie ordered them.
+    The `sort` used by marisa-trie internally is not the same as the python `sort`.
     
     :param trie: 
     :type trie: marisa-trie

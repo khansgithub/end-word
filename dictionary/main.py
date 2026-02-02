@@ -9,6 +9,7 @@ app = FastAPI(title="Korean Dictionary API (MARISA-backed)")
 @app.get("/lookup/{word}")
 def lookup(word: str):
     result = dictionary.lookup(word)
+    print(f"lookup({word}) = {result}")
     # if result is None:
     #     raise HTTPException(status_code=404, detail="Word not found")
     return result or {}

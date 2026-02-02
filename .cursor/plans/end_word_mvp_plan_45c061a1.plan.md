@@ -1,3 +1,10 @@
+---
+name: ""
+overview: ""
+todos: []
+isProject: false
+---
+
 # End Word MVP Implementation Plan
 
 ## Current State Summary
@@ -39,6 +46,8 @@ flowchart LR
     Timer -->|"timeout signal"| UI
 ```
 
+
+
 **Key decisions:**
 
 - Keep using [fml.ts](src/server/fml.ts) as your main handler (abandon the old socketHandlers.ts for now)
@@ -78,8 +87,6 @@ if (word.length === 0 || word[0] !== currentMatchLetter) {
 }
 ```
 
-
-
 ### 1.3 Verify MAX_PLAYERS is 5
 
 Check [src/shared/consts.ts](src/shared/consts.ts) - should already be set.---
@@ -100,8 +107,6 @@ const res = await fetch("/dictionary/word/" + input);
 const res = await fetch("http://localhost:8000/lookup/" + input);
 ```
 
-
-
 ### 2.2 Remove the bypass
 
 In [src/shared/utils.ts:116-117](src/shared/utils.ts), remove:
@@ -110,8 +115,6 @@ In [src/shared/utils.ts:116-117](src/shared/utils.ts), remove:
 console.warn("skipping this for dev purposes");
 return true;
 ```
-
-
 
 ### 2.3 Handle dictionary response format
 
@@ -164,8 +167,6 @@ In [src/shared/types.ts](src/shared/types.ts), the `GameStatus` already has `"fi
 export type GameStatus = "waiting" | "playing" | "finished" | null;
 ```
 
-
-
 ### 4.2 Track loser in game state
 
 Add to `GameState`:
@@ -173,8 +174,6 @@ Add to `GameState`:
 ```typescript
 loser?: number;  // seat of losing player
 ```
-
-
 
 ### 4.3 Set loser on invalid submission
 
@@ -189,8 +188,6 @@ if (!validWord) {
     return;
 }
 ```
-
-
 
 ### 4.4 Show game-over UI
 
@@ -216,8 +213,6 @@ In [Game.tsx:57](src/app/components/Game.tsx), remove:
 <p>Game State: {JSON.stringify(gameState)}</p>
 ```
 
-
-
 ### 5.2 Add invalid word feedback
 
 When `ack.success === false`, show error message briefly (toast or input shake).
@@ -230,12 +225,12 @@ Style the timer to be visually prominent (large numbers, color change when low).
 
 Before calling it MVP:
 
-- [ ] 2 players can join and take turns
-- [ ] 3+ players can join (up to 5)
-- [ ] Invalid words are rejected with feedback
-- [ ] Timer counts down and triggers loss on timeout  
-- [ ] Game shows winner when someone loses
-- [ ] Refresh doesn't break the game (returning player works)
+- 2 players can join and take turns
+- 3+ players can join (up to 5)
+- Invalid words are rejected with feedback
+- Timer counts down and triggers loss on timeout  
+- Game shows winner when someone loses
+- Refresh doesn't break the game (returning player works)
 
 ---
 

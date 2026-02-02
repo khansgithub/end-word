@@ -63,3 +63,6 @@ def q():
     print(r)
 
 # p()
+
+x = dictionary.trie.get("먹어")
+print(x)

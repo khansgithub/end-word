@@ -11,6 +11,10 @@ import SubmitButton from "./SubmitButton";
 import { gameStrings } from "./gameStrings";
 import { getSocketManager } from "./socketComponent";
 
+const L = "Game: "
+const log = console.log;
+const error = console.error;
+
 interface props {
     gameState: GameStateClient,
 }
@@ -39,11 +43,11 @@ export default function Game(props: props) {
                 type: "setPlayerLastWord",
                 payload: [gameState, word],
             });
-            console.log("[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
+            log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
         }
 
         emitSubmitWord(socket.current, word, (response: AckSubmitWordResponseParams) => {
-            console.log("submitWord response", response);
+            log(L, "submitWord response", response);
             if (response.success) {
                 dispatch({
                     type: "gameStateUpdateClient",
@@ -51,7 +55,7 @@ export default function Game(props: props) {
                 });
             } else {
                 setInputError(true);
-                console.error("submitWord failed", response.reason);
+                error(L, "submitWord failed", response.reason);
             }
         });
         resetInput();

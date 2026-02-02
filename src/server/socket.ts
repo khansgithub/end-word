@@ -1,9 +1,8 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { createServerConnectionHandler, createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
-import { countSocketEvent, setRegisteredClients } from "./metrics";
-import { fml } from "./fml";
+import { createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
 import { GameState, ServerPlayerSocket } from "../shared/types";
+import { fml } from "./fml";
 
 let activeServerContext: ServerSocketContext | null = null;
 let socketServer: SocketServer | null = null;
