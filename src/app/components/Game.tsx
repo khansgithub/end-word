@@ -2,14 +2,14 @@
 
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
-import { AckSubmitWord, AckSubmitWordParams, GameState, GameStateClient, GameStateFrozen } from "../../shared/types";
+import { emitSubmitWord, registerClientSocketHandlers as handleSocket } from "../../shared/socketClient";
+import { AckSubmitWordResponseParams, GameStateClient } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
 import InputBox, { getInputValue, resetInput, setInputError } from "./InputBox";
 import Player from "./Player";
 import SubmitButton from "./SubmitButton";
-import { getSocketManager, handleSocket } from "./socket";
-import { socketEvents } from "../../shared/socket";
 import { gameStrings } from "./gameStrings";
+import { getSocketManager } from "./socketComponent";
 
 interface props {
     gameState: GameStateClient,
@@ -41,8 +41,18 @@ export default function Game(props: props) {
             });
             console.log("[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
         }
-        getSocketManager().emit(socketEvents.submitWord, word, (response: AckSubmitWordParams) => {
-            console.log("ack submit word")
+
+        emitSubmitWord(socket.current, word, (response: AckSubmitWordResponseParams) => {
+            console.log("submitWord response", response);
+            if (response.success) {
+                dispatch({
+                    type: "gameStateUpdateClient",
+                    payload: [response.gameState],
+                });
+            } else {
+                setInputError(true);
+                console.error("submitWord failed", response.reason);
+            }
         });
         resetInput();
     }

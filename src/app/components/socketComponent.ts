@@ -1,7 +1,6 @@
 import { io } from "socket.io-client";
 import { socketEvents } from "../../shared/socket";
-import { registerClientSocketHandlers } from "../../shared/socketClient";
-import type { AckRegisterPlayerResponse, ClientPlayerSocket, GameStateClient, PlayerWithId } from "../../shared/types";
+import type { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore } from "../store/userStore";
 
 
@@ -32,14 +31,4 @@ export function getSocketManager(clientId?: string): ClientPlayerSocket {
     });
 
     return socket;
-}
-
-export const handleSocket = registerClientSocketHandlers;
-
-export function socketRegisterPlayer(
-    socket: ClientPlayerSocket,
-    player: PlayerWithId,
-    callback: (response: AckRegisterPlayerResponse) => void
-) {
-    socket.emit(socketEvents.registerPlayer, player, callback);
 }

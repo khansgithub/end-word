@@ -1,7 +1,7 @@
 import { progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
 import { socketEvents } from "../shared/socket";
 import { ServerSocketContext } from "../shared/socketServer";
-import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWord, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, AckSubmitWordResponseParams, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { inputIsValid } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getGameState, setGameState } from "./serverGameState";
@@ -95,29 +95,28 @@ function unregisterPlayer(clientId: string) {
 }
 
 // --- Word submission ---
-async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWord) {
+async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
     console.log("submitWord event received from client: " + word);
     const state = getGameState();
     const currentMatchLetter = state.matchLetter.block;
 
+    // Validate word matches the match letter
     if (word.length === 0 || word[0] !== currentMatchLetter) {
-        console.log(`submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}`);
+        ack({ success: false, reason: `submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}` });
         return;
     }
 
     const validWord = await inputIsValid(word);
     if (!validWord) {
-        console.log(`submitWord: word is not valid`);
+        ack({ success: false, reason: `submitWord: word (${word}) is not valid` });
         return;
     }
 
     const block = word.slice(-1);
     const nextState = progressNextTurn(state, block, word);
     setGameState(nextState);
-
     const emitState = toGameStateEmit(nextState);
     broadcastGameState(socket, emitState);
-    socket.emit("gameStateUpdate", emitState);
     ack({ success: true, gameState: emitState });
 }
 
@@ -148,7 +147,7 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
         broadcastGameState(socket, toGameStateEmit(getGameState()));
     });
 
-    socket.on(socketEvents.submitWord, (word: string, ack: AckSubmitWord) => {
+    socket.on(socketEvents.submitWord, (word: string, ack: AckSubmitWordResponse) => {
         countSocketEvent("submitWord");
         handleSubmitWord(socket, word, ack);
     });

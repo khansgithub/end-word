@@ -37,7 +37,7 @@ const GameStateActions = {
     removePlayer,
     progressNextTurn,
     updateConnectedPlayersCount,
-    replaceGameState,
+    replaceGameState, // remove
     gameStateUpdateClient,
 } satisfies { [key: string]: (...args: any[]) => GameState };
 

@@ -1,8 +1,8 @@
-import type { ActionDispatch } from "react";
+import type { ActionDispatch, Dispatch, SetStateAction } from "react";
 import { GameStateActionsType } from "./GameState";
 import { socketEvents } from "./socket";
-import type { ClientPlayerSocket, GameState, Player } from "./types";
-import { isSuppress, pp } from "./utils";
+import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId } from "./types";
+import { pp } from "./utils";
 
 const L = "socketClient: "
 const log = console.log;
@@ -10,6 +10,22 @@ const log = console.log;
 
 // Used to ensure we only attach a single handler set per client socket.
 const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
+
+export function emitSubmitWord(
+    socket: ClientPlayerSocket,
+    word: string,
+    callback: (response: AckSubmitWordResponseParams) => void
+){
+    socket.emit(socketEvents.submitWord, word, callback);
+}
+
+export function emitRegisterPlayer(
+    socket: ClientPlayerSocket,
+    player: PlayerWithId,
+    callback: (response: AckRegisterPlayerResponse) => void
+) {
+    socket.emit(socketEvents.registerPlayer, player, callback);
+}
 
 // Wires client listeners to update the local game state based on server pushes.
 export function registerClientSocketHandlers(
@@ -141,10 +157,15 @@ export function registerClientSocketHandlers(
 //     }))
 // }
 
-export function socketSetReturningPlayer(
+export function emitIsReturningPlayer(
     socket: ClientPlayerSocket,
     clientId: string,
-    setReturningPlayer: (player: Player) => void) {
+    setReturningPlayer: Dispatch<SetStateAction<Player | null>>) {
+        /**
+         * @param {ClientPlayerSocket} socket - The socket instance to use for communication.
+         * @param {string} clientId - The clientId to check.
+         * @param {(player: Player) => void} setReturningPlayer - React setState callback to set the returning player.
+         */
     socket.emit("isReturningPlayer", clientId, (({ found, player }) => {
         log(L, "isReturningPlayer: ", found, player);
         if (found && player) setReturningPlayer(player);

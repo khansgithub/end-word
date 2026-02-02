@@ -70,8 +70,8 @@ export type AckRegisterPlayerResponse =
 export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
 export type AckUnregisterPlayer = (response: { success: boolean }) => void;
 export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
-export type AckSubmitWordParams = { success: true; gameState: GameStateEmit } | { success: false; reason: string };
-export type AckSubmitWord = (response: AckSubmitWordParams) => void;
+export type AckSubmitWordResponseParams = { success: true; gameState: GameStateEmit } | { success: false; reason: string };
+export type AckSubmitWordResponse = (response: AckSubmitWordResponseParams) => void;
 export type AckRequestFullState = (gameState: GameStateEmit) => void;
 
 export type ClientToServerEvents = SharedSocketEvents & {
@@ -79,7 +79,7 @@ export type ClientToServerEvents = SharedSocketEvents & {
     registerPlayer: (playerProfile: PlayerWithId, ack: AckRegisterPlayer) => void;
     unregisterPlayer: (playerProfile: PlayerWithId, ack: AckUnregisterPlayer) => void; // maybe this can be just the id?
     isReturningPlayer: (clientId: string, ack: AckIsReturningPlayer) => void;
-    submitWord: (word: string, ack: AckSubmitWord) => void;
+    submitWord: (word: string, ack: AckSubmitWordResponse) => void;
     requestFullState: (ack: AckRequestFullState) => void;
     disconnect: (reason: string) => void;
 };

@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
+import { emitIsReturningPlayer, socketGetPlayerCount } from '../../shared/socketClient';
+import { Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
-import { getSocketManager } from './socket';
-import { ClientPlayerSocket, Player, ServerToClientEvents } from '../../shared/types';
-import { socketGetPlayerCount, socketSetReturningPlayer } from '../../shared/socketClient';
+import { getSocketManager } from './socketComponent';
 
 
 export function Homescreen() {
@@ -49,7 +49,7 @@ export function Homescreen() {
             socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
-        socketSetReturningPlayer(socket, clientId, setReturningPlayer)
+        emitIsReturningPlayer(socket, clientId, setReturningPlayer)
 
         return () => { };
     }, []);
@@ -64,7 +64,7 @@ export function Homescreen() {
         }
 
         // check if there exists a player with the socket.id
-        socketSetReturningPlayer(socket, clientId, setReturningPlayer)
+        emitIsReturningPlayer(socket, clientId, setReturningPlayer)
         socketGetPlayerCount(socket, setPlayerCount);
         console.log(`Connected to socket after ${retryCount} attempts.`);
         return () => {

@@ -1,5 +1,5 @@
 import { socketEvents } from "../../shared/socket";
-import { getSocketManager } from "./socket";
+import { getSocketManager } from "./socketComponent";
 
 /**
  * submitButtonForInputBox:

@@ -2,14 +2,12 @@
 
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
-import { buildInitialGameState } from '../../shared/GameState';
-import { assertIsGameStateClient, assertIsRequiredGameState } from '../../shared/guards';
-import { AckRegisterPlayerResponse, ClientPlayerSocket, GameState, GameStateClient, PlayerWithId } from '../../shared/types';
+import { assertIsGameStateClient } from '../../shared/guards';
+import { AckRegisterPlayerResponse, ClientPlayerSocket, GameStateClient, PlayerWithId } from '../../shared/types';
 import { makeNewPlayer } from '../../shared/utils';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import Game from './Game';
-import { socketEvents } from '../../shared/socket';
-import { socketRegisterPlayer } from './socket';
+import { emitRegisterPlayer } from '../../shared/socketClient';
 
 const L = "Game Container: "
 const log = console.log;
@@ -63,7 +61,7 @@ function GameContainer() {
             log(L, 'Register player;', player, socket.auth);
         }
 
-        socketRegisterPlayer(socket, player, (response: AckRegisterPlayerResponse) => {
+        emitRegisterPlayer(socket, player, (response: AckRegisterPlayerResponse) => {
             if (response.success) {
                 const nextState: GameStateClient = {
                     ...response.gameState,
