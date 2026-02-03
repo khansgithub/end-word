@@ -37,17 +37,32 @@ def parse_entries() -> list:
         print("Parsing file:", file)
         tree = ET.parse(DATA_DIR / file)
         root = tree.getroot()
-        for entry in root.findall(".//LexicalEntry"):
-            lemma_node = entry.find("./Lemma/feat[@att='writtenForm']")
-            if lemma_node is None:
-                continue
+        for lexical_entry in root.findall(".//LexicalEntry"):
+            is_word = lexical_entry.find("./feat[@att='lexicalUnit']").attrib.get("val") == "단어"
+            if not is_word: continue
+            
+            part_of_speech = lexical_entry.find("./Lemma/feat[@att='partOfSpeech']").attrib.get("val")
+            if part_of_speech not in ["명사", "동사"]: continue
 
-            lemma = lemma_node.attrib["val"]
+            lemma = lexical_entry.find("./Lemma/feat[@att='writtenForm']").attrib.get("val")
+            if lemma is None: continue
+
+            if part_of_speech == "명사":
+                forms = []
+                for word_form in lexical_entry.findall("./WordForm"):
+                    if word_form.find("./feat[@att='type']").attrib.get("val") != "활용": continue
+                    
+                    forms.append(
+                        word_form.find("./feat[@att='writtenForm']").attrib.get("val")
+                    )
+                # the stem is (probably) the shortest form
+                stem = min(forms, key=len)
 
             senses: list[EntryDataEng] = []
-            for sense in entry.findall("./Sense"):
+            for sense in lexical_entry.findall("./Sense"):
                 def_node = sense.find("./feat[@att='definition']")
-
+ 
+                if part_of_speech not in ["명사", "동사"]: continue
                 # .//Lexicon/LexicalEntry/Sense[@val=1]/Equivalent/feat[@val='영어']/following-sibling::*
                 eng_def_node = sense.find("./Equivalent/feat[@val='영어']/..")
                 if (eng_def_node is None): continue
