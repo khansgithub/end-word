@@ -10,6 +10,7 @@ import {
     continueInput as _continueInput,
     actionHandlers as validateWrapper
 } from "./inputValidation";
+import { gameStrings } from "./gameStrings";
 
 // Zustand store for input state to minimize re-renders
 const useInputStore = create<InputState>((set) => ({
@@ -207,8 +208,8 @@ function InputBox({
 
     return (
         <div className="flex flex-row items-center justify-center gap-2">
+            {/* {Last Key Display} */}
             <div
-                // ref={inputKeyDisplayDom}
                 contentEditable={false}
                 onChange={() => {}}
                 className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold"
@@ -305,7 +306,7 @@ function InputBox({
                                     className="text-xs font-medium"
                                     style={{ color: 'var(--input-text-disabled)' }}
                                 >
-                                    Not your turn
+                                    {gameStrings.inputDisabledText}
                                 </span>
                             </div>
                         </div>
@@ -314,7 +315,7 @@ function InputBox({
                 {isError && !disabled && (
                     <label className="label py-1">
                         <span className="label-text-alt" style={{ color: 'var(--text-error)', fontSize: '0.7rem' }}>
-                            Invalid word
+                            {gameStrings.inputInvalidText}
                         </span>
                     </label>
                 )}

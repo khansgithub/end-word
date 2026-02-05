@@ -6,7 +6,6 @@ import { fml } from "./fml";
 
 let activeServerContext: ServerSocketContext | null = null;
 let socketServer: SocketServer | null = null;
-const socketContext = createServerSocketContext();
 
 export function getServerSocketContext(): ServerSocketContext {
     if (activeServerContext === null) {
@@ -27,12 +26,14 @@ export function createIOServer(server: http.Server): SocketServer {
 
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
     const socketConextWrapper = (socket: ServerPlayerSocket) => {
-        fml(socket, socketContext);
+        fml(socket, createServerSocketContext());
     };
     socketServer.on("connection", socketConextWrapper);
     return socketServer;
 }
+
 function broadcastGameState(gameState: GameState){
     if (!socketServer) return;
     socketServer.emit("broadcast game state test", "test");
 }
+

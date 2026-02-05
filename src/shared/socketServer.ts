@@ -1,16 +1,15 @@
 
 import { Server as SocketServer } from "socket.io";
-import { buildInitialGameState } from "./GameState";
-import { socketEvents } from "./socket";
+import { getGameState } from "../server/serverGameState";
+// import { socketEvents } from "./socket";
+// import { HandlerDependencies, SocketHandlers } from "./socketHandlers";
 import {
     type GameState,
     type PlayerWithId,
-    type ServerPlayers,
-    type ServerPlayerSocket,
-    RunExclusive,
+    // type ServerPlayerSocket,
+    RunExclusive
 } from "./types";
 import { createSocketMutex } from "./utils";
-import { SocketHandlers, HandlerDependencies } from "./socketHandlers";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
@@ -35,8 +34,12 @@ export function createServerSocketContext(
     instrumentation?: ServerSocketContext["instrumentation"],
     io?: SocketServer
 ): ServerSocketContext {
+    const gameState = getGameState();
+    if (!gameState) {
+        throw new Error("Game state not initialized");
+    }
     return {
-        state: initialState ?? buildInitialGameState(),
+        state: initialState ?? gameState,
         runExclusive: createSocketMutex(),
         registeredSockets: new Map<PlayerUid, Required<PlayerWithId>>(),
         io,
@@ -49,121 +52,121 @@ export function createServerSocketContext(
     };
 }
 
-// ===================================================================
-// SERVER SOCKET EVENT HANDLER
-// ===================================================================
-export function createServerConnectionHandler(context: ServerSocketContext) {
-    const { runExclusive, registeredSockets, stats } = context; // shared amongst all connections
-    const countEvent = context.instrumentation?.countEvent ?? (() => { });
+// // ===================================================================
+// // SERVER SOCKET EVENT HANDLER
+// // ===================================================================
+// export function createServerConnectionHandler(context: ServerSocketContext) {
+//     const { runExclusive, registeredSockets, stats } = context; // shared amongst all connections
+//     const countEvent = context.instrumentation?.countEvent ?? (() => { });
     
-    const metrics = {
-        countEvent,
-        setRegisteredClients: context.instrumentation?.setRegisteredClients ?? (() => { }),
-        incrementConnections: () => { stats.connections += 1; },
-        incrementGetPlayerCountRequests: () => { stats.getPlayerCount += 1; },
-        recordGetPlayerCountRequest: () => {
-            metrics.incrementGetPlayerCountRequests();
-            try {
-                metrics.countEvent("getPlayerCount");
-            } catch (err) {
-                console.warn("countEvent failed for getPlayerCount", err);
-            }
-        },
-    };
+//     const metrics = {
+//         countEvent,
+//         setRegisteredClients: context.instrumentation?.setRegisteredClients ?? (() => { }),
+//         incrementConnections: () => { stats.connections += 1; },
+//         incrementGetPlayerCountRequests: () => { stats.getPlayerCount += 1; },
+//         recordGetPlayerCountRequest: () => {
+//             metrics.incrementGetPlayerCountRequests();
+//             try {
+//                 metrics.countEvent("getPlayerCount");
+//             } catch (err) {
+//                 console.warn("countEvent failed for getPlayerCount", err);
+//             }
+//         },
+//     };
 
-    let state = context.state;
+//     let state = context.state;
 
-    const getState = () => state;
-    function setState(nextState: GameState) {
-        state = nextState;
-        context.state = nextState;
-    }
+//     const getState = () => state;
+//     function setState(nextState: GameState) {
+//         state = nextState;
+//         context.state = nextState;
+//     }
 
-    // Create dependencies object and handlers instance
-    const deps: HandlerDependencies = {
-        context,
-        getState,
-        setState,
-        registeredSockets,
-        runExclusive,
-        socketServer: context.io,
-        metrics,
-    };
+//     // Create dependencies object and handlers instance
+//     const deps: HandlerDependencies = {
+//         context,
+//         getState,
+//         setState,
+//         registeredSockets,
+//         runExclusive,
+//         socketServer: context.io,
+//         metrics,
+//     };
 
-    const handlers = new SocketHandlers(deps);
+//     const handlers = new SocketHandlers(deps);
 
-    // ===================================================================
-    // EVENT HANDLER REGISTRATION 
-    // ===================================================================
-    function handler(socket: ServerPlayerSocket) {
-        console.log(`[socket] Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
-        metrics.incrementConnections();
-        metrics.countEvent("connect");
+//     // ===================================================================
+//     // EVENT HANDLER REGISTRATION 
+//     // ===================================================================
+//     function handler(socket: ServerPlayerSocket) {
+//         console.log(`[socket] Client connected id=${socket.id} auth=${JSON.stringify(socket.handshake.auth)}`);
+//         metrics.incrementConnections();
+//         metrics.countEvent("connect");
 
-        /*
-        * ===================================================================
-        * DISCONNECT HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.disconnect, (reason) => 
-            handlers.handleDisconnect(socket, reason)
-        );
+//         /*
+//         * ===================================================================
+//         * DISCONNECT HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.disconnect, (reason) => 
+//             handlers.handleDisconnect(socket, reason)
+//         );
 
-        socket.on(socketEvents.text, (text: string) => {
-            console.log("text", text);
-            console.log(`Text from client: ${text}`);
-        });
+//         socket.on(socketEvents.text, (text: string) => {
+//             console.log("text", text);
+//             console.log(`Text from client: ${text}`);
+//         });
 
-        /*
-        * ===================================================================
-        * GET PLAYER COUNT HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.getPlayerCount, async () => {
-            handlers.handleGetPlayerCount(socket);
-        });
+//         /*
+//         * ===================================================================
+//         * GET PLAYER COUNT HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.getPlayerCount, async () => {
+//             handlers.handleGetPlayerCount(socket);
+//         });
 
-        /*
-        * ===================================================================
-        * REGISTER PLAYER HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.registerPlayer, (player) => {
-            handlers.handleRegisterPlayer(socket, player);
-        });
+//         /*
+//         * ===================================================================
+//         * REGISTER PLAYER HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.registerPlayer, (player) => {
+//             handlers.handleRegisterPlayer(socket, player);
+//         });
 
-        /*
-        * ===================================================================
-        * RETURNING PLAYER HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.isReturningPlayer, async (clientId) => {
-            handlers.handleIsReturningPlayer(socket, clientId);
-        });
+//         /*
+//         * ===================================================================
+//         * RETURNING PLAYER HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.isReturningPlayer, async (clientId) => {
+//             handlers.handleIsReturningPlayer(socket, clientId);
+//         });
 
-        /*
-        * ===================================================================
-        * WORD SUBMISSION HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.submitWord, async (word: string) => {
-            await handlers.handleSubmitWord(socket, word);
-        });
+//         /*
+//         * ===================================================================
+//         * WORD SUBMISSION HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.submitWord, async (word: string) => {
+//             await handlers.handleSubmitWord(socket, word);
+//         });
 
-        /*
-        * ===================================================================
-        * REQUEST FULL STATE HANDLER
-        * ===================================================================
-        */
-        handlers.registerWithMutex(socket, socketEvents.requestFullState, () => {
-            handlers.handleRequestFullState(socket);
-        });
+//         /*
+//         * ===================================================================
+//         * REQUEST FULL STATE HANDLER
+//         * ===================================================================
+//         */
+//         handlers.registerWithMutex(socket, socketEvents.requestFullState, () => {
+//             handlers.handleRequestFullState(socket);
+//         });
 
-        socket.onAny((eventName) => {
-            console.log(`[socket] got event -> ${eventName}`);
-        });
+//         socket.onAny((eventName) => {
+//             console.log(`[socket] got event -> ${eventName}`);
+//         });
 
-    }
+//     }
 
-    return handler;
-}
+//     return handler;
+// }

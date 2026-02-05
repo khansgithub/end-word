@@ -3,6 +3,7 @@ fastapi>=0.100.0
 uvicorn>=0.20.0
 marisa-trie>=1.0.0
 orjson>=3.9.0
+pydantic>=2.0.0
 
 
 # Tests
@@ -12,3 +13,11 @@ httpx>=0.24.0
 
 # Test fixtures (conftest.py)
 sqlalchemy>=2.0.0
+
+# Dev
+ipdb
+black
+ruff
+isort
+mypy
+rich

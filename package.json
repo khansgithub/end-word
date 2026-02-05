@@ -19,6 +19,7 @@
     "test:all": "vitest --run --reporter=json --outputFile=test-results/unit-tests.json && playwright test --reporter=json > test-results/e2e-tests.json"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "framer-motion": "^12.23.26",
     "hangulx": "^0.6.5",

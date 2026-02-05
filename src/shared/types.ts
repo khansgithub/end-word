@@ -155,4 +155,19 @@ export type GameStateClient = (
 export type GameStateFrozen = Readonly<GameState>;
 // export type GameStateFrozen = Readonly<GameState<PlayersArray>>
 
+/* --------------------------------------------------
+ * API Types
+ * -------------------------------------------------- */
+export type EntryDataEng = {
+    word: string
+    definition: string
+};
 
+export type DictionaryEntry = {
+    key: string
+    data: Array<EntryDataEng>
+};
+
+export type DictionaryEmptyEntry = {};
+
+export type DictionaryResponse = DictionaryEntry | DictionaryEmptyEntry;

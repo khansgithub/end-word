@@ -1,4 +1,5 @@
 export const gameStrings = {
+    submitButtonText: "▶ Submit Word",
     gameState: "Game State: ",
     waitingForGameToStart: "Waiting for game to start...",
     round: "Round ",
@@ -6,5 +7,7 @@ export const gameStrings = {
     players: "Players",
     emptySeat: "?",
     empty: "Empty",
+    inputDisabledText: "Not your turn",
+    inputInvalidText: "Invalid word",
 } as const;
 

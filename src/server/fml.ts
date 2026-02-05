@@ -1,7 +1,8 @@
-import { progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
+import { getRandomWordFromDictionary } from "../shared/api";
+import { buildInitialGameState, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
 import { socketEvents } from "../shared/socket";
 import { ServerSocketContext } from "../shared/socketServer";
-import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, AckSubmitWordResponseParams, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { inputIsValid } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getGameState, setGameState } from "./serverGameState";
@@ -145,6 +146,10 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
         countSocketEvent("disconnect");
         unregisterPlayer(clientId);
         broadcastGameState(socket, toGameStateEmit(getGameState()));
+
+        if (getGameState().connectedPlayers === 0) {
+            setGameState({...getGameState(), status: "waiting", turn: 0 });
+        }
     });
 
     socket.on(socketEvents.submitWord, (word: string, ack: AckSubmitWordResponse) => {

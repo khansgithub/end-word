@@ -100,6 +100,13 @@ const stylesMap = {
             0: '0',
         },
     },
+    panelClassName: {
+        values: ['isCurrentPlayer'],
+        map: {
+            1: 'player-panel',
+            0: 'panel',
+        },
+    },
 } satisfies Record<string, PropertyBoolMap>;
 
 
@@ -124,9 +131,9 @@ export default function Player({ player, turn, lastWord, isCurrentPlayer = false
     );
     return (
         <div
-            className="panel w-32 transition-all duration-300 relative flex align-center flex-col"
+            className={`w-32 transition-all duration-300 relative flex align-center flex-col ${styles.panelClassName}`}
             style={{
-                backgroundColor: 'var(--bg-secondary-solid)',
+                // backgroundColor: 'var(--bg-secondary-solid)',
                 borderColor: styles.borderColor,
                 borderWidth: styles.borderWidth,
                 transform: styles.transform,

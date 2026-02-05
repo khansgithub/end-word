@@ -7,7 +7,7 @@ Notes from gpt:
 
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { ClientPlayers, GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
+import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
 import { buildMatchLetter, cloneServerPlayersToClientPlayers, getCurrentPlayerIndex, pp } from "./utils";
 
 export type GameStateActionsType = {
@@ -236,11 +236,11 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 // OTHER FUNCTIONS
 // =============================================================================
-export function buildInitialGameState(): GameState {
+export function buildInitialGameState(block?: string): GameState {
     const players = makePlayersArray<ServerPlayers>();
     const socketPlayerMap = new Map<string, PlayerWithId>();
     return {
-        matchLetter: buildMatchLetter("다"),
+        matchLetter: buildMatchLetter(block ?? "다"),
         status: null,
         players: players,
         turn: 0,

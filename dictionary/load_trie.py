@@ -1,7 +1,8 @@
 # api/trie_loader.py
-from build_trie import Entry
+from models import Entry
 import marisa_trie
 import orjson
+import random
 
 TRIE_PATH = "data/dict.marisa"
 META_PATH = "data/metadata.jsonl"
@@ -41,6 +42,9 @@ class Dictionary:
             if len(results) >= limit:
                 break
         return results
+    
+    def random(self):
+        return self.metadata[random.randint(0, len(self.metadata) - 1)]
 
 
 dictionary = Dictionary()
@@ -64,5 +68,5 @@ def q():
 
 # p()
 
-x = dictionary.trie.get("먹어")
+x = dictionary.random()
 print(x)

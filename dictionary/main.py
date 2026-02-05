@@ -14,6 +14,10 @@ def lookup(word: str):
     #     raise HTTPException(status_code=404, detail="Word not found")
     return result or {}
 
+@app.get("/random")
+def random():
+    return dictionary.random()
+
 
 # @app.get("/prefix/{prefix}")
 # def prefix_search(prefix: str, limit: int = 20):

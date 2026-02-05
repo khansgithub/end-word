@@ -1,4 +1,5 @@
 // import { Message, Player } from "@/app/types";
+import { isDictionaryEntry } from "./guards";
 
 // type Response = {
 //     key: string;
@@ -29,13 +30,35 @@
 // }
 
 export async function lookUpWord(word: String): Promise<Response> {
-    const res = await fetch("http://localhost:8000/lookup/" + word);
+    const dictionaryUrl = process.env.DICTIONARY_URL;
+    if (!dictionaryUrl) {
+        throw new Error("Dictionary URL is not set");
+    }
+    const res = await fetch(`${dictionaryUrl}/lookup/${word}`);
     if (res.ok) {
         const data = await res.json();
         console.log("/server/api");
         console.log(data);
         return data;
     } else {
-        return {};
+        throw new Error("Failed to look up word");
+    }
+}
+
+
+export async function getRandomWordFromDictionary(): Promise<string> {
+    const dictionaryUrl = process.env.DICTIONARY_URL;
+    if (!dictionaryUrl) {
+        throw new Error("Dictionary URL is not set");
+    }
+    const res = await fetch(`${dictionaryUrl}/random`);
+    if (res.ok) {
+        const data = await res.json();
+        if (!isDictionaryEntry(data)) {
+            throw new Error("Invalid dictionary response");
+        }
+        return data.key;
+    } else {
+        throw new Error("Failed to get random word from dictionary");
     }
 }
