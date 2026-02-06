@@ -1,3 +1,4 @@
+// @ts-nocheck
 // fix this file
 
 import { ActionDispatch, RefObject } from "react";

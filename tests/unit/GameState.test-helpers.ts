@@ -1,5 +1,6 @@
-import { buildInitialGameState, makePlayersArray } from "../../src/shared/GameState";
-import { ClientPlayers, GameState, Player, PlayerWithId } from "../../src/shared/types";
+import { DEFAULT_HEALTH } from "@/shared/consts";
+import { buildInitialGameState, makePlayersArray } from "@/shared/GameState";
+import { ClientPlayers, GameState, Player, PlayerWithId } from "@/shared/types";
 
 // =============================================================================
 // TEST HELPERS
@@ -9,6 +10,7 @@ export function createTestPlayer(name: string, uid?: string, seat?: number): Pla
     return {
         name,
         lastWord: "",
+        health: DEFAULT_HEALTH,
         ...(uid && { uid }),
         ...(seat !== undefined && { seat }),
     };
@@ -19,6 +21,7 @@ export function createTestPlayerWithId(name: string, uid: string, seat?: number)
         name,
         uid,
         lastWord: "",
+        health: DEFAULT_HEALTH,
         ...(seat !== undefined && { seat }),
     };
 }
@@ -29,6 +32,7 @@ export function createRequiredPlayerWithId(name: string, uid: string, seat: numb
         uid,
         lastWord: "",
         seat,
+        health: DEFAULT_HEALTH,
     };
 }
 

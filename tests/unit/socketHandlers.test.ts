@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
 import { Server as SocketServer } from "socket.io";
 import {

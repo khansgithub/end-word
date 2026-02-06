@@ -3,20 +3,17 @@ import express from "express";
 import next from "next";
 
 import { createServer } from "node:http";
+import { getRandomWordFromDictionary } from "../shared/api";
 import { buildInitialGameState } from "../shared/GameState";
-import { isDictionaryEntry } from "../shared/guards";
-import { DictionaryResponse } from "../shared/types";
 import { registry } from "./metrics";
 import { setGameState } from "./serverGameState";
 import { createIOServer, getServerSocketContext } from "./socket";
-import { getRandomWordFromDictionary } from "../shared/api";
 
 const app = next({ dev: true, dir: "src" });
 const express_app = express();
 const server = createServer(express_app);
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
-const dictionaryUrl = process.env.DICTIONARY_URL || "http://localhost:8000";
 
 const enableTestEndpoints = process.env.NODE_ENV === "test" || process.env.PLAYWRIGHT_TEST === "1";
 

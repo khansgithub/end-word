@@ -46,7 +46,12 @@
   
   /* Gradient Backgrounds */
   --gradient-panel: radial-gradient(circle at top, #020617 0, #020617 35%, #030712 100%);
-  --gradient-player-panel: linear-gradient(to top, #09070a 0%,#a481f5 80%, #b190ff 100%);
+  --gradient-player-panel: linear-gradient(
+    to top,
+    rgba(164,129,245,0) 0%,
+    rgba(164,129,245,0.6) 80%,
+    rgba(177,144,255,1) 100%
+  );
   --gradient-button: radial-gradient(circle at top left, #38bdf8, #4f46e5 45%, #a855f7 100%);
   --gradient-input: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
   --gradient-chip: radial-gradient(circle at top, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.8));

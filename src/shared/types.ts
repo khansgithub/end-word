@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
-import { MAX_PLAYERS } from "./consts";
+import { DEFAULT_HEALTH, MAX_PLAYERS } from "./consts";
 import { SocketEventName } from "./socket";
 
 /* --------------------------------------------------
@@ -38,6 +38,7 @@ export type Player = {
     seat?: number
     name: string;
     lastWord: string;
+    health: typeof DEFAULT_HEALTH;
 };
 
 // export type Player = PlayerWithId | PlayerWithoutId;

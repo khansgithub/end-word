@@ -1,3 +1,5 @@
+// I don't think this is used
+
 // app/api/foo/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { lookUpWord } from "../../../../shared/api";

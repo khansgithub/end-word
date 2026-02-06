@@ -30,6 +30,7 @@ export type GameStateActionsType = {
 const GameStateActions = {
     nextTurn,
     setPlayerLastWord,
+    decreasePlayerHealth,
     // fullUpdateGameState,
     registerPlayer,
     addPlayer,
@@ -193,6 +194,25 @@ export function setPlayerLastWord(
         ...state,
         players: updatedPlayers,
     };
+}
+
+export function decreasePlayerHealth(
+    state: GameState,
+    currentHealth: number,
+    currentState?: GameState
+): GameState {
+    if (currentHealth <= 0) throw new Error("health cannot be less than 0");
+
+    let nextState: GameState = { ...state };
+    if (!nextState.thisPlayer) throw new Error("thisPlayer is missing from game state");
+    if (nextState.thisPlayer.seat === undefined) throw new Error("thisPlayer.seat is missing from game state");
+
+    const newHealth = currentHealth - 1;
+    if (newHealth <= 0) throw new Error("health cannot be less than 0");
+
+    nextState.thisPlayer.health = newHealth;
+    nextState.players[nextState.thisPlayer.seat]!.health = newHealth;
+    return nextState;
 }
 
 export function progressNextTurn(

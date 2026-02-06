@@ -4,8 +4,9 @@ import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
 import { emitSubmitWord, registerClientSocketHandlers as handleSocket } from "../../shared/socketClient";
 import { AckSubmitWordResponseParams, GameStateClient } from "../../shared/types";
-import { isPlayerTurn } from "../../shared/utils";
+import { isPlayerTurn, pp } from "../../shared/utils";
 import { getInputValue, resetInput, setInputError } from "./InputBox";
+import HealthDisplay from "./HealthDisplay";
 import InputSection from "./InputSection";
 import MatchLetterDisplay from "./MatchLetterDisplay";
 import PlayersSection from "./PlayersSection";
@@ -26,7 +27,7 @@ export default function Game(props: props) {
         gameStateReducer<GameStateClient>,
         props.gameState
     );
-    
+
     const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState, gameState.thisPlayer.seat);
 
     const socket = useRef(getSocketManager());
@@ -40,28 +41,38 @@ export default function Game(props: props) {
             return;
         }
 
-        if (gameState.thisPlayer) {
-            dispatch({
-                type: "setPlayerLastWord",
-                payload: [gameState, word],
-            });
-            log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
-        }
+        emitSubmitWord(socket.current, word, (res) => submitWordCallback(res, word));
+        resetInput();
+    }
 
-        emitSubmitWord(socket.current, word, (response: AckSubmitWordResponseParams) => {
-            log(L, "submitWord response", response);
-            if (response.success) {
+    function submitWordCallback(response: AckSubmitWordResponseParams, word: string) {
+        log(L, "submitWord response", response);
+        if (response.success) {
+            if (gameState.thisPlayer) {
                 dispatch({
-                    type: "gameStateUpdateClient",
-                    payload: [response.gameState],
+                    type: "setPlayerLastWord",
+                    payload: [gameState, word],
                 });
+                log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
+            }
+
+            dispatch({
+                type: "gameStateUpdateClient",
+                payload: [response.gameState],
+            });
+        } else {
+            if (gameState.thisPlayer.health == 1) {
+                // TODO: show game over screen
+                
             } else {
+                dispatch({
+                    type: "decreasePlayerHealth",
+                    payload: [gameState, gameState.thisPlayer.health],
+                });
                 setInputError(true);
                 error(L, "submitWord failed", response.reason);
             }
-        });
-        
-        resetInput();
+        }
     }
 
     handleSocket(socket.current, gameState, dispatch);
@@ -72,6 +83,7 @@ export default function Game(props: props) {
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <p>gameState is: {pp(gameState)}</p>
             {/* Waiting Overlay */}
             <WaitingOverlay status={gameState.status} />
 
@@ -80,6 +92,9 @@ export default function Game(props: props) {
 
             {/* Match Letter Display */}
             <MatchLetterDisplay matchLetter={gameState.matchLetter} />
+
+            {/* Health Display */}
+            <HealthDisplay health={gameState.thisPlayer.health} />
 
             {/* Input Section */}
             <InputSection

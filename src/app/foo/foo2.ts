@@ -1,4 +1,5 @@
-import { Server, Player } from './foo2-1';
+// @ts-nocheck
+// import { Server, Player } from './foo2-1';
 
 const server = new Server();
 const p1 = new Player("p1");

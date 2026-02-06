@@ -1,5 +1,8 @@
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { ClientPlayers, ClientPlayerSocket, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { DEFAULT_HEALTH } from "./consts";
+import { lookUpWord } from "./api";
+import { isDictionaryEntry } from "./guards";
 
 // ============================================================================
 // Core Utilities
@@ -57,7 +60,7 @@ export function makeNewPlayer(name: string, uid: string): PlayerWithId;
  * @returns A player object with or without a uid property
  */
 export function makeNewPlayer(name: string, uid?: string): PlayerWithoutId | PlayerWithId {
-    const r = { name, lastWord: "" };
+    const r = { name, lastWord: "", health: DEFAULT_HEALTH };
     return uid === undefined ? r : { ...r, uid };
 }
 
@@ -135,11 +138,9 @@ export async function inputIsValid(input: string): Promise<boolean> {
         }
     }
     
-    const res = await fetch("http://localhost:8000/lookup/" + input);
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    return Object.keys(data).length > 0;
+    // const res = await fetch("http://localhost:8000/lookup/" + input);
+    const res = await lookUpWord(input);
+    return Object.keys(res).length > 0;
 }
 
 // ============================================================================

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BoolMap, PropertyBoolMap } from "../shared/types";
 import { pp } from "../shared/utils";
 

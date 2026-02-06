@@ -4,9 +4,9 @@ import {
     clonePlayersArray,
     isRequiredGameState,
     makePlayersArray,
-} from "../../src/shared/GameState";
-import { MAX_PLAYERS } from "../../src/shared/consts";
-import { ClientPlayers, ServerPlayers } from "../../src/shared/types";
+} from "@/shared/GameState";
+import { MAX_PLAYERS } from "@/shared/consts";
+import { ClientPlayers, ServerPlayers } from "@/shared/types";
 import {
     createGameStateWithPlayers,
     createRequiredPlayerWithId,

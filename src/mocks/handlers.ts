@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { http, HttpResponse } from "msw";
 
 const buildDictionaryResponse = (word?: string) => {
