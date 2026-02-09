@@ -1,5 +1,5 @@
 import { getRandomWordFromDictionary } from "../shared/api";
-import { buildInitialGameState, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
+import { buildInitialGameState, decreasePlayerHealth, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
 import { socketEvents } from "../shared/socket";
 import { ServerSocketContext } from "../shared/socketServer";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
@@ -96,20 +96,22 @@ function unregisterPlayer(clientId: string) {
 }
 
 // --- Word submission ---
-async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
+export async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
     console.log("submitWord event received from client: " + word);
     const state = getGameState();
     const currentMatchLetter = state.matchLetter.block;
 
     // Validate word matches the match letter
     if (word.length === 0 || word[0] !== currentMatchLetter) {
-        ack({ success: false, reason: `submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}` });
+        const reason = `submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}`;
+        invalidWord(socket, reason , ack);
         return;
     }
 
     const validWord = await inputIsValid(word);
     if (!validWord) {
-        ack({ success: false, reason: `submitWord: word (${word}) is not valid` });
+        const reason = `submitWord: word (${word}) is not valid`;
+        invalidWord(socket, reason, ack);
         return;
     }
 
@@ -119,6 +121,21 @@ async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: A
     const emitState = toGameStateEmit(nextState);
     broadcastGameState(socket, emitState);
     ack({ success: true, gameState: emitState });
+}
+
+function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitWordResponse ){
+    /**
+     * Invoked during a submit word event, when the input word is invalid.
+     * Calls the ack function with the reason for the word being invalid.
+     * Also reduces the player health by one.
+     */
+    ack({ success: false, reason: reason});
+    const state = getGameState();
+    const player = state.socketPlayerMap?.get(getClientId(socket));
+    if (!player) throw new Error("Unexpected error; player is undefined");
+    const nextState = decreasePlayerHealth(state, player.health);
+    setGameState(nextState);
+    broadcastGameState(socket, nextState);
 }
 
 // --- Main entry: attach socket handlers ---

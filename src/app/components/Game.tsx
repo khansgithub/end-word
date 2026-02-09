@@ -13,6 +13,7 @@ import PlayersSection from "./PlayersSection";
 import { RoundNumberBadge } from "./RoundNumberBadge";
 import { getSocketManager } from "./socketComponent";
 import WaitingOverlay from "./WaitingOverlay";
+import GameOverlay from "./GameOverlay";
 
 const L = "Game: "
 const log = console.log;
@@ -85,7 +86,8 @@ export default function Game(props: props) {
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
             <p>gameState is: {pp(gameState)}</p>
             {/* Waiting Overlay */}
-            <WaitingOverlay status={gameState.status} />
+            {/* <WaitingOverlay status={gameState.status} /> */}
+            <GameOverlay status={gameState.status} />
 
             {/* Round Number Badge */}
             <RoundNumberBadge turn={gameState.turn ?? 1} />

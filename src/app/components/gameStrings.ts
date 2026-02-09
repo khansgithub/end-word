@@ -9,5 +9,9 @@ export const gameStrings = {
     empty: "Empty",
     inputDisabledText: "Not your turn",
     inputInvalidText: "Invalid word",
+    connectionRequired: "Connection Required",
+    pleaseConnectToJoin: "Please connect to join the game",
+    connectButtonText: "Connect",
+    playIcon: "▶",
 } as const;
 
