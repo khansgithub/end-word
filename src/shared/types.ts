@@ -111,7 +111,7 @@ export type ClientPlayerSocket = SocketClient<ServerToClientEvents, ClientToServ
 /* --------------------------------------------------
  * Game States
  * -------------------------------------------------- */
-export type GameStatus = "waiting" | "playing" | "finished" | null;
+export type GameStatus = "waiting" | "playing" | "finished";
 
 export type MatchLetter = {
     block: string

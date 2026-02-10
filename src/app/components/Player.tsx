@@ -1,5 +1,7 @@
 import { BoolMap, PropertyBoolMap } from "../../shared/types";
 import type { Player as PlayerType } from "../../shared/types";
+import HealthDisplay from "./HealthDisplay";
+import { PlayerHealth } from "./PlayerHealth";
 
 interface props {
     player: PlayerType
@@ -180,6 +182,10 @@ export default function Player({ player, turn, lastWord, isCurrentPlayer = false
                         Turn
                     </div>
                 )}
+
+                <div className="pt-2">
+                    <PlayerHealth health={player.health}></PlayerHealth>
+                </div>
             </div>
         </div>
     );

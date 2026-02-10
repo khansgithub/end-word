@@ -68,7 +68,7 @@ export default function Game(props: props) {
             } else {
                 dispatch({
                     type: "decreasePlayerHealth",
-                    payload: [gameState, gameState.thisPlayer.health],
+                    payload: [gameState, gameState.thisPlayer.health, gameState.thisPlayer.seat!],
                 });
                 setInputError(true);
                 error(L, "submitWord failed", response.reason);

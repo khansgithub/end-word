@@ -196,19 +196,30 @@ export function setPlayerLastWord(
     };
 }
 
+/**
+ * Decreases the health of the player specified by `state.thisPlayer`.
+ * Returns the updated game state.
+ * @param state - The current game state.
+ * @param currentHealth - The current health of the player.
+ * @param currentState - The current game state.
+ * @returns The updated game state.
+ */
 export function decreasePlayerHealth(
     state: GameState,
     currentHealth: number,
+    playerSeat: number,
     currentState?: GameState
 ): GameState {
     if (currentHealth <= 0) throw new Error("health cannot be less than 0");
+    if (state.status != "playing") throw new Error("game must be in state 'playing'");
 
     let nextState: GameState = { ...state };
     if (!nextState.thisPlayer) throw new Error("thisPlayer is missing from game state");
     if (nextState.thisPlayer.seat === undefined) throw new Error("thisPlayer.seat is missing from game state");
 
     const newHealth = currentHealth - 1;
-    if (newHealth <= 0) throw new Error("health cannot be less than 0");
+    if (newHealth == 0) nextState.status = "finished";
+    if (newHealth < 0) throw new Error("health cannot be less than 0");
 
     nextState.thisPlayer.health = newHealth;
     nextState.players[nextState.thisPlayer.seat]!.health = newHealth;
@@ -261,7 +272,7 @@ export function buildInitialGameState(block?: string): GameState {
     const socketPlayerMap = new Map<string, PlayerWithId>();
     return {
         matchLetter: buildMatchLetter(block ?? "다"),
-        status: null,
+        status: "waiting",
         players: players,
         turn: 0,
         connectedPlayers: 0,

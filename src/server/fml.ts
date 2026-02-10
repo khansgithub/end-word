@@ -7,6 +7,9 @@ import { inputIsValid } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getGameState, setGameState } from "./serverGameState";
 
+const L = "fml: ";
+const _log = console.log;
+
 // --- Logging ---
 function log(message: string, context: ServerSocketContext) {
     const entry = { ts: Date.now(), msg: `[socket] ${message}` };
@@ -30,7 +33,7 @@ const isReturningPlayer = (clientId: string) => {
 };
 
 // --- Broadcasting ---
-function broadcastGameState(socket: ServerPlayerSocket, gameState: GameState) {
+export function broadcastGameState(socket: ServerPlayerSocket, gameState: GameState) {
     console.log(`broadcastGameState: Broadcasting updated game state to all clients except sender. GameState:`, toGameStateEmit(gameState));
     socket.broadcast.emit("gameStateUpdate", toGameStateEmit(gameState));
 }
@@ -97,7 +100,10 @@ function unregisterPlayer(clientId: string) {
 
 // --- Word submission ---
 export async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
-    console.log("submitWord event received from client: " + word);
+    _log(L, `submitWord event received from client ${getClientId(socket)}`);
+    const player = getGameState().socketPlayerMap?.get(getClientId(socket));
+    _log(L, `player: ${JSON.stringify(player)}`);
+    _log(L, `word: ${word}`);
     const state = getGameState();
     const currentMatchLetter = state.matchLetter.block;
 
@@ -133,7 +139,7 @@ function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitW
     const state = getGameState();
     const player = state.socketPlayerMap?.get(getClientId(socket));
     if (!player) throw new Error("Unexpected error; player is undefined");
-    const nextState = decreasePlayerHealth(state, player.health);
+    const nextState = decreasePlayerHealth(state, player.health, player.seat!);
     setGameState(nextState);
     broadcastGameState(socket, nextState);
 }

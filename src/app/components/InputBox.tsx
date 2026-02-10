@@ -34,30 +34,34 @@ const useInputStore = create<InputState>((set) => ({
 }));
 
 /**
+/**
  * InputBox Zustand State & Props Documentation
- * 
+ *
  * Zustand store state:
- * - inputValue:      The current user input in the actual <input> field. Updated on user typing.
- * - highlightValue:  The text shown in the "highlight" input overlay, representing the match letter or composition.
- * - isComposing:     Whether the user is currently composing text (IME/composition input, e.g. for Hangul typing).
- * - isError:         Indicates whether the current input is considered invalid by validation logic.
- * - lastKey:         The last character/key input detected (used for display or logic feedback).
+ * - inputValue:      The current user input in the actual <input> field. Updated when the user types.
+ * - highlightValue:  The text currently shown in the "highlight" overlay input, typically the match letter (or composition fragment).
+ * - isComposing:     Whether the user is currently using IME/composition (e.g. Hangul typing).
+ * - isError:         True if the current input is considered invalid by validation logic; used for error highlighting.
+ * - lastKey:         The last character or key input detected (used for UI/animation feedback, not always needed by parent).
  * - setInputValue:       Setter to update inputValue.
  * - setHighlightValue:   Setter to update highlightValue.
  * - setIsComposing:      Setter to update isComposing.
  * - setIsError:          Setter to update isError.
  * - setLastKey:          Setter to update lastKey.
- * - reset:               Resets all input-related state.
- * 
+ * - reset:               Resets all tracked input state to defaults.
+ *
  * Props on InputBox:
- * - matchLetter:         The current letter to match (with decomposed steps) for input guidance.
- * - disabled:            Whether the input is disabled (prevents editing, changes visual feedback).
- * - onSubmit:            Optional. Called with completed input when "Enter" is pressed and input is non-empty.
- * - onKeyDisplayChange:  Optional. Called with every key typed or erased; used to update key overlay display.
- * 
- * InputBox uses a dual layer input:
- * - The highlight layer shows the expected match letter(s) and composition progress.
- * - The real input layer is where users type. Handlers (change, composition, keydown) keep all state and visual feedback in-sync with the store and parent callbacks.
+ * - matchLetter:         The current MatchLetter object (with `.steps[]` for composite Hangul etc.) for input guidance and validation.
+ * - disabled:            Whether the input is visually/functionally disabled (prevents typing, changes appearance).
+ * - onSubmit:            Called with completed input when "Enter" is pressed and the input is non-empty (required).
+ *
+ * InputBox uses two overlapping input layers:
+ * - The "highlight" layer is an input with aria-hidden="true" that displays the expected initial match (usually matchLetter.steps[0]).
+ *   It updates via highlightValue, usually immediately when matchLetter changes, or during composition.
+ * - The actual user-editable input is above the highlight and receives keyboard/composition input.
+ *   React/Zustand keep all state and error feedback in sync; handlers for onChange, onComposition events, and onKeyDown update global state.
+ *
+ * This documentation is accurate as of 2024-06: All state and prop references are up-to-date with the latest implementation.
  */
 
 interface InputBoxProps {

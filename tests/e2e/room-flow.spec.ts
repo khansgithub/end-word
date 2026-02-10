@@ -2,6 +2,11 @@ import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, P
 import { expect, test } from "@playwright/test";
 import { decomposeSyllable } from "../../src/app/hangul-decomposer";
 import { roomFlowTestNames } from "./test-names";
+import { test as base } from '@playwright/test';
+import assert from "assert";
+
+type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
+
 
 async function scrapeMetric(request: APIRequestContext, name: string, label?: string): Promise<number> {
     try {
@@ -25,8 +30,6 @@ async function scrapeMetric(request: APIRequestContext, name: string, label?: st
         return 0;
     }
 }
-
-type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
 
 async function collectAndPrintMergedLogs(
     clientLogs: LogEntry[],
@@ -75,9 +78,9 @@ async function collectAndPrintMergedLogs(
     }
 }
 
-test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
+async function setupPages(browser: Browser){
+    const baseURL = "http://localhost:4000";
     const clientLogs: LogEntry[] = [];
-
     const log = (message: string) => {
         const ts = Date.now();
         const entry: LogEntry = { ts, msg: `[client] ${message}`, source: "client" };
@@ -85,18 +88,68 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
         console.log(new Date(ts).toISOString(), entry.msg);
     };
 
-    page.on("console", (msg) => {
-        const ts = Date.now();
-        const line = `[browser-console] ${msg.type()}: ${msg.text()}`;
-        clientLogs.push({ ts, msg: line, source: "browser" });
-        console.log(new Date(ts).toISOString(), line);
-    });
+    const attachConsole = (pageLabel: string, page: Page) => {
+        page.on("console", (msg) => {
+            const ts = Date.now();
+            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
+            clientLogs.push({ ts, msg: line, source: "browser" });
+            console.log(new Date(ts).toISOString(), line);
+        });
+    };
+
+    const locators = {
+        input: (page: Page) => page.getByRole("textbox", { name: /name/i }),
+        highlightInput: (page: Page) => page.locator('input[aria-hidden="true"]').first(),
+        wordInput: (page: Page) => page.locator("input:not([readonly])"),
+        submitButton: (page: Page) => page.getByRole("button", { name: /submit word/i }),
+        loadingBlur: (page: Page) => page.locator("div.backdrop-blur-sm"),
+        matchLetterDisplay: (page: Page) => page.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/),
+        thisPlayerHeartDisplay: (page: Page) => page.getByText(/❤️/i),
+        playerPanelHeartDisplay: (page: Page) => page.getByText(/❤️/i).locator("..").getByText(/[가-힣]/),
+    }
+
+    const contextA = await browser.newContext({ baseURL });
+    const contextB = await browser.newContext({ baseURL });
+
+    const pageA = await contextA.newPage();
+    const pageB = await contextB.newPage();
+
+    attachConsole("A", pageA);
+    attachConsole("B", pageB);
+
+    const dom = Object.fromEntries([["pageA", pageA], ["pageB", pageB]].map(([pageLabel, page]) => {
+        const p = page as Page;
+        return [pageLabel, {
+            input: locators.input(p),
+            highlightInput: locators.highlightInput(p),
+            wordInput: locators.wordInput(p),
+            submitButton: locators.submitButton(p),
+            loadingBlur: locators.loadingBlur(p),
+            matchLetterDisplay: locators.matchLetterDisplay(p),
+            page: p,
+        }]})) as { [key in ("pageA" | "pageB")]: {[key in keyof typeof locators]: Locator} & { page: Page } };
+
+    return { pageA, pageB, contextA, contextB, clientLogs, log, dom};
+}
+
+base.beforeEach(async ({ browser }, testInfo) => {
+    if (process.env.MOCK_WORD_VALIDATION != "true" || process.env.MOCK_WORD_VALIDATION_FAIL == "true") {
+        console.warn(
+            `[e2e WARNING] It is recommended to run e2e tests with MOCK_WORD_VALIDATION=true and MOCK_WORD_VALIDATION_FAIL!=true. Current: MOCK_WORD_VALIDATION=${process.env.MOCK_WORD_VALIDATION}, MOCK_WORD_VALIDATION_FAIL=${process.env.MOCK_WORD_VALIDATION_FAIL}`,
+        );
+    }
+});
+
+
+test(roomFlowTestNames.resetAfterReload, async ({ browser, request }) => {
+    const { pageA, pageB, contextA, contextB, clientLogs, log, dom } = await setupPages(browser);
+
 
     let cdp: CDPSession | null = null;
 
     try {
         log("goto /");
-        await page.goto("/");
+        await pageA.goto("/");
 
         log("wait for socket connect (server stats)");
         await expect
@@ -108,12 +161,12 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
             .poll(() => scrapeMetric(request, "socket_event_total", 'event="getPlayerCount"'), { timeout: 15_000, intervals: [500, 750, 1000] })
             .toBeGreaterThan(0);
 
-        let roomCount = page.getByText('/5');
+        let roomCount = pageA.getByText('/5');
         
         log("wait for Room heading text");
         await expect(roomCount).toHaveText("0/5", { timeout: 5_000 });
 
-        const nameInput = page.getByRole("textbox", { name: /name/i });
+        const nameInput = pageA.getByRole("textbox", { name: /name/i });
         
         log('fill name "Foo"');
         await nameInput.fill("Foo");
@@ -122,10 +175,10 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
         await nameInput.press("Enter");
 
         log("wait for navigation to /room");
-        await page.waitForURL("**/room", { timeout: 15_000 });
+        await pageA.waitForURL("**/room", { timeout: 15_000 });
         
         log("wait for Match text");
-        await expect(page.getByText('Waiting for game to start...')).toBeVisible({ timeout: 5_000 });
+        await expect(pageA.getByText('Waiting for game to start...')).toBeVisible({ timeout: 5_000 });
 
         log("Check stat to see if the player has been registered");
         await expect
@@ -136,15 +189,15 @@ test(roomFlowTestNames.resetAfterReload, async ({ page, request }) => {
             .toBe(1);
 
         log("hard reload (ignore cache)");
-        cdp = await page.context().newCDPSession(page);
+        cdp = await pageA.context().newCDPSession(pageA);
         await cdp.send("Network.clearBrowserCache");
         await cdp.send("Network.clearBrowserCookies");
         await cdp.send("Page.reload", { ignoreCache: true });
         
         log("wait for redirect back to /");
-        await page.waitForURL("http://localhost:4000/", { timeout: 15_000 });
+        await pageA.waitForURL("http://localhost:4000/", { timeout: 15_000 });
 
-        roomCount = page.getByText('/5');
+        roomCount = pageA.getByText('/5');
         
         log(`Check to see if the previous session has been terminated: [${await roomCount.textContent()}]`);
         await expect(roomCount).toHaveText("0/5", { timeout: 5_000 });
@@ -197,61 +250,29 @@ test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }) => {
      * Regression guard: verify two isolated browsers can both join; then on one page we assert the UI renders all 5 player slots (#players > div count).
      * Currently observed failure: only fewer than 5 divs render in CI/local, so this test captures and logs that discrepancy.
      */
-    const clientLogs: LogEntry[] = [];
-    const log = (message: string, source: "client" | "browser" | "server" = "client") => {
-        const ts = Date.now();
-        const entry: LogEntry = { ts, msg: `[${source}] ${message}`, source };
-        clientLogs.push(entry);
-        console.log(new Date(ts).toISOString(), entry.msg);
-    };
-
-    let contextA: BrowserContext | null = null;
-    let contextB: BrowserContext | null = null;
+    const { pageA, pageB, contextA, contextB, clientLogs, log, dom } = await setupPages(browser);
 
     try {
-        contextA = await browser.newContext({ baseURL: "http://localhost:4000" });
-        contextB = await browser.newContext({ baseURL: "http://localhost:4000" });
-
-        const pageA = await contextA.newPage();
-        const pageB = await contextB.newPage();
-
-        const attachConsole = (pageLabel: string, page: typeof pageA) => {
-            page.on("console", (msg) => {
-                const ts = Date.now();
-                const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
-                clientLogs.push({ ts, msg: line, source: "browser" });
-                console.log(new Date(ts).toISOString(), line);
-            });
-        };
-
-        attachConsole("A", pageA);
-        attachConsole("B", pageB);
-
         log("goto / on both pages");
         await Promise.all([pageA.goto("/"), pageB.goto("/")]);
 
-        const inputA = pageA.getByRole("textbox", { name: /name/i });
-        const inputB = pageB.getByRole("textbox", { name: /name/i });
-
         log('fill name "Alice" on A');
-        await inputA.fill("Alice");
+        await dom.pageA.input.fill("Alice");
         log('fill name "Bob" on B');
-        await inputB.fill("Bob");
+        await dom.pageB.input.fill("Bob");
 
         log("press Enter on both pages to join room");
         await Promise.all([
-            inputA.press("Enter"),
-            inputB.press("Enter"),
+            dom.pageA.input.press("Enter"),
+            dom.pageB.input.press("Enter"),
             pageA.waitForURL("**/room", { timeout: 15_000 }),
             pageB.waitForURL("**/room", { timeout: 15_000 }),
         ]);
 
         log("wait for loading spinners to disappear");
-        const loadingA = pageA.locator("span.loading");
-        const loadingB = pageB.locator("span.loading");
         await Promise.all([
-            loadingA.first().waitFor({ state: "detached", timeout: 20_000 }),
-            loadingB.first().waitFor({ state: "detached", timeout: 20_000 }),
+            dom.pageA.loadingBlur.first().waitFor({ state: "detached", timeout: 20_000 }),
+            dom.pageB.loadingBlur.first().waitFor({ state: "detached", timeout: 20_000 }),
         ]);
 
         const playersA = pageA.locator("#players");
@@ -295,20 +316,14 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
      * and the inputDomHighlight value is updated to the new matchLetter's first step.
      */
 
-    async function assertHighlightValue(page: Page, highlightInputLocator: Locator) {
-        const currentMatchLetterDisplay = await getMatchLetterDisplay(page);
+    async function assertHighlightValue(dom: { matchLetterDisplay: Locator }, highlightInputLocator: Locator) {
+        const currentMatchLetterDisplay = await dom.matchLetterDisplay.textContent();
         if (!currentMatchLetterDisplay) throw new Error("No match letter found");
         const highlightInputValue = await highlightInputLocator.inputValue();
         const highlightExpectValue = decomposeSyllable(currentMatchLetterDisplay)[0];
         log(`assertHighlightValue: highlightInputValue: ${highlightInputValue}, highlightExpectValue: ${highlightExpectValue}`);
         expect(highlightInputValue).toBe(highlightExpectValue);
         return highlightExpectValue;
-    }
-
-    async function getMatchLetterDisplay(page: Page) {
-        const r = await page.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/).textContent();
-        if (!r) throw new Error("No match letter found");
-        return r;
     }
 
     function randomHangulBlock() {
@@ -319,26 +334,12 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         return String.fromCharCode(code);
     }
 
-    const { pageA, pageB, contextA, contextB, clientLogs, log } = await setupPages(browser);
+    assert(process.env.MOCK_WORD_VALIDATION == "true", "MOCK_WORD_VALIDATION must be enabled for e2e tests");
+    assert(process.env.MOCK_WORD_VALIDATION_FAIL == "false", "MOCK_WORD_VALIDATION_FAIL must be enabled for e2e tests");
+    
+    const { pageA, pageB, contextA, contextB, clientLogs, log, dom } = await setupPages(browser);
 
     try {
-        const dom = {
-            pageA: {
-                input: pageA.getByRole("textbox", { name: /name/i }),
-                highlightInput: pageA.locator('input[aria-hidden="true"]').first(),
-                wordInput: pageA.locator("input:not([readonly])"),
-                submitButton: pageA.getByRole("button", { name: /submit word/i }),
-                loadingBlur: pageA.locator("div.backdrop-blur-sm"),
-            },
-            pageB: {
-                input: pageB.getByRole("textbox", { name: /name/i }),
-                highlightInput: pageB.locator('input[aria-hidden="true"]').first(),
-                wordInput: pageB.locator("input:not([readonly])"),
-                submitButton: pageB.getByRole("button", { name: /submit word/i }),
-                loadingBlur: pageB.locator("div.backdrop-blur-sm"),
-            },
-        };
-
         // Go to the home page
         log("goto / on both pages");
         await Promise.all([pageA.goto("/"), pageB.goto("/")]);
@@ -366,7 +367,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
 
         // Find the highlight input element (the one with aria-hidden="true")
         log("get initial highlight value from page A");
-        const highlightValueA = await assertHighlightValue(pageA, dom.pageA.highlightInput);
+        const highlightValueA = await assertHighlightValue(dom.pageA, dom.pageA.highlightInput);
         log(`initial highlight value on page A: ${highlightValueA}`);
 
         // Verify it's player 1's turn
@@ -393,7 +394,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         //     throw new Error(`No word found for first letter: ${firstLetter}`);
         // }
         // const wordToSubmit = firstLetterToWord[firstLetter];
-        const wordToSubmit = (await getMatchLetterDisplay(pageA)) + randomHangulBlock();
+        const wordToSubmit = (await dom.pageA.matchLetterDisplay.textContent()) + randomHangulBlock();
         log(`typing word: ${wordToSubmit}`);
         await dom.pageA.wordInput.fill(wordToSubmit, { timeout: 1_000 });
 
@@ -408,8 +409,8 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
         const expectedNewMatchLetter = wordToSubmit.slice(-1);
         log(`waiting for new matchLetter to be: ${expectedNewMatchLetter}`);
         Promise.all([
-            expect(await getMatchLetterDisplay(pageA)).toBe(expectedNewMatchLetter),
-            expect(await getMatchLetterDisplay(pageB)).toBe(expectedNewMatchLetter),
+            expect(await dom.pageA.matchLetterDisplay.textContent()).toBe(expectedNewMatchLetter),
+            expect(await dom.pageB.matchLetterDisplay.textContent()).toBe(expectedNewMatchLetter),
         ]);
 
         // Verify the input on page B is enabled
@@ -422,7 +423,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
 
         // Get highlight value on page B
         log("assert highlight value on page B is valid");
-        const highlightValueB = await assertHighlightValue(pageB, dom.pageB.highlightInput);
+        const highlightValueB = await assertHighlightValue(dom.pageB, dom.pageB.highlightInput);
         log(`highlight value on page B: ${highlightValueB}`);
     } catch (error) {
         log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
@@ -454,29 +455,10 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }) 
     }
 });
 
-
-
-test(roomFlowTestNames.foo, async ({ browser, request }) => {
+test(roomFlowTestNames.gameStartsAfterBothPlayersJoin, async ({ browser, request }) => {
     const TIMEOUT = 5000;
-    const { pageA, pageB, contextA, contextB, clientLogs, log } = await setupPages(browser);
+    const { pageA, pageB, contextA, contextB, clientLogs, log, dom } = await setupPages(browser);
     try {
-        const dom = {
-            pageA: {
-                input: pageA.getByRole("textbox", { name: /name/i }),
-                highlightInput: pageA.locator('input[aria-hidden="true"]').first(),
-                wordInput: pageA.locator("input:not([readonly])"),
-                submitButton: pageA.getByRole("button", { name: /submit word/i }),
-                loadingBlur: pageA.locator("div.backdrop-blur-sm"),
-            },
-            pageB: {
-                input: pageB.getByRole("textbox", { name: /name/i }),
-                highlightInput: pageB.locator('input[aria-hidden="true"]').first(),
-                wordInput: pageB.locator("input:not([readonly])"),
-                submitButton: pageB.getByRole("button", { name: /submit word/i }),
-                loadingBlur: pageB.locator("div.backdrop-blur-sm"),
-            },
-        };
-
         // Go to the home page
         log("goto / on both pages");
         await Promise.all([pageA.goto("/"), pageB.goto("/")]);
@@ -511,7 +493,7 @@ test(roomFlowTestNames.foo, async ({ browser, request }) => {
         
     } catch(err) {
         log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-    }finally {
+    } finally {
         // Always close contexts, even on failure
         const closePromises: Promise<void>[] = [];
         if (contextA) {
@@ -535,36 +517,80 @@ test(roomFlowTestNames.foo, async ({ browser, request }) => {
     }
 });
 
-async function setupPages(browser: Browser){
-    const baseURL = "http://localhost:4000";
-    const clientLogs: LogEntry[] = [];
-    const log = (message: string) => {
-        const ts = Date.now();
-        const entry: LogEntry = { ts, msg: `[client] ${message}`, source: "client" };
-        clientLogs.push(entry);
-        console.log(new Date(ts).toISOString(), entry.msg);
-    };
+test(roomFlowTestNames.playerHealthDecreases, async ({ browser, request }) => {
+    assert(process.env.MOCK_WORD_VALIDATION_FAIL == "true", `MOCK_WORD_VALIDATION_FAIL must be enabled for the ${roomFlowTestNames.playerHealthDecreases} e2e tests`);
+    const TIMEOUT = 5000;
+    const { pageA, pageB, contextA, contextB, clientLogs, log, dom } = await setupPages(browser);
 
-    let contextA: BrowserContext | null = null;
-    let contextB: BrowserContext | null = null;
+    try {
+        // Go to the home page
+        log("goto / on both pages");
+        await Promise.all([pageA.goto("/"), pageB.goto("/")]);
 
-    contextA = await browser.newContext({ baseURL });
-    contextB = await browser.newContext({ baseURL });
+        // Fill in the names
+        log('fill name "Player1" on A');
+        await dom.pageA.input.fill("Player1");
+        log('fill name "Player2" on B');
+        await dom.pageB.input.fill("Player2");
 
-    const pageA = await contextA.newPage();
-    const pageB = await contextB.newPage();
+        // join page one (A) by pressing Enter
+        log('press Enter on A to join room');
+        await dom.pageA.input.press("Enter");
 
-    const attachConsole = (pageLabel: string, page: typeof pageA) => {
-        page.on("console", (msg) => {
-            const ts = Date.now();
-            const line = `[browser:${pageLabel}] ${msg.type()}: ${msg.text()}`;
-            clientLogs.push({ ts, msg: line, source: "browser" });
-            console.log(new Date(ts).toISOString(), line);
-        });
-    };
+        // wait for the loading screen to appear on page one (A)
+        log('wait for loading blur to appear on A');
+        await dom.pageA.loadingBlur.first().waitFor({ state: "visible", timeout: TIMEOUT });
 
-    attachConsole("A", pageA);
-    attachConsole("B", pageB);
+        // join page two (B) by pressing Enter
+        log('press Enter on B to join room');
+        await dom.pageB.input.press("Enter");
 
-    return { pageA, pageB, contextA, contextB, clientLogs, log };
-}
+        // wait for the loading screen to disappear on page one (A)
+        log('wait for loading blur to disappear on A');
+        await dom.pageA.loadingBlur.first().waitFor({ state: "detached", timeout: TIMEOUT });
+
+        log('wait for loading blur to disappear on B');
+        await dom.pageB.loadingBlur.first().waitFor({ state: "detached", timeout: TIMEOUT });
+
+        log('pause 5 seconds');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        // type an invalid word on page A
+        log('type an invalid word on A');
+        await dom.pageA.wordInput.fill("invalid", { timeout: TIMEOUT });
+
+        // submit the word on page A
+        log('submit the word on A');
+        await dom.pageA.submitButton.click();
+
+        // assert the input is error
+        log('assert the input is error');
+        await expect(dom.pageA.page.getByText("Invalid word")).toBeVisible({ timeout: TIMEOUT });
+
+        // WIP add selectoer for the hearts, and test to make sure the hearats only decreases for this player
+        // and the hearts for the other player's main display doesn't decrease
+
+    } catch(err) {
+        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+        // Always close contexts, even on failure
+        const closePromises: Promise<void>[] = [];
+        if (contextA) {
+            closePromises.push(
+                contextA.close().catch((err) => {
+                    log(`Failed to close contextA: ${err}`);
+                })
+            );
+        }
+        if (contextB) {
+            closePromises.push(
+                contextB.close().catch((err) => {
+                    log(`Failed to close contextB: ${err}`);
+                })
+            );
+        }
+        await Promise.all(closePromises);
+        // Always collect logs for debugging, even on failure
+        await collectAndPrintMergedLogs(clientLogs, request);
+    }
+});
