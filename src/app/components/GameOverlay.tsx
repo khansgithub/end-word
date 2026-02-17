@@ -17,6 +17,7 @@ export default function GameOverlay({ status }: GameOverlayProps) {
         <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{gameStrings.waitingForGameToStart}</p>
     </>);
+
     const finishedJsx = (<>
         <div className="stats shadow">
             <div className="stat">
@@ -33,12 +34,13 @@ export default function GameOverlay({ status }: GameOverlayProps) {
         "playing": <></>
     };
 
-    if (status !== 'waiting') {
+    if (status == 'playing') {
         return null;
     }
 
     return (
         <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+            <p>gameState is: {status}</p>
             <div className="panel" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-6">
                     {mapping[status]}

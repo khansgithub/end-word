@@ -97,37 +97,45 @@ async function setupPages(browser: Browser){
         });
     };
 
-    const locators = {
-        input: (page: Page) => page.getByRole("textbox", { name: /name/i }),
-        highlightInput: (page: Page) => page.locator('input[aria-hidden="true"]').first(),
-        wordInput: (page: Page) => page.locator("input:not([readonly])"),
-        submitButton: (page: Page) => page.getByRole("button", { name: /submit word/i }),
-        loadingBlur: (page: Page) => page.locator("div.backdrop-blur-sm"),
-        matchLetterDisplay: (page: Page) => page.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/),
-        thisPlayerHeartDisplay: (page: Page) => page.getByText(/❤️/i),
-        playerPanelHeartDisplay: (page: Page) => page.getByText(/❤️/i).locator("..").getByText(/[가-힣]/),
-    }
+    const locators = (page: Page) => {
+        return {
+            input: page.getByRole("textbox", { name: /name/i }),
+            highlightInput: page.locator('input[aria-hidden="true"]').first(),
+            wordInput: page.locator("input:not([readonly])"),
+            submitButton: page.getByRole("button", { name: /submit word/i }),
+            loadingBlur: page.locator("div.backdrop-blur-sm"),
+            matchLetterDisplay: page.getByText(/Match Letter/i).locator("..").getByText(/[가-힣]/),
+            // thisPlayerPanelHeartDispay: page.locator("div").filter({hasText:"turn"}).last().locator("..").locator("svg"),
+            // otherPlayerPanelHeartDispay: page.locator("div").filter({hasText:"Player"}).filter({hasNotText: "Turn"}).locator("span > svg"),
+            player1PanelHeartDisplay: page.locator("div").filter({hasText:"Player1"}).last().locator("span  > svg"),
+            player2PanelHeartDisplay: page.locator("div").filter({hasText:"Player2"}).last().locator("span > svg"),
+            thisPlayerHeartDisplay: page.locator("span").first().locator(".."),
+        }
+    };
 
-    const contextA = await browser.newContext({ baseURL });
-    const contextB = await browser.newContext({ baseURL });
+    const browserOptions = { baseURL };
+    const contextA = await browser.newContext(browserOptions);
+    const contextB = await browser.newContext(browserOptions);
 
     const pageA = await contextA.newPage();
     const pageB = await contextB.newPage();
+    
+    // pageA.locator("div").filter({hasText:"Player", hasNotText}).last().locator("span").locator("svg")
+
+    await pageA.setViewportSize({height: 1000, width: 1000});
+    await pageB.setViewportSize({height: 1000, width: 1000});
 
     attachConsole("A", pageA);
     attachConsole("B", pageB);
 
     const dom = Object.fromEntries([["pageA", pageA], ["pageB", pageB]].map(([pageLabel, page]) => {
         const p = page as Page;
-        return [pageLabel, {
-            input: locators.input(p),
-            highlightInput: locators.highlightInput(p),
-            wordInput: locators.wordInput(p),
-            submitButton: locators.submitButton(p),
-            loadingBlur: locators.loadingBlur(p),
-            matchLetterDisplay: locators.matchLetterDisplay(p),
-            page: p,
-        }]})) as { [key in ("pageA" | "pageB")]: {[key in keyof typeof locators]: Locator} & { page: Page } };
+        const r = {
+            ...locators(p),
+            page: p
+        }
+        return [pageLabel, r];
+    }))  as {[key in ("pageA" | "pageB")]: {[key in keyof ReturnType<typeof locators>]: Locator} & { page: Page }};
 
     return { pageA, pageB, contextA, contextB, clientLogs, log, dom};
 }
@@ -557,7 +565,9 @@ test(roomFlowTestNames.playerHealthDecreases, async ({ browser, request }) => {
 
         // type an invalid word on page A
         log('type an invalid word on A');
-        await dom.pageA.wordInput.fill("invalid", { timeout: TIMEOUT });
+        const currentMatchLetter = (await dom.pageA.matchLetterDisplay.textContent());
+        if (!currentMatchLetter) throw new Error("matchLetterDisplay for pageA did not resolve");
+        await dom.pageA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
 
         // submit the word on page A
         log('submit the word on A');
@@ -567,8 +577,20 @@ test(roomFlowTestNames.playerHealthDecreases, async ({ browser, request }) => {
         log('assert the input is error');
         await expect(dom.pageA.page.getByText("Invalid word")).toBeVisible({ timeout: TIMEOUT });
 
-        // WIP add selectoer for the hearts, and test to make sure the hearats only decreases for this player
-        // and the hearts for the other player's main display doesn't decrease
+        log('make sure the main hearts display for PlayerA decreases by one');
+        await expect(dom.pageA.thisPlayerHeartDisplay.locator('span')).toHaveCount(4, {timeout: TIMEOUT});
+
+        log('make sure the main hearts display for PlayerB does NOT decrease');
+        await expect(dom.pageB.thisPlayerHeartDisplay.locator('span')).toHaveCount(5, {timeout: TIMEOUT});
+
+        log('make sure the PlayerA heart display also decreases on PageA');
+        await expect(dom.pageA.player1PanelHeartDisplay).toHaveCount(4, {timeout: TIMEOUT});
+
+        log("make sure the Player2's heart doesn't change on PageA");
+        await expect(dom.pageA.player2PanelHeartDisplay).toHaveCount(5, {timeout: TIMEOUT});
+
+        log("make sure PlayerA's heart display has decreased on PageB");
+        await expect(dom.pageB.player1PanelHeartDisplay).toHaveCount(4, {timeout: TIMEOUT});
 
     } catch(err) {
         log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);

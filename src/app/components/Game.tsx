@@ -14,8 +14,9 @@ import { RoundNumberBadge } from "./RoundNumberBadge";
 import { getSocketManager } from "./socketComponent";
 import WaitingOverlay from "./WaitingOverlay";
 import GameOverlay from "./GameOverlay";
+import { correctWord, submitWordCallback, wrongWord } from "./wordSubmit";
 
-const L = "Game: "
+const L = `${__filename}: `
 const log = console.log;
 const error = console.error;
 
@@ -25,7 +26,7 @@ interface props {
 
 export default function Game(props: props) {
     const [gameState, dispatch] = useReducer(
-        gameStateReducer<GameStateClient>,
+        gameStateReducer,
         props.gameState
     );
 
@@ -41,39 +42,19 @@ export default function Game(props: props) {
             setInputError(true);
             return;
         }
-
-        emitSubmitWord(socket.current, word, (res) => submitWordCallback(res, word));
+        log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
+        emitSubmitWord(
+            socket.current,
+            word,
+            (response) => submitWordCallback(
+                gameState,
+                dispatch,
+                setInputError,
+                response,
+                word,
+            )
+        );
         resetInput();
-    }
-
-    function submitWordCallback(response: AckSubmitWordResponseParams, word: string) {
-        log(L, "submitWord response", response);
-        if (response.success) {
-            if (gameState.thisPlayer) {
-                dispatch({
-                    type: "setPlayerLastWord",
-                    payload: [gameState, word],
-                });
-                log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
-            }
-
-            dispatch({
-                type: "gameStateUpdateClient",
-                payload: [response.gameState],
-            });
-        } else {
-            if (gameState.thisPlayer.health == 1) {
-                // TODO: show game over screen
-                
-            } else {
-                dispatch({
-                    type: "decreasePlayerHealth",
-                    payload: [gameState, gameState.thisPlayer.health, gameState.thisPlayer.seat!],
-                });
-                setInputError(true);
-                error(L, "submitWord failed", response.reason);
-            }
-        }
     }
 
     handleSocket(socket.current, gameState, dispatch);
@@ -84,7 +65,7 @@ export default function Game(props: props) {
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <p>gameState is: {pp(gameState)}</p>
+            {/* <p>gameState is: {pp(gameState)}</p> */}
             {/* Waiting Overlay */}
             {/* <WaitingOverlay status={gameState.status} /> */}
             <GameOverlay status={gameState.status} />

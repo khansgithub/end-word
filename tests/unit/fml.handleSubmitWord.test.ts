@@ -37,7 +37,7 @@ function createTestGameStateWithMatchLetter(matchLetter: string): GameStateType 
     const state = buildInitialGameState();
     const testPlayer = createRequiredPlayerWithId("TestPlayer", "test-client-id", 0);
     const testPlayer2 = createRequiredPlayerWithId("TestPlayer2", "test-client-id2", 1);
-    
+
     return {
         ...state,
         matchLetter: {
@@ -50,7 +50,7 @@ function createTestGameStateWithMatchLetter(matchLetter: string): GameStateType 
         connectedPlayers: 2,
         status: "playing",
         thisPlayer: testPlayer, // Required for invalidWord to work
-        socketPlayerMap: new Map([["test-client-id", testPlayer], ["test-client-id2", testPlayer2]]),
+        socketPlayerMap: new Map([["test-client-id", 0], ["test-client-id2", 1]]),
     };
 }
 
@@ -67,14 +67,14 @@ describe("handleSubmitWord - validation logic", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         mockSocket = createMockSocket("test-client-id");
         mockAck = createMockAck();
 
         // Mock getGameState and setGameState
         mockGetGameState = vi.fn();
         mockSetGameState = vi.fn();
-        
+
         vi.spyOn(serverGameState, "getGameState").mockImplementation(mockGetGameState as any);
         vi.spyOn(serverGameState, "setGameState").mockImplementation(mockSetGameState as any);
 
@@ -85,18 +85,36 @@ describe("handleSubmitWord - validation logic", () => {
 
     describe("correct player health is decreased", () => {
         it("should decrease the health of the correct player", async () => {
-            const mockDecreasePlayerHealth = vi.fn(GameState.decreasePlayerHealth);
-            const state = createTestGameStateWithMatchLetter("가");
-            const testPlayer = state.players[1]!;
-            const word = "가나다";
+            const letter = "가";
+            const [player1Seat, player2Seat, player1Id, player2Id] = [0, 1, "player1Id", "player2Id"];
+            const player1 = createRequiredPlayerWithId("TestPlayer", player1Id, player1Seat);
+            const player2 = createRequiredPlayerWithId("TestPlayer2",  player2Id, player2Seat);
+            const state = {
+                ...buildInitialGameState(),
+                matchLetter: {
+                    block: letter,
+                    steps: [],
+                    value: letter,
+                    next: 0,
+                },
+                players: [player1, player2, null, null, null],
+                connectedPlayers: 2,
+                status: "playing",
+                thisPlayer: player2, // Required for invalidWord to work
+                socketPlayerMap: new Map([[player1Id, player1Seat], [player2Id, player2Seat]]),
+            };
 
-            state.turn = 1;
-            state.thisPlayer = testPlayer as PlayerWithId;
+            const testPlayer = player2;
+            const word = "가나다";
+            const mockDecreasePlayerHealth = vi.fn(GameState.decreasePlayerHealth);
+
 
             vi.spyOn(GameState, "decreasePlayerHealth").mockImplementation(mockDecreasePlayerHealth as any);
 
             mockGetGameState.mockReturnValue(state);
             mockInputIsValid.mockResolvedValue(false);
+
+            mockSocket.handshake.auth.clientId = testPlayer.uid;
 
             await handleSubmitWord(
                 mockSocket as unknown as ServerPlayerSocket,
@@ -120,7 +138,7 @@ describe("handleSubmitWord - validation logic", () => {
             mockGetGameState.mockReturnValue(state);
 
             const emptyWord = "";
-            
+
             await handleSubmitWord(
                 mockSocket as unknown as ServerPlayerSocket,
                 emptyWord,
@@ -136,7 +154,7 @@ describe("handleSubmitWord - validation logic", () => {
                 success: false,
                 reason: expect.stringContaining("Expected starting with: 가"),
             });
-            
+
             // Should NOT proceed to validate word
             expect(mockInputIsValid).not.toHaveBeenCalled();
         });
@@ -163,7 +181,7 @@ describe("handleSubmitWord - validation logic", () => {
                 success: false,
                 reason: expect.stringContaining(`got: ${notMatchLetterWord}`),
             });
-            
+
             // Should NOT proceed to validate word
             expect(mockInputIsValid).not.toHaveBeenCalled();
         });
@@ -202,7 +220,7 @@ describe("handleSubmitWord - validation logic", () => {
 
             // Should call inputIsValid
             expect(mockInputIsValid).toHaveBeenCalledWith(invalidWord);
-            
+
             // Should call ack with failure
             expect(mockAck).toHaveBeenCalledWith({
                 success: false,
@@ -227,10 +245,10 @@ describe("handleSubmitWord - validation logic", () => {
 
             // Should call inputIsValid
             expect(mockInputIsValid).toHaveBeenCalledWith(validWord);
-            
+
             // Should proceed to update state (setGameState should be called)
             expect(mockSetGameState).toHaveBeenCalled();
-            
+
             // Should call ack with success
             expect(mockAck).toHaveBeenCalledWith(
                 expect.objectContaining({

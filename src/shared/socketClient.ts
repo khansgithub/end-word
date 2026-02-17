@@ -1,5 +1,5 @@
-import type { ActionDispatch, Dispatch, SetStateAction } from "react";
-import { GameStateActionsType } from "./GameState";
+import type { Dispatch, SetStateAction } from "react";
+import { GameStateDispatch } from "./GameState";
 import { socketEvents } from "./socket";
 import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId } from "./types";
 import { pp } from "./utils";
@@ -31,7 +31,7 @@ export function emitRegisterPlayer(
 export function registerClientSocketHandlers(
     socket: ClientPlayerSocket,
     state: GameState,
-    dispatch: ActionDispatch<[action: GameStateActionsType]>
+    dispatch: GameStateDispatch
 ) {
     if (!socket.connected) {
         console.warn("Socket is not connected");

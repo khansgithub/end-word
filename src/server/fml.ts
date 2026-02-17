@@ -1,18 +1,23 @@
-import { getRandomWordFromDictionary } from "../shared/api";
-import { buildInitialGameState, decreasePlayerHealth, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, toGameStateEmit } from "../shared/GameState";
+import { decreasePlayerHealth, endGame, getPlayerByClientId, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
+import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socket";
-import { ServerSocketContext } from "../shared/socketServer";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { inputIsValid } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
+import { getServerSocketContext, ServerSocketContext } from "./serverContext";
 import { getGameState, setGameState } from "./serverGameState";
 
 const L = "fml: ";
 const _log = console.log;
+const log2 = (...args: any[]) => {
+    const context = getServerSocketContext();
+    if (context) serverLog(context, args);
+    return console.log;
+}
 
 // --- Logging ---
-function log(message: string, context: ServerSocketContext) {
-    const entry = { ts: Date.now(), msg: `[socket] ${message}` };
+function serverLog(context: ServerSocketContext, ...messages: any[]) {
+    const entry = { ts: Date.now(), msg: `[socket] ${messages}` };
     context.logs.push(entry);
     if (context.logs.length > 500) context.logs.shift();
     console.log(new Date(entry.ts).toISOString(), entry.msg);
@@ -27,8 +32,11 @@ function getClientId(socket: ServerPlayerSocket) {
 const getPlayerCount = () => getGameState().connectedPlayers;
 
 const isReturningPlayer = (clientId: string) => {
-    const player = getGameState().socketPlayerMap?.get(clientId);
-    if (player === undefined) return { found: false };
+    const state = getGameState();
+    const seat = socketToSeat(state, clientId);
+    if (seat === false) return { found: false };
+    const player = state.players[seat];
+    if (!player) return { found: false };
     return { found: true, player: { ...player, uid: clientId } };
 };
 
@@ -47,10 +55,13 @@ const registerPlayer = (player: PlayerWithId): GameState => {
 
 function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPlayer): boolean {
     const clientId = getClientId(socket);
-    if (getGameState().socketPlayerMap?.has(clientId)) {
+    const state = getGameState();
+    const playerSeat = socketToSeat(state, clientId);
+    if (playerSeat != false) {
         const newState = getGameState();
-        const player = newState.socketPlayerMap?.get(clientId);
+        const player = newState.players[playerSeat];
         if (!player) throw new Error("Unexpected error; player is undefined");
+        assertIsPlayerWithId(player);
         ack({ success: true, gameState: toGameStateEmit(newState), player: player });
         return true;
     }
@@ -59,8 +70,8 @@ function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPl
 
 function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, ack: AckRegisterPlayer) {
     const clientId = getClientId(socket);
-    const isReturningPlayerFlag = getGameState().socketPlayerMap?.has(clientId);
-    if (isReturningPlayerFlag) {
+    const isReturningPlayerFlag = socketToSeat(getGameState(), clientId);
+    if (isReturningPlayerFlag !== false) {
         return reconnectingPlayerSocket(socket, ack);
     }
 
@@ -71,7 +82,9 @@ function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, 
     const { thisPlayer } = newState;
     const clientGameState = toGameStateEmit(newState);
     if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
-    newState.socketPlayerMap?.set(clientId, thisPlayer);
+    assertIsPlayerWithId(thisPlayer);
+    if (thisPlayer.seat === undefined) throw new Error("seat must be assigned before adding to socketPlayerMap");
+    newState.socketPlayerMap?.set(clientId, thisPlayer.seat);
 
     setRegisteredClients(newState.socketPlayerMap?.size ?? 0);
 
@@ -85,7 +98,7 @@ function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, 
 // --- Player removal ---
 function unregisterPlayer(clientId: string) {
     const state = getGameState();
-    const player = state.socketPlayerMap?.get(clientId);
+    const player = getPlayerByClientId(state, clientId);
     if (!player) {
         console.warn(`[unregisterPlayer] No player found for clientId=${clientId}`);
         setRegisteredClients(state.socketPlayerMap?.size ?? 0);
@@ -99,18 +112,25 @@ function unregisterPlayer(clientId: string) {
 }
 
 // --- Word submission ---
+/**
+ * The player is derived from state.socketPlayerMap using the the clientID
+ * @param socket 
+ * @param word 
+ * @param ack 
+ * @returns 
+ */
 export async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
-    _log(L, `submitWord event received from client ${getClientId(socket)}`);
-    const player = getGameState().socketPlayerMap?.get(getClientId(socket));
-    _log(L, `player: ${JSON.stringify(player)}`);
-    _log(L, `word: ${word}`);
+    console.log(L, `submitWord event received from client ${getClientId(socket)}`);
+    const player = getPlayerByClientId(getGameState(), getClientId(socket));
+    console.log(L, `player: ${JSON.stringify(player)}`);
+    console.log(L, `word: ${word}`);
     const state = getGameState();
     const currentMatchLetter = state.matchLetter.block;
 
     // Validate word matches the match letter
     if (word.length === 0 || word[0] !== currentMatchLetter) {
         const reason = `submitWord: word doesn't match. Expected starting with: ${currentMatchLetter}, got: ${word}`;
-        invalidWord(socket, reason , ack);
+        invalidWord(socket, reason, ack);
         return;
     }
 
@@ -129,24 +149,42 @@ export async function handleSubmitWord(socket: ServerPlayerSocket, word: string,
     ack({ success: true, gameState: emitState });
 }
 
-function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitWordResponse ){
+function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitWordResponse) {
     /**
      * Invoked during a submit word event, when the input word is invalid.
      * Calls the ack function with the reason for the word being invalid.
      * Also reduces the player health by one.
      */
-    ack({ success: false, reason: reason});
+
     const state = getGameState();
-    const player = state.socketPlayerMap?.get(getClientId(socket));
+    const clientId = getClientId(socket);
+    const player = getPlayerByClientId(state, clientId);
     if (!player) throw new Error("Unexpected error; player is undefined");
-    const nextState = decreasePlayerHealth(state, player.health, player.seat!);
+    const end = player.health == 1;
+
+    // FIXME: This is logic assuming the game is for just 2 players.
+    // Need to handle skipping players who have lost in games with > 2 players.
+    const nextState =
+        end
+            ? endGame(state)
+            : decreasePlayerHealth(
+                  state,
+                  player.health,
+                  player.seat!
+              );
+
+    if (end){
+        // purgeGameState();
+    }
+
     setGameState(nextState);
     broadcastGameState(socket, nextState);
+    ack({ success: false, reason: reason, ... end ? {endGameState: toGameStateEmit(nextState)} : {}});
 }
 
 // --- Main entry: attach socket handlers ---
 export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketContext) {
-    const logger = (message: string) => log(message, socketContext);
+    const logger = (message: string) => serverLog(socketContext, message);
 
     countSocketEvent("connect");
 
@@ -171,7 +209,7 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
         broadcastGameState(socket, toGameStateEmit(getGameState()));
 
         if (getGameState().connectedPlayers === 0) {
-            setGameState({...getGameState(), status: "waiting", turn: 0 });
+            setGameState({ ...getGameState(), status: "waiting", turn: 0 });
         }
     });
 

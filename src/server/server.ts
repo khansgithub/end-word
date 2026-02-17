@@ -7,7 +7,11 @@ import { getRandomWordFromDictionary } from "../shared/api";
 import { buildInitialGameState } from "../shared/GameState";
 import { registry } from "./metrics";
 import { setGameState } from "./serverGameState";
-import { createIOServer, getServerSocketContext } from "./socket";
+import { getServerSocketContext } from "./serverContext";
+import { createIOServer } from "./socket";
+import { pp } from "../shared/utils";
+import { NodeJS } from "../app/env";
+
 
 const app = next({ dev: true, dir: "src" });
 const express_app = express();
@@ -15,7 +19,17 @@ const server = createServer(express_app);
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 
-const enableTestEndpoints = process.env.NODE_ENV === "test" || process.env.PLAYWRIGHT_TEST === "1";
+const enableTestEndpoints = process.env.NODE_ENV === "test" || process.env.PLAYWRIGHT_TEST === "true";
+
+const envVars: Array<keyof NodeJS.ProcessEnv> = [
+    "DICTIONARY_URL",
+    "SERVER",
+    "SUPPRESS",
+    "PLAYWRIGHT_TEST",
+    "MOCK_WORD_VALIDATION",
+    "MOCK_WORD_VALIDATION_FAIL",
+];
+console.log("Env variables:", (()=>{return envVars.map(v => `${v}=${process.env[v]}`)})());
 
 getRandomWordFromDictionary()
     .catch(err => {
@@ -59,13 +73,17 @@ async function startServer(): Promise<void> {
     if (enableTestEndpoints) {
         express_app.get("/__test/server-logs", (_req_1, res_1) => {
             try {
-                const { logs } = getServerSocketContext();
+                const logs = getServerSocketContext()?.logs ?? null;
+                if (!logs) return;
                 res_1.json({ logs });
             } catch (err_1) {
                 const message_2 = err_1 instanceof Error ? err_1.message : "Unknown error";
+                console.error(err_1)
                 res_1.status(500).json({ error: message_2 });
             }
         });
+    } else {
+        console.log("enableTestEndpoints is disabled");
     }
 
     /**

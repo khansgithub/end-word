@@ -5,6 +5,7 @@ Notes from gpt:
 - use simple objects rather than classes (Player type vs Player class)
 ***/
 
+import { ActionDispatch } from "react";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
@@ -18,6 +19,7 @@ export type GameStateActionsType = {
     }
 }[keyof typeof GameStateActions];
 
+export type GameStateDispatch = ActionDispatch<[action: GameStateActionsType]>;
 
 // can't most of these just be one function which is passed "update data"? 
 // okay the keys here should not be the same the socket events, that makes things confusing
@@ -28,43 +30,44 @@ export type GameStateActionsType = {
 
 
 const GameStateActions = {
+
+    // ========================================
+    // Game Progression & Turn Management
+    // ========================================
     nextTurn,
+    progressNextTurn,
+    endGame,
+
+    // ========================================
+    // Player State Modification
+    // ========================================
     setPlayerLastWord,
     decreasePlayerHealth,
-    // fullUpdateGameState,
+
+    // ========================================
+    // Player Registration & Array Management
+    // ========================================
     registerPlayer,
     addPlayer,
     addPlayerToArray,
     removePlayer,
-    progressNextTurn,
+
+    // ========================================
+    // General State Updates
+    // ========================================
     updateConnectedPlayersCount,
-    replaceGameState, // remove
+    replaceGameState, // TODO: remove/consider refactor
     gameStateUpdateClient,
+
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
 // =============================================================================
 // REDUCER FUNCTIONS
 // =============================================================================
 
-export function replaceGameState(newState: GameState, currentState?: GameState): GameState {
-    return newState;
-}
-
-export function gameStateUpdateClient(newState: GameStateEmit, currentState?: GameStateClient): GameStateClient {
-    if (!currentState) throw new Error("currentState needs to be passed");
-    return {
-        ...newState,
-        thisPlayer: currentState.thisPlayer
-    };
-}
-
-export function updateConnectedPlayersCount(state: GameState, count: number, currentState?: GameState): GameState {
-    return {
-        ...state,
-        connectedPlayers: count
-    }
-}
-
+// ========================================
+// Game Progression & Turn Management
+// ========================================
 export function nextTurn(state: GameState, currentState?: GameState): GameState {
     return {
         ...state,
@@ -72,106 +75,35 @@ export function nextTurn(state: GameState, currentState?: GameState): GameState 
     };
 }
 
-function _postPlayerCountUpdateState(state: GameState): GameState {
-    /**
-     * This function will update values which depend on the number of players connected to the game.
-     */
-    const connectedPlayers = state.players.filter((p) => p != null).length;
-    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
-    return {
-        ...state,
-        connectedPlayers: connectedPlayers,
-        status: status
-    };
-}
-
-export function removePlayer(
+export function progressNextTurn(
     state: GameState,
-    player: Player,
+    block: string,
+    playerLastWord: string,
     currentState?: GameState
 ): GameState {
-    const playerId = player.seat;
-    if (playerId === undefined) {
-        throw new Error("unexpected error");
-    }
-
-    // const updatedPlayers = state.players.slice();
-    const updatedPlayers = clonePlayersArray(state.players);
-    updatedPlayers[playerId] = null;
-    // TODO: Remove player from map!!
-    const playerUid = player.uid;
-    if (playerUid === undefined) throw new Error("unexpected error");
-    state.socketPlayerMap?.delete(playerUid);
-
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
-
-    return {
+    let nextState: GameState = state;
+    nextState = {
         ...nextState,
+        matchLetter: buildMatchLetter(block),
     };
-}
-
-export function registerPlayer(
-    state: GameState,
-    player: PlayerWithId,
-    currentState?: GameState
-): GameState {
-    assertIsRequiredPlayerWithId(player);
-    const seat = findAvailableSeat(state);
-    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
-    const newPlayer = updatedPlayers[seat];
-    if (newPlayer === null) throw new Error("newPlayer cannot be null here");
-    assertIsRequiredPlayerWithId(newPlayer);
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers, thisPlayer: newPlayer });
-
-    console.log("registerPlayer in Reducer: next state is: ", pp(nextState));
-
-    return nextState
-}
-
-export function addPlayerToArray(
-    state: GameState,
-    player: PlayerWithId,
-    currentState?: GameState
-): GameState {
-    const updatedPlayers = clonePlayersArray(state.players);
-    if (player.seat === undefined) throw new Error(`Player ${pp(player)} must have a seat`)
-    updatedPlayers[player.seat] = { ...player };
-    // if (state.thisPlayer) {
-    //     const thisPlayer = updatedPlayers[state.thisPlayer.seat] as PlayerWithId;
-    //     thisPlayer.uid = state.thisPlayer.uid;
-    // }
-
-    const nextState = _postPlayerCountUpdateState({
-        ...state,
-        players: updatedPlayers
-    });
-
+    nextState = setPlayerLastWord(nextState, playerLastWord)
+    nextState = nextTurn(nextState);
     return nextState;
 }
 
-/**
- * This function takes a player (which has not been assigned a seat) and gives it one.
- * This should only be called by the server.
- * @param state 
- * @param player 
- * @returns 
- */
-export function addPlayer(
-    state: GameState,
-    player: PlayerWithId,
-    currentState?: GameState
-): GameState {
-    if (!player.name) {
-        console.error("addPlayer: profile.name is undefined")
-        throw new Error("unexpected error");
-    }
-    const seat = findAvailableSeat(state);
-    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
-    console.log("addPlayer in Reducer: next state is: ", pp(nextState));
-    return nextState;
-}
+export function endGame(currentState?: GameState): GameState {
+    const loser = currentState?.thisPlayer;
+    if (!loser) throw new Error("Unexpected error: 'thisPlayer' is undefined.");
+    const nextState: GameState = {
+        ...currentState,
+        status: "finished"
+    };
+    return toGameStateEmit(nextState);
+};
 
+// ========================================
+// Player State Modification
+// ========================================
 export function setPlayerLastWord(
     state: GameState,
     playerLastWord: string,
@@ -210,39 +142,152 @@ export function decreasePlayerHealth(
     playerSeat: number,
     currentState?: GameState
 ): GameState {
+    const newHealth = currentHealth - 1;
+
     if (currentHealth <= 0) throw new Error("health cannot be less than 0");
     if (state.status != "playing") throw new Error("game must be in state 'playing'");
 
     let nextState: GameState = { ...state };
-    if (!nextState.thisPlayer) throw new Error("thisPlayer is missing from game state");
-    if (nextState.thisPlayer.seat === undefined) throw new Error("thisPlayer.seat is missing from game state");
+    const updateThisPlayer = nextState.thisPlayer && nextState.thisPlayer.seat == playerSeat;
 
-    const newHealth = currentHealth - 1;
-    if (newHealth == 0) nextState.status = "finished";
-    if (newHealth < 0) throw new Error("health cannot be less than 0");
+    nextState.status = newHealth == 0 ? "finished" : nextState.status;
 
-    nextState.thisPlayer.health = newHealth;
-    nextState.players[nextState.thisPlayer.seat]!.health = newHealth;
+    const player = nextState.players[playerSeat];
+    if (!player) throw new Error(`Unexpected error: no player with ${playerSeat} could be found in ${nextState.players}`);
+
+    player.health = newHealth;
+
+    if (updateThisPlayer) {
+        nextState.thisPlayer!.health = newHealth;
+    }
+
     return nextState;
 }
 
-export function progressNextTurn(
+// ========================================
+// Player Registration & Array Management
+// ========================================
+function _postPlayerCountUpdateState(state: GameState): GameState {
+    /**
+     * This function will update values which depend on the number of players connected to the game.
+     */
+    const connectedPlayers = state.players.filter((p) => p != null).length;
+    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+    return {
+        ...state,
+        connectedPlayers: connectedPlayers,
+        status: status
+    };
+}
+
+export function registerPlayer(
     state: GameState,
-    block: string,
-    playerLastWord: string,
+    player: PlayerWithId,
     currentState?: GameState
 ): GameState {
-    let nextState: GameState = state;
-    nextState = {
-        ...nextState,
-        matchLetter: buildMatchLetter(block),
-    };
-    nextState = setPlayerLastWord(nextState, playerLastWord)
-    nextState = nextTurn(nextState);
+    assertIsRequiredPlayerWithId(player);
+    const seat = findAvailableSeat(state);
+    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
+    const newPlayer = updatedPlayers[seat];
+    if (newPlayer === null) throw new Error("newPlayer cannot be null here");
+    assertIsRequiredPlayerWithId(newPlayer);
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers, thisPlayer: newPlayer });
+
+    console.log("registerPlayer in Reducer: next state is: ", pp(nextState));
+
+    return nextState
+}
+
+/**
+ * This function takes a player (which has not been assigned a seat) and gives it one.
+ * This should only be called by the server.
+ * @param state 
+ * @param player 
+ * @returns 
+ */
+export function addPlayer(
+    state: GameState,
+    player: PlayerWithId,
+    currentState?: GameState
+): GameState {
+    if (!player.name) {
+        console.error("addPlayer: profile.name is undefined")
+        throw new Error("unexpected error");
+    }
+    const seat = findAvailableSeat(state);
+    const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
+    console.log("addPlayer in Reducer: next state is: ", pp(nextState));
     return nextState;
 }
 
+export function addPlayerToArray(
+    state: GameState,
+    player: PlayerWithId,
+    currentState?: GameState
+): GameState {
+    const updatedPlayers = clonePlayersArray(state.players);
+    if (player.seat === undefined) throw new Error(`Player ${pp(player)} must have a seat`)
+    updatedPlayers[player.seat] = { ...player };
+    // if (state.thisPlayer) {
+    //     const thisPlayer = updatedPlayers[state.thisPlayer.seat] as PlayerWithId;
+    //     thisPlayer.uid = state.thisPlayer.uid;
+    // }
 
+    const nextState = _postPlayerCountUpdateState({
+        ...state,
+        players: updatedPlayers
+    });
+
+    return nextState;
+}
+
+export function removePlayer(
+    state: GameState,
+    player: Player,
+    currentState?: GameState
+): GameState {
+    const playerId = player.seat;
+    if (playerId === undefined) {
+        throw new Error("unexpected error");
+    }
+
+    // const updatedPlayers = state.players.slice();
+    const updatedPlayers = clonePlayersArray(state.players);
+    updatedPlayers[playerId] = null;
+    // TODO: Remove player from map!!
+    const playerUid = player.uid;
+    if (playerUid === undefined) throw new Error("unexpected error");
+    state.socketPlayerMap?.delete(playerUid);
+
+    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
+
+    return {
+        ...nextState,
+    };
+}
+
+// ========================================
+// General State Updates
+// ========================================
+export function updateConnectedPlayersCount(state: GameState, count: number, currentState?: GameState): GameState {
+    return {
+        ...state,
+        connectedPlayers: count
+    }
+}
+
+export function replaceGameState(newState: GameState, currentState?: GameState): GameState {
+    return newState;
+}
+
+export function gameStateUpdateClient(newState: GameStateEmit, currentState?: GameStateClient): GameStateClient {
+    if (!currentState) throw new Error("currentState needs to be passed");
+    return {
+        ...newState,
+        thisPlayer: currentState.thisPlayer
+    };
+}
 
 // =============================================================================
 // REDUCER
@@ -261,7 +306,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
     // const f = GameStateActions[action.type] as (state: GameState, ...args: any[]) => GameState;
     const f = GameStateActions[action.type] as (state: GameState, ...args: unknown[]) => GameState;
     const params = action.payload as Parameters<typeof f>;
-    return f(...params, state) as T;//ClientOrServerReturn<T>;
+    return f(...params, state) as T;
 }
 
 // =============================================================================
@@ -269,7 +314,7 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 export function buildInitialGameState(block?: string): GameState {
     const players = makePlayersArray<ServerPlayers>();
-    const socketPlayerMap = new Map<string, PlayerWithId>();
+    const socketPlayerMap = new Map<string, number>();
     return {
         matchLetter: buildMatchLetter(block ?? "다"),
         status: "waiting",
@@ -335,6 +380,31 @@ export function toGameStateServer(state: GameState): GameStateServer {
         ...rest,
         socketPlayerMap: socketPlayerMap,
     };
+}
+
+/**
+ * Resolves clientId to the player's seat index.
+ * @param state - The game state
+ * @param clientId - The socket client ID
+ * @returns The seat number, or false if not found
+ */
+export function socketToSeat(state: GameState, clientId: string): number | false {
+    const playerSeat = state.socketPlayerMap?.get(clientId);
+    return playerSeat !== undefined ? playerSeat : false;
+}
+
+/**
+ * Gets the player object for a given clientId.
+ * @param state - The game state
+ * @param clientId - The socket client ID
+ * @returns The player with ID, or null if not found
+ */
+export function getPlayerByClientId(state: GameState, clientId: string): PlayerWithId | null {
+    const seat = socketToSeat(state, clientId);
+    if (seat === false) return null;
+    const player = state.players[seat];
+    if (!player || !("uid" in player) || !player.uid) return null;
+    return player as PlayerWithId;
 }
 
 function findAvailableSeat(state: GameState): number {

@@ -71,7 +71,9 @@ export type AckRegisterPlayerResponse =
 export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
 export type AckUnregisterPlayer = (response: { success: boolean }) => void;
 export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
-export type AckSubmitWordResponseParams = { success: true; gameState: GameStateEmit } | { success: false; reason: string };
+export type AckSubmitWordResponseParams = 
+    | { success: true; gameState: GameStateEmit }
+    | { success: false; reason: string; endGameState?: GameStateEmit };
 export type AckSubmitWordResponse = (response: AckSubmitWordResponseParams) => void;
 export type AckRequestFullState = (gameState: GameStateEmit) => void;
 
@@ -140,7 +142,9 @@ export type GameState = {
     turn: number,
     // socketPlayerMap?: WeakMap<string, Player>, // only on server - don't really know if using a weakmap is necessary here
     // socketPlayerMap?: Map<string, Player>,
-    socketPlayerMap?: Map<string, PlayerWithId>,
+    // socketPlayerMap?: Map<string, PlayerWithId>,
+    // socketPlayerMap?: Map<string, PlayerWithId>,
+    socketPlayerMap?: Map<string, number>,
 }
 
 export type GameStateEmit = (

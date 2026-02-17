@@ -1,18 +1,11 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { createServerSocketContext, type ServerSocketContext } from "../shared/socketServer";
+import { createServerSocketContext } from "./serverContext";
 import { GameState, ServerPlayerSocket } from "../shared/types";
 import { fml } from "./fml";
+import { getServerSocketContext, setActiveServerContext } from "./serverContext";
 
-let activeServerContext: ServerSocketContext | null = null;
 let socketServer: SocketServer | null = null;
-
-export function getServerSocketContext(): ServerSocketContext {
-    if (activeServerContext === null) {
-        throw new Error("Server socket context has not been initialized");
-    }
-    return activeServerContext;
-}
 
 export function createIOServer(server: http.Server): SocketServer {
     socketServer = new SocketServer(server, {
@@ -21,19 +14,21 @@ export function createIOServer(server: http.Server): SocketServer {
         pingTimeout: 5000,
     });
 
+    setActiveServerContext(createServerSocketContext(undefined, undefined, socketServer));
     return setUpIOServer(socketServer);
 }
 
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
     const socketConextWrapper = (socket: ServerPlayerSocket) => {
-        fml(socket, createServerSocketContext());
+        const ctx = getServerSocketContext();
+        if (!ctx) throw new Error("Server context not setup");
+        fml(socket, ctx);
     };
     socketServer.on("connection", socketConextWrapper);
     return socketServer;
 }
 
-function broadcastGameState(gameState: GameState){
-    if (!socketServer) return;
-    socketServer.emit("broadcast game state test", "test");
+export function purgeSockets(socketServer: SocketServer){
+    socketServer.disconnectSockets()
 }
 

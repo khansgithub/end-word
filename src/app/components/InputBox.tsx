@@ -338,7 +338,12 @@ export const getInputValue = () => useInputStore.getState().inputValue;
 export const setInputError = (error: boolean) => useInputStore.getState().setIsError(error);
 
 // Export a function to reset the input
-export const resetInput = () => useInputStore.getState().reset();
+export const resetInput = () => {
+    useInputStore.getState().reset();
+    // hacky
+    const inputDom = document.querySelector('input[type="text"]:not([disabled])');
+    if (inputDom) (inputDom as HTMLInputElement).focus();
+};
 
 export default memo(InputBox);
 

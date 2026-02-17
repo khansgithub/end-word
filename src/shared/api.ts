@@ -92,6 +92,11 @@ const exportMap  = {
     }
 };
 
+/**
+ * Returns either the mock or real API function from `exportsMap`
+ * @param func 
+ * @returns 
+ */
 function setExports<T extends (...args: any[])=>unknown>(func: T): T {
     const isMock = process.env.MOCK_WORD_VALIDATION === "true";
     return exportMap[func.name][isMock ? "mock" : "api"] as T;

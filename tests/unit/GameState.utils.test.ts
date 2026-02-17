@@ -78,7 +78,7 @@ describe("clonePlayersArray", () => {
 describe("buildInitialGameState", () => {
     it("should create a game state with default values", () => {
         const state = buildInitialGameState();
-        expect(state.status).toBeNull();
+        expect(state.status).toBe("waiting");
         expect(state.turn).toBe(0);
         expect(state.connectedPlayers).toBe(0);
         expect(state.players).toHaveLength(MAX_PLAYERS);
