@@ -1,7 +1,7 @@
 import express from "express";
 import type next from "next";
 import { registry } from "./metrics";
-import { getServerSocketContext } from "./context";
+import { getLogs, log } from "./logging";
 
 /**
  * Handle metrics requests, used for monitoring the server + testing.
@@ -26,24 +26,23 @@ function logsRoute(app: express.Express, enableTestEndpoints: boolean) {
     if (enableTestEndpoints) {
         app.get("/__test/server-logs", (_req, res) => {
             try {
-                const logs = getServerSocketContext()?.logs ?? null;
-                if (!logs) return;
-                res.json({ logs });
+                const logs = getLogs();
+                return res.json({ logs });
             } catch (err) {
                 const message = err instanceof Error ? err.message : "Unknown error";
-                console.error(err);
-                res.status(500).json({ error: message });
+                log("[logsRoute] error:", message)();
+                return res.status(500).json({ error: message });
             }
         });
     } else {
-        console.log("enableTestEndpoints is disabled");
+        log("enableTestEndpoints is disabled")();
     }
 }
 
 /**
  * Handle all other requests, used for serving the app.
  */
-function nextAppRoute(app: express.Express, nextApp: ReturnType<typeof next>){
+function nextAppRoute(app: express.Express, nextApp: ReturnType<typeof next>) {
     app.all(
         "/{*any}",
         (req: express.Request, res: express.Response) => nextApp.getRequestHandler()(req, res)

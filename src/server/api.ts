@@ -1,7 +1,8 @@
 // import { Message, Player } from "@/app/types";
-import { isDictionaryEntry } from "./guards";
-import { DictionaryEntry, DictionaryResponse } from "./types";
-
+import { getMockedData } from "../mocks/mock-dictionary-data";
+import { isDictionaryEntry } from "../shared/guards";
+import { DictionaryResponse } from "../shared/types";
+import { log } from "./logging";
 // type Response = {
 //     key: string;
 //     data: Array<string>;
@@ -11,7 +12,7 @@ import { DictionaryEntry, DictionaryResponse } from "./types";
 //     swapCharacter: () => void;
 //     swapRole: () => void;
 //     endChat: () => void;
-// }
+// }`
 
 // export interface ClientToServerEvents extends Shared {
 //     chatMessage: (
@@ -49,16 +50,24 @@ async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
 
 async function lookUpWordMock(word: string): Promise<DictionaryResponse> {
     const isFail = process.env.MOCK_WORD_VALIDATION_FAIL === "true";
-    const r: DictionaryResponse = {
-        key: "foo",
-        data: [{
-            word: "foo",
-            definition: "bar"
-        }]
-    };
-    return isFail ? {} : r;
-}
+    const loadMockData = process.env.MOCK_DICTIONARY_DATA === "true";
+    log("[lookUpWordMock] isFail:", isFail, "loadMockData:", loadMockData)();
+    if (isFail) return {};
 
+    if (loadMockData) {
+        const data = getMockedData().next().value as DictionaryResponse;
+        log("[lookUpWordMock][getMockedData] data:", JSON.stringify(data))();
+        return data;
+    } else {
+        return {
+            key: "foo",
+            data: [{
+                word: "foo",
+                definition: "bar"
+            }]
+        };
+    }
+}
 
 async function getRandomWordFromDictionaryMock(): Promise<string> {
     return "음";
@@ -81,28 +90,28 @@ async function getRandomWordFromDictionaryApi(): Promise<string> {
     }
 }
 
-const exportMap  = {
+const exportMap = {
     [getRandomWordFromDictionaryApi.name]: {
         api: getRandomWordFromDictionaryApi,
         mock: getRandomWordFromDictionaryMock
     },
-    [lookUpWordApi.name]:{
+    [lookUpWordApi.name]: {
         api: lookUpWordApi,
         mock: lookUpWordMock
     }
 };
 
 /**
- * Returns either the mock or real API function from `exportsMap`
- * @param func 
- * @returns 
+ * Returns either the mock or real API function from `exportsMap`.
+ * Add custom logic for when to mock functions.
  */
-function setExports<T extends (...args: any[])=>unknown>(func: T): T {
-    const isMock = process.env.MOCK_WORD_VALIDATION === "true";
+function setExports<T extends (...args: any[]) => unknown>(func: T, mockEnvVar: string): T {
+    const isMock = process.env[mockEnvVar] === "true";
     return exportMap[func.name][isMock ? "mock" : "api"] as T;
 }
 
-const getRandomWordFromDictionary = setExports(getRandomWordFromDictionaryApi);
-const lookUpWord = setExports(lookUpWordApi)
+const getRandomWordFromDictionary = setExports(getRandomWordFromDictionaryApi, "MOCK_GET_RANDOM_WORD");
+const lookUpWord = setExports(lookUpWordApi, "MOCK_LOOKUP_WORD");
 
 export { getRandomWordFromDictionary, lookUpWord };
+

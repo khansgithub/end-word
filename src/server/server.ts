@@ -3,13 +3,16 @@ import express from "express";
 import next from "next";
 
 import { createServer } from "node:http";
-import { getRandomWordFromDictionary } from "../shared/api";
+import { getRandomWordFromDictionary } from "./api";
 import { buildInitialGameState } from "../shared/GameState";
 import { setGameState } from "./state";
 import { createIOServer } from "./socket";
 import { setupRoutes } from "./routes";
+import { initLogging, log } from "./logging";
 import { NodeJS } from "../app/env";
 
+// --- Logging lifecycle: init early ---
+initLogging();
 
 const app = next({ dev: true, dir: "src" });
 const express_app = express();
@@ -24,8 +27,10 @@ const envVars: Array<keyof NodeJS.ProcessEnv> = [
     "SERVER",
     "SUPPRESS",
     "PLAYWRIGHT_TEST",
-    "MOCK_WORD_VALIDATION",
+    "MOCK_GET_RANDOM_WORD",
+    "MOCK_LOOKUP_WORD",
     "MOCK_WORD_VALIDATION_FAIL",
+    "MOCK_DICTIONARY_DATA",
 ];
 
 /**
@@ -37,27 +42,27 @@ async function startServer(): Promise<void> {
     setupRoutes(express_app, app, enableTestEndpoints);
 
     server.listen(port, () => {
-        console.log(`server running at http://localhost:${port}`);
+        log(`server running at http://localhost:${port}`)();
     });
 }
 
-function main(){
+function main() {
     getRandomWordFromDictionary()
-    .catch(err => {
-        console.error("Error getting random word from dictionary", err);
-        process.exit(1);
-    })
-    .then(word => {
-        setGameState(buildInitialGameState(word.slice(-1)));
-        createIOServer(server);
-        return startServer();
-    })
-    .catch(err => {
-        console.error("Error setting up game state", err);
-        process.exit(1);
-    });
+        .catch(err => {
+            console.error("Error getting random word from dictionary", err);
+            process.exit(1);
+        })
+        .then(word => {
+            setGameState(buildInitialGameState(word.slice(-1)));
+            createIOServer(server);
+            return startServer();
+        })
+        .catch(err => {
+            console.error("Error setting up game state", err);
+            process.exit(1);
+        });
 }
 
-console.log("Env variables:", (() => { return envVars.map(v => `${v}=${process.env[v]}`) })());
+log("Env variables:", envVars.map(v => `${v}=${process.env[v]}`).join(", "))();
 
 main();

@@ -13,7 +13,7 @@ import { getGameState } from "./state";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 
-/** Shared context for socket handlers: state, mutex, registrations, logs, and optional instrumentation. */
+/** Shared context for socket handlers: state, mutex, registrations, and optional instrumentation. */
 export type ServerSocketContext = {
     state: GameState;
     runExclusive: RunExclusive;
@@ -27,7 +27,6 @@ export type ServerSocketContext = {
         countEvent: (event: string) => void;
         setRegisteredClients: (count: number) => void;
     };
-    logs: Array<{ ts: number; msg: string }>;
 };
 
 let activeServerContext: ServerSocketContext | null = null;
@@ -66,6 +65,5 @@ export function createServerSocketContext(
             connections: 0,
         },
         instrumentation,
-        logs: [],
     };
 }

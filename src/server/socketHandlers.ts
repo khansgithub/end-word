@@ -2,26 +2,14 @@ import { decreasePlayerHealth, endGame, getPlayerByClientId, progressNextTurn, r
 import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socket";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
-import { getAlivePlayerCount, inputIsValid } from "../shared/utils";
+import { getAlivePlayerCount } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getServerSocketContext, ServerSocketContext } from "./context";
 import { getGameState, setGameState } from "./state";
+import { log } from "./logging";
+import { inputIsValid } from "./util";
 
 const L = "fml: ";
-const _log = console.log;
-const log2 = (...args: any[]) => {
-    const context = getServerSocketContext();
-    if (context) serverLog(context, args);
-    return console.log;
-}
-
-// --- Logging ---
-function serverLog(context: ServerSocketContext, ...messages: any[]) {
-    const entry = { ts: Date.now(), msg: `[socket] ${messages}` };
-    context.logs.push(entry);
-    if (context.logs.length > 500) context.logs.shift();
-    console.log(new Date(entry.ts).toISOString(), entry.msg);
-}
 
 // --- Client / socket helpers ---
 function getClientId(socket: ServerPlayerSocket) {
@@ -42,7 +30,7 @@ const isReturningPlayer = (clientId: string) => {
 
 // --- Broadcasting ---
 export function broadcastGameState(socket: ServerPlayerSocket, gameState: GameState) {
-    console.log(`broadcastGameState: Broadcasting updated game state to all clients except sender. GameState:`, toGameStateEmit(gameState));
+    log("broadcastGameState: Broadcasting updated game state to all clients except sender. GameState:", toGameStateEmit(gameState))();
     socket.broadcast.emit("gameStateUpdate", toGameStateEmit(gameState));
 }
 
@@ -120,10 +108,10 @@ function unregisterPlayer(clientId: string) {
  * @returns 
  */
 export async function handleSubmitWord(socket: ServerPlayerSocket, word: string, ack: AckSubmitWordResponse) {
-    console.log(L, `submitWord event received from client ${getClientId(socket)}`);
+    log(L, `submitWord event received from client ${getClientId(socket)}`)();
     const player = getPlayerByClientId(getGameState(), getClientId(socket));
-    console.log(L, `player: ${JSON.stringify(player)}`);
-    console.log(L, `word: ${word}`);
+    log(L, `player: ${JSON.stringify(player)}`)();
+    log(L, `word: ${word}`)();
     const state = getGameState();
     const currentMatchLetter = state.matchLetter.block;
 
@@ -184,8 +172,6 @@ function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitW
 
 // --- Main entry: attach socket handlers ---
 export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketContext) {
-    const logger = (message: string) => serverLog(socketContext, message);
-
     countSocketEvent("connect");
 
     socket.on("getPlayerCount", (ack: AckGetPlayerCount) => {
@@ -203,7 +189,7 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
 
     socket.on(socketEvents.disconnect, (reason: string) => {
         const clientId = getClientId(socket);
-        console.log("disconnect event received from client: " + reason);
+        log("disconnect event received from client: " + reason)();
         countSocketEvent("disconnect");
         unregisterPlayer(clientId);
         broadcastGameState(socket, toGameStateEmit(getGameState()));
@@ -218,5 +204,5 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
         handleSubmitWord(socket, word, ack);
     });
 
-    socket.onAny(event => console.log(event));
+    socket.onAny(event => log(event)());
 }

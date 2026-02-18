@@ -55,7 +55,6 @@ function createMockContext(overrides?: Partial<ServerSocketContext>): ServerSock
         registeredSockets: new Map(),
         io: undefined,
         stats: { getPlayerCount: 0, connections: 0 },
-        logs: [],
         ...overrides,
     };
 }

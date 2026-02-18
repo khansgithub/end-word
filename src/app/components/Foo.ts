@@ -44,7 +44,7 @@ function foo(num: number) { };
 function bar(str: string) { };
 function foobar(num: number, str: string) { };
 
-declare const data: functionMap;
+const data: functionMap;
 const f = functions[data.type];
 
 function call<K extends keyof typeof functions>(
@@ -53,5 +53,5 @@ function call<K extends keyof typeof functions>(
     return functions[data.type](...data.payload);
 }
 
-
+export default {};
 // (...data.payload);

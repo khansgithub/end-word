@@ -1,13 +1,15 @@
 import { spawn } from "node:child_process";
 import { roomFlowTestNames, type RoomFlowTestName } from "./test-names";
+import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
 
 type runTestConfig = {
     testName: RoomFlowTestName,
     envVars: Partial<typeof process.env>,
-    enableUi?: boolean
+    enableUi?: boolean,
+    cb?: (...args: any[]) => void
 }
 
-function runTest({ testName, envVars, enableUi }: runTestConfig) {
+function runTest({ testName, envVars, enableUi, cb }: runTestConfig) {
     // const defaultTest: RoomFlowTestName = roomFlowTestNames.dualBrowserJoin;
     // const requested: RoomFlowTestName | undefined = process.argv[2] as RoomFlowTestName | undefined;
     // let testName = requested ?? defaultTest;
@@ -20,6 +22,7 @@ function runTest({ testName, envVars, enableUi }: runTestConfig) {
         testName,
         enableUi ? "--ui" : ""
     ];
+    if (cb) cb();
     const command = `npx ${args.join(" ")}`;
     console.log("Running test: ", testName);
     console.log("Environment variables: ", envVars);
@@ -37,19 +40,26 @@ const testConfigs = {
     [roomFlowTestNames.playerHealthDecreases]: {
         testName: roomFlowTestNames.playerHealthDecreases,
         envVars: {
-            MOCK_WORD_VALIDATION: "true",
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
             MOCK_WORD_VALIDATION_FAIL: "true",
         },
     },
     [roomFlowTestNames.playerDiesIn3PlayerGame]: {
         testName: roomFlowTestNames.playerDiesIn3PlayerGame,
         envVars: {
-            MOCK_WORD_VALIDATION: "true",
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
             MOCK_WORD_VALIDATION_FAIL: "false",
+            MOCK_DICTIONARY_DATA: "true",
         },
-        enableUi: true
+        enableUi: true,
+        cb: setupMockDictionaryData,
     }
 };
 
+function setupMockDictionaryData() {
+    writeMockData([o, x, x, x, x, x, x]);
+}
 
 runTest(testConfigs[roomFlowTestNames.playerDiesIn3PlayerGame]);
