@@ -65,7 +65,7 @@ export default function Game(props: props) {
 
     return (
         <div className="flex flex-col w-full min-h-screen items-center p-3 gap-3" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            {/* <p>gameState is: {pp(gameState)}</p> */}
+            <p>gameState is: {JSON.stringify(gameState)}</p>
             {/* Waiting Overlay */}
             {/* <WaitingOverlay status={gameState.status} /> */}
             <GameOverlay status={gameState.status} />

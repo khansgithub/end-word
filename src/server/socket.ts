@@ -1,9 +1,9 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { createServerSocketContext } from "./serverContext";
+import { createServerSocketContext } from "./context";
 import { GameState, ServerPlayerSocket } from "../shared/types";
-import { fml } from "./fml";
-import { getServerSocketContext, setActiveServerContext } from "./serverContext";
+import { fml } from "./socketHandlers";
+import { getServerSocketContext, setActiveServerContext } from "./context";
 
 let socketServer: SocketServer | null = null;
 
@@ -28,7 +28,7 @@ export function setUpIOServer(socketServer: SocketServer): SocketServer {
     return socketServer;
 }
 
-export function purgeSockets(socketServer: SocketServer){
+export function purgeSockets(socketServer: SocketServer) {
     socketServer.disconnectSockets()
 }
 

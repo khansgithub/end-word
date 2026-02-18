@@ -1,7 +1,13 @@
 import { spawn } from "node:child_process";
 import { roomFlowTestNames, type RoomFlowTestName } from "./test-names";
 
-function runTest(testName: RoomFlowTestName, envVars: Partial<typeof process.env>, enableUi: boolean) {
+type runTestConfig = {
+    testName: RoomFlowTestName,
+    envVars: Partial<typeof process.env>,
+    enableUi?: boolean
+}
+
+function runTest({ testName, envVars, enableUi }: runTestConfig) {
     // const defaultTest: RoomFlowTestName = roomFlowTestNames.dualBrowserJoin;
     // const requested: RoomFlowTestName | undefined = process.argv[2] as RoomFlowTestName | undefined;
     // let testName = requested ?? defaultTest;
@@ -27,11 +33,23 @@ function runTest(testName: RoomFlowTestName, envVars: Partial<typeof process.env
     });
 }
 
-
-const testName: RoomFlowTestName = roomFlowTestNames.playerHealthDecreases;
-const envVars: Partial<typeof process.env> = {
-    MOCK_WORD_VALIDATION: "true",
-    MOCK_WORD_VALIDATION_FAIL: "true",
+const testConfigs = {
+    [roomFlowTestNames.playerHealthDecreases]: {
+        testName: roomFlowTestNames.playerHealthDecreases,
+        envVars: {
+            MOCK_WORD_VALIDATION: "true",
+            MOCK_WORD_VALIDATION_FAIL: "true",
+        },
+    },
+    [roomFlowTestNames.playerDiesIn3PlayerGame]: {
+        testName: roomFlowTestNames.playerDiesIn3PlayerGame,
+        envVars: {
+            MOCK_WORD_VALIDATION: "true",
+            MOCK_WORD_VALIDATION_FAIL: "false",
+        },
+        enableUi: true
+    }
 };
-const enableUi = true;
-runTest(testName, envVars, enableUi);
+
+
+runTest(testConfigs[roomFlowTestNames.playerDiesIn3PlayerGame]);

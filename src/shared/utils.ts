@@ -1,5 +1,5 @@
 import { buildSyllableSteps } from "../app/hangul-decomposer";
-import { ClientPlayers, ClientPlayerSocket, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { ClientPlayers, ClientPlayerSocket, GameState, MatchLetter, Player, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
 import { DEFAULT_HEALTH } from "./consts";
 import { lookUpWord } from "./api";
 import { isDictionaryEntry } from "./guards";
@@ -87,8 +87,24 @@ export function cloneServerPlayersToClientPlayers(players: ServerPlayers): Clien
  * @param connectedPlayers - The number of connected players
  * @returns The index of the current player (0-based)
  */
-export function getCurrentPlayerIndex(turn: number, connectedPlayers: number): number {
+export function turnToPlayerIndex(turn: number, connectedPlayers: number): number {
     return turn % connectedPlayers;
+}
+
+/**
+ * Get the player whose turn it is.
+ */
+export function getCurrentTurnPlayer(state: GameState){
+    const playerI = turnToPlayerIndex(state.turn, state.connectedPlayers);
+    const player = state.players[playerI];
+    return player;
+}
+
+export function getAlivePlayerCount(state: GameState): number{
+    return state.players.reduce(
+        (count, player) =>
+            (player && player.health > 0 ? count + 1 : count),
+        0);
 }
 
 /**
@@ -99,7 +115,7 @@ export function getCurrentPlayerIndex(turn: number, connectedPlayers: number): n
  * @returns True if it's the specified player's turn, false otherwise
  */
 export function isPlayerTurn(gameState: { turn: number; connectedPlayers: number }, playerSeat: number): boolean {
-    return getCurrentPlayerIndex(gameState.turn, gameState.connectedPlayers) === playerSeat;
+    return turnToPlayerIndex(gameState.turn, gameState.connectedPlayers) === playerSeat;
 }
 
 // ============================================================================

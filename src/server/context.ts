@@ -9,7 +9,7 @@ import {
     type RunExclusive,
 } from "../shared/types";
 import { createSocketMutex } from "../shared/utils";
-import { getGameState } from "./serverGameState";
+import { getGameState } from "./state";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 

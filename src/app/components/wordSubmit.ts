@@ -40,16 +40,17 @@ export function correctWord(
     dispatch: GameStateDispatch,
     responseGameState: GameStateEmit,
     word: string,
-){
+) {
     dispatch({
         type: "gameStateUpdateClient",
         payload: [responseGameState],
     });
 
     if (gameState.thisPlayer) {
+        // avoid race by passing in the response state here
         dispatch({
             type: "setPlayerLastWord",
-            payload: [gameState, word],
+            payload: [{ ...responseGameState, thisPlayer: gameState.thisPlayer }, word],
         });
     }
 }
@@ -60,8 +61,8 @@ export function wrongWord(
     responseGameState: null | GameStateEmit,
     setInputError: (error: boolean) => void,
     reason: string,
-){
-    if (responseGameState){
+) {
+    if (responseGameState) {
         dispatch({
             type: "gameStateUpdateClient",
             payload: [responseGameState],
@@ -75,13 +76,13 @@ export function wrongWord(
         error(L, "submitWord failed", reason);
     };
     // if (gameState.thisPlayer.health == 1) {
-        
+
     //     // TODO: show game over screen
     //     dispatch({
     //         type: "endGame",
     //         payload: []
     //     });
-        
+
     // } else {
     //     dispatch({
     //         type: "decreasePlayerHealth",

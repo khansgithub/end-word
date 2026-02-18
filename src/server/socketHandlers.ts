@@ -2,10 +2,10 @@ import { decreasePlayerHealth, endGame, getPlayerByClientId, progressNextTurn, r
 import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socket";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
-import { inputIsValid } from "../shared/utils";
+import { getAlivePlayerCount, inputIsValid } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
-import { getServerSocketContext, ServerSocketContext } from "./serverContext";
-import { getGameState, setGameState } from "./serverGameState";
+import { getServerSocketContext, ServerSocketContext } from "./context";
+import { getGameState, setGameState } from "./state";
 
 const L = "fml: ";
 const _log = console.log;
@@ -153,33 +153,33 @@ function invalidWord(socket: ServerPlayerSocket, reason: string, ack: AckSubmitW
     /**
      * Invoked during a submit word event, when the input word is invalid.
      * Calls the ack function with the reason for the word being invalid.
-     * Also reduces the player health by one.
+     * Reduces player health by 1 down to 0.
+     * If there are only 2 players left, and one dies, game is over. state.status set to "finished"
+     * 
      */
 
     const state = getGameState();
     const clientId = getClientId(socket);
     const player = getPlayerByClientId(state, clientId);
     if (!player) throw new Error("Unexpected error; player is undefined");
-    const end = player.health == 1;
+    const playerDead = player.health == 1;
+    const end = playerDead && getAlivePlayerCount(state) == 2;
 
-    // FIXME: This is logic assuming the game is for just 2 players.
-    // Need to handle skipping players who have lost in games with > 2 players.
-    const nextState =
-        end
-            ? endGame(state)
-            : decreasePlayerHealth(
-                  state,
-                  player.health,
-                  player.seat!
-              );
+    const nextState = end
+        ? endGame(state)
+        : decreasePlayerHealth(state, player.health, player.seat!);
 
-    if (end){
+    if (end) {
         // purgeGameState();
     }
 
     setGameState(nextState);
     broadcastGameState(socket, nextState);
-    ack({ success: false, reason: reason, ... end ? {endGameState: toGameStateEmit(nextState)} : {}});
+    ack({
+        success: false,
+        reason: reason,
+        ...end ? { endGameState: toGameStateEmit(nextState) } : {}
+    });
 }
 
 // --- Main entry: attach socket handlers ---

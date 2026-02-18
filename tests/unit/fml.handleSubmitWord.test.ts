@@ -1,10 +1,10 @@
+import { handleSubmitWord } from "@/server/socketHandlers";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
-import { handleSubmitWord } from "../../src/server/fml";
-import * as serverGameState from "../../src/server/serverGameState";
 import * as GameState from "../../src/shared/GameState";
+import * as ServerGameState from "../../src/server/state";
 import { buildInitialGameState } from "../../src/shared/GameState";
-import { AckSubmitWordResponse, GameState as GameStateType, PlayerWithId, ServerPlayerSocket } from "../../src/shared/types";
+import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayerSocket } from "../../src/shared/types";
 import * as utils from "../../src/shared/utils";
 import { pp } from "../../src/shared/utils";
 import { createRequiredPlayerWithId } from "./GameState.test-helpers";
@@ -75,8 +75,8 @@ describe("handleSubmitWord - validation logic", () => {
         mockGetGameState = vi.fn();
         mockSetGameState = vi.fn();
 
-        vi.spyOn(serverGameState, "getGameState").mockImplementation(mockGetGameState as any);
-        vi.spyOn(serverGameState, "setGameState").mockImplementation(mockSetGameState as any);
+        vi.spyOn(ServerGameState, "getGameState").mockImplementation(mockGetGameState as any);
+        vi.spyOn(ServerGameState, "setGameState").mockImplementation(mockSetGameState as any);
 
         // Mock inputIsValid
         mockInputIsValid = vi.fn();

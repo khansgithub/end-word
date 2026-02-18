@@ -9,7 +9,7 @@ import { ActionDispatch } from "react";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
-import { buildMatchLetter, cloneServerPlayersToClientPlayers, getCurrentPlayerIndex, pp } from "./utils";
+import { buildMatchLetter, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -75,19 +75,43 @@ export function nextTurn(state: GameState, currentState?: GameState): GameState 
     };
 }
 
+/**
+ * Performas all the actions needed to move to the next turn:
+ *  - update the turn value
+ *  - update the matchLetter value
+ *  - sets the players last word
+ * Skips turns for 
+ * @param state 
+ * @param block 
+ * @param playerLastWord 
+ * @param currentState 
+ * @returns 
+ */
 export function progressNextTurn(
     state: GameState,
     block: string,
     playerLastWord: string,
     currentState?: GameState
 ): GameState {
-    let nextState: GameState = state;
-    nextState = {
-        ...nextState,
-        matchLetter: buildMatchLetter(block),
-    };
-    nextState = setPlayerLastWord(nextState, playerLastWord)
+    let nextState: GameState = { ...state };
+    let nextTurnPlayer;
+    nextState.matchLetter = buildMatchLetter(block);
+    nextState = setPlayerLastWord(nextState, playerLastWord);
     nextState = nextTurn(nextState);
+
+    let maxLoops = 0;
+    nextTurnPlayer = getCurrentTurnPlayer(nextState);
+
+    while ((!nextTurnPlayer || nextTurnPlayer.health <= 0) && maxLoops < MAX_PLAYERS + 1) {
+        nextState = nextTurn(nextState);
+        nextTurnPlayer = getCurrentTurnPlayer(nextState);
+        maxLoops++;
+    }
+
+    if (maxLoops >= MAX_PLAYERS + 1) {
+        throw new Error("Unexpected error, cannot progress turn.")
+    }
+
     return nextState;
 }
 
@@ -109,7 +133,7 @@ export function setPlayerLastWord(
     playerLastWord: string,
     currentState?: GameState
 ): GameState {
-    const currentPlayerIndex = getCurrentPlayerIndex(state.turn, state.connectedPlayers);
+    const currentPlayerIndex = turnToPlayerIndex(state.turn, state.connectedPlayers);
     const updatedPlayers = clonePlayersArray(state.players);
     const player = updatedPlayers[currentPlayerIndex];
 

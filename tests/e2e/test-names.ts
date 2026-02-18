@@ -4,6 +4,7 @@ const namesOfTests = [
     "turnChangeUpdatesHighlight",
     "playerHealthDecreases",
     "gameStartsAfterBothPlayersJoin",
+    "playerDiesIn3PlayerGame"
 ] as const;
 
 export const roomFlowTestNames = Object.fromEntries(
@@ -16,6 +17,7 @@ export const roomFlowTestDescriptions: Record<RoomFlowTestName, string> = {
     turnChangeUpdatesHighlight: "Test that the inputDomHighlight updates when turn changes after word submission",
     playerHealthDecreases: "Test that the player health decreases when an invalid word is submitted",
     gameStartsAfterBothPlayersJoin: "Test that the room flow starts the game after both players join",
+    playerDiesIn3PlayerGame: "Test that in a 3 player game, when the 2nd player dies the server skips them when progressing following turns."
 } as const;
 
 export type RoomFlowTestName = (typeof namesOfTests)[number];
