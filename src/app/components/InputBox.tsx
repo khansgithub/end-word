@@ -11,6 +11,7 @@ import {
     actionHandlers as validateWrapper
 } from "./inputValidation";
 import { gameStrings } from "./gameStrings";
+import { IconLock } from "./icons";
 
 // Zustand store for input state to minimize re-renders
 const useInputStore = create<InputState>((set) => ({
@@ -294,18 +295,11 @@ function InputBox({
                             }}
                         >
                             <div className="flex flex-col items-center gap-1">
-                                <svg
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    style={{ color: 'var(--input-text-disabled)' }}
-                                >
-                                    <rect x="5" y="11" width="14" height="10" rx="2" ry="2" />
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                </svg>
+                                <IconLock
+                                    width={24}
+                                    height={24}
+                                    style={{ color: "var(--input-text-disabled)" }}
+                                />
                                 <span
                                     className="text-xs font-medium"
                                     style={{ color: 'var(--input-text-disabled)' }}

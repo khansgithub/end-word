@@ -9,7 +9,7 @@ import { ActionDispatch } from "react";
 import { MAX_PLAYERS } from "./consts";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
-import { buildMatchLetter, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer } from "./utils";
+import { buildMatchLetter, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -171,10 +171,10 @@ export function decreasePlayerHealth(
     if (currentHealth <= 0) throw new Error("health cannot be less than 0");
     if (state.status != "playing") throw new Error("game must be in state 'playing'");
 
-    let nextState: GameState = { ...state };
+    const nextState: GameState = { ...state };
+    
+    // If `thisPlayer` is in the state value, update its health
     const updateThisPlayer = nextState.thisPlayer && nextState.thisPlayer.seat == playerSeat;
-
-    nextState.status = newHealth == 0 ? "finished" : nextState.status;
 
     const player = nextState.players[playerSeat];
     if (!player) throw new Error(`Unexpected error: no player with ${playerSeat} could be found in ${nextState.players}`);
@@ -307,9 +307,11 @@ export function replaceGameState(newState: GameState, currentState?: GameState):
 
 export function gameStateUpdateClient(newState: GameStateEmit, currentState?: GameStateClient): GameStateClient {
     if (!currentState) throw new Error("currentState needs to be passed");
+    let p  = newState.players[currentState.thisPlayer.seat ?? -1];
+    p = {...currentState.thisPlayer, ... (p || {})};
     return {
         ...newState,
-        thisPlayer: currentState.thisPlayer
+        thisPlayer: {...currentState.thisPlayer, ... (p || {})}
     };
 }
 

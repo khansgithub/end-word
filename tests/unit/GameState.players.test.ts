@@ -17,7 +17,7 @@ import {
 describe("registerPlayer", () => {
     it("should set thisPlayer in the state", () => {
         const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1", 0);
+        const player = createTestPlayerWithId("Player0", "uid0", 0);
         const action = {
             type: "registerPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -27,21 +27,21 @@ describe("registerPlayer", () => {
     });
 
     it("should replace existing thisPlayer", () => {
-        const existingPlayer = createRequiredPlayerWithId("Alice", "uid1", 0);
+        const existingPlayer = createRequiredPlayerWithId("Player0", "uid0", 0);
         const state = createTestGameState({ thisPlayer: existingPlayer });
-        const newPlayer = createRequiredPlayerWithId("Bob", "uid2", 0);
+        const newPlayer = createRequiredPlayerWithId("Player1", "uid1", 0);
         const action = {
             type: "registerPlayer" as const,
             payload: [state, newPlayer] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.thisPlayer).toEqual(newPlayer);
-        expect(result.thisPlayer?.uid).toBe("uid2");
+        expect(result.thisPlayer?.uid).toBe("uid1");
     });
 
     it("should not mutate the original state", () => {
         const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1", 0);
+        const player = createTestPlayerWithId("Player0", "uid0", 0);
         const action = {
             type: "registerPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -54,40 +54,40 @@ describe("registerPlayer", () => {
 describe("addPlayer", () => {
     it("should add a player to the first available seat", () => {
         const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1");
+        const player = createTestPlayerWithId("Player0", "uid0");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.players[0]).toBeDefined();
-        expect(result.players[0]?.name).toBe("Alice");
+        expect(result.players[0]?.name).toBe("Player0");
         expect(result.players[0]?.seat).toBe(0);
     });
 
     it("should add a player to the next available seat", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
+            createTestPlayer("Player0", "uid0", 0),
             null,
             null,
             null,
             null,
         ]);
-        const player = createTestPlayerWithId("Bob", "uid2");
+        const player = createTestPlayerWithId("Player1", "uid1");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.players[1]).toBeDefined();
-        expect(result.players[1]?.name).toBe("Bob");
+        expect(result.players[1]?.name).toBe("Player1");
         expect(result.players[1]?.seat).toBe(1);
     });
 
     it("should assign uid from thisPlayer if thisPlayer exists", () => {
         const thisPlayer = createRequiredPlayerWithId("Current", "current-uid", 0);
         const state = createTestGameState({ thisPlayer });
-        const player = createTestPlayerWithId("Alice", "uid1");
+        const player = createTestPlayerWithId("Player0", "uid0");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -95,12 +95,12 @@ describe("addPlayer", () => {
         const result = gameStateReducer(state, action);
         const addedPlayer = result.players[0];
         expect(addedPlayer).toHaveProperty("uid");
-        expect((addedPlayer as PlayerWithId).uid).toBe("uid1");
+        expect((addedPlayer as PlayerWithId).uid).toBe("uid0");
     });
 
     it("should not assign uid if thisPlayer does not exist", () => {
         const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1");
+        const player = createTestPlayerWithId("Player0", "uid0");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -108,13 +108,15 @@ describe("addPlayer", () => {
         const result = gameStateReducer(state, action);
         // The player's original uid should be preserved
         const addedPlayer = result.players[0];
-        expect(addedPlayer && "uid" in addedPlayer ? addedPlayer.uid : undefined).toBe("uid1");
+        expect(addedPlayer && "uid" in addedPlayer ? addedPlayer.uid : undefined).toBe("uid0");
     });
 
     it("should throw error when no seats are available", () => {
         const players = Array(MAX_PLAYERS)
             .fill(null)
-            .map((_, i) => createTestPlayer(`Player${i}`, `uid${i}`, i));
+            .map((_, i) =>
+                createTestPlayer(`Player${i}`, `uid${i}`, i)
+            );
         const state = createGameStateWithPlayers(players);
         const player = createTestPlayerWithId("NewPlayer", "new-uid");
         const action = {
@@ -126,7 +128,7 @@ describe("addPlayer", () => {
 
     it("should throw error when player name is missing", () => {
         const state = createTestGameState();
-        const player = { ...createTestPlayerWithId("", "uid1"), name: "" };
+        const player = { ...createTestPlayerWithId("", "uid0"), name: "" };
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -138,13 +140,13 @@ describe("addPlayer", () => {
 describe("removePlayer", () => {
     it("should remove a player from the specified seat", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
             null,
             null,
         ]);
-        const playerToRemove = createTestPlayer("Alice", "uid1", 0);
+        const playerToRemove = createTestPlayer("Player0", "uid0", 0);
         const action = {
             type: "removePlayer" as const,
             payload: [state, playerToRemove] as [GameState, Player],
@@ -156,13 +158,13 @@ describe("removePlayer", () => {
 
     it("should update connectedPlayers count after removal", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
             null,
             null,
         ]);
-        const playerToRemove = createTestPlayer("Alice", "uid1", 0);
+        const playerToRemove = createTestPlayer("Player0", "uid0", 0);
         const action = {
             type: "removePlayer" as const,
             payload: [state, playerToRemove] as [GameState, Player],
@@ -174,7 +176,7 @@ describe("removePlayer", () => {
 
     it("should throw error when player seat is undefined", () => {
         const state = createTestGameState();
-        const playerWithoutSeat = createTestPlayer("Alice", "uid1");
+        const playerWithoutSeat = createTestPlayer("Player0", "uid0");
         const action = {
             type: "removePlayer" as const,
             payload: [state, playerWithoutSeat] as [GameState, Player],
@@ -184,13 +186,13 @@ describe("removePlayer", () => {
 
     it("should not mutate the original state", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
+            createTestPlayer("Player0", "uid0", 0),
             null,
             null,
             null,
             null,
         ]);
-        const playerToRemove = createTestPlayer("Alice", "uid1", 0);
+        const playerToRemove = createTestPlayer("Player0", "uid0", 0);
         const action = {
             type: "removePlayer" as const,
             payload: [state, playerToRemove] as [GameState, Player],
@@ -203,21 +205,21 @@ describe("removePlayer", () => {
 describe("addPlayerToArray", () => {
     it("should add a player to the specified seat", () => {
         const state = createTestGameState();
-        const player = createTestPlayer("Alice", "uid1", 2);
+        const player = createTestPlayer("Player0", "uid0", 2);
         const action = {
             type: "addPlayerToArray" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
         expect(result.players[2]).toBeDefined();
-        expect(result.players[2]?.name).toBe("Alice");
+        expect(result.players[2]?.name).toBe("Player0");
         expect(result.players[2]?.seat).toBe(2);
     });
 
     it("should update uid for thisPlayer if thisPlayer exists", () => {
         const thisPlayer = createRequiredPlayerWithId("Current", "current-uid", 1);
         const state = createTestGameState({ thisPlayer });
-        const player = createTestPlayer("Alice", "uid1", 1);
+        const player = createTestPlayer("Player0", "uid0", 1);
         const action = {
             type: "addPlayerToArray" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -225,12 +227,12 @@ describe("addPlayerToArray", () => {
         const result = gameStateReducer(state, action);
         const updatedPlayer = result.players[1];
         expect(updatedPlayer).toHaveProperty("uid");
-        expect((updatedPlayer as PlayerWithId).uid).toBe("uid1");
+        expect((updatedPlayer as PlayerWithId).uid).toBe("uid0");
     });
 
     it("should throw error when player seat is undefined", () => {
         const state = createTestGameState();
-        const playerWithoutSeat = createTestPlayer("Alice", "uid1");
+        const playerWithoutSeat = createTestPlayer("Player0", "uid0");
         const action = {
             type: "addPlayerToArray" as const,
             payload: [state, playerWithoutSeat] as [GameState, PlayerWithId],
@@ -240,7 +242,7 @@ describe("addPlayerToArray", () => {
 
     it("should update connectedPlayers count", () => {
         const state = createTestGameState();
-        const player = createTestPlayer("Alice", "uid1", 0);
+        const player = createTestPlayer("Player0", "uid0", 0);
         const action = {
             type: "addPlayerToArray" as const,
             payload: [state, player] as [GameState, PlayerWithId],

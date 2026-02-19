@@ -71,7 +71,7 @@ describe("nextTurn", () => {
 describe("_postPlayerCountUpdateState (via addPlayer)", () => {
     it("should set status to 'waiting' when less than 2 players", () => {
         const state = createTestGameState();
-        const player = createTestPlayerWithId("Alice", "uid1");
+        const player = createTestPlayerWithId("Player0", "uid0");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -83,13 +83,13 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
 
     it("should set status to 'playing' when 2 or more players", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
+            createTestPlayer("Player0", "uid0", 0),
             null,
             null,
             null,
             null,
         ]);
-        const player = createTestPlayerWithId("Bob", "uid2");
+        const player = createTestPlayerWithId("Player1", "uid1");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
@@ -101,13 +101,13 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
 
     it("should correctly count connected players", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
-            createTestPlayer("Charlie", "uid3", 3),
+            createTestPlayer("Player2", "uid2", 3),
             null,
         ]);
-        const player = createTestPlayerWithId("David", "uid4");
+        const player = createTestPlayerWithId("Player3", "uid3");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],

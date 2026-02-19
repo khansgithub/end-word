@@ -50,7 +50,7 @@ describe("clonePlayersArray", () => {
 
     it("should clone players correctly", () => {
         const original = makePlayersArray<ClientPlayers>();
-        const player = createTestPlayer("Alice", "uid1", 0);
+        const player = createTestPlayer("Player0", "uid0", 0);
         original[0] = player;
         const cloned = clonePlayersArray(original);
         expect(cloned[0]).toEqual(player);
@@ -59,7 +59,7 @@ describe("clonePlayersArray", () => {
 
     it("should preserve null values", () => {
         const original = makePlayersArray<ClientPlayers>();
-        original[0] = createTestPlayer("Alice", "uid1", 0);
+        original[0] = createTestPlayer("Player0", "uid0", 0);
         const cloned = clonePlayersArray(original);
         expect(cloned[0]).not.toBeNull();
         expect(cloned[1]).toBeNull();
@@ -67,10 +67,10 @@ describe("clonePlayersArray", () => {
 
     it("should not mutate the original array", () => {
         const original = makePlayersArray<ClientPlayers>();
-        const player = createTestPlayer("Alice", "uid1", 0);
+        const player = createTestPlayer("Player0", "uid0", 0);
         original[0] = player;
         const cloned = clonePlayersArray(original);
-        cloned[1] = createTestPlayer("Bob", "uid2", 1);
+        cloned[1] = createTestPlayer("Player1", "uid1", 1);
         expect(original[1]).toBeNull();
     });
 });
@@ -103,7 +103,7 @@ describe("buildInitialGameState", () => {
 describe("isRequiredGameState", () => {
     it("should return true when thisPlayer is defined", () => {
         const state = createTestGameState();
-        const player = createRequiredPlayerWithId("Alice", "uid1", 0);
+        const player = createRequiredPlayerWithId("Player0", "uid0", 0);
         const stateWithPlayer = { ...state, thisPlayer: player };
         expect(isRequiredGameState(stateWithPlayer)).toBe(true);
     });

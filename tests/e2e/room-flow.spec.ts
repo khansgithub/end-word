@@ -477,6 +477,7 @@ test(roomFlowTestNames.gameStartsAfterBothPlayersJoin, async ({ browser, request
 });
 
 test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }) => {
+    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
     assert(process.env.MOCK_GET_RANDOM_WORD == "true", `MOCK_GET_RANDOM_WORD must be enabled for the ${roomFlowTestNames.playerHealthDecreases} e2e tests`);
     assert(process.env.MOCK_LOOKUP_WORD == "true", `MOCK_LOOKUP_WORD must be enabled for the ${roomFlowTestNames.playerHealthDecreases} e2e tests`);
     assert(process.env.MOCK_WORD_VALIDATION_FAIL == "true", `MOCK_WORD_VALIDATION_FAIL must be enabled for the ${roomFlowTestNames.playerHealthDecreases} e2e tests`);
@@ -529,6 +530,7 @@ test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }) => {
 });
 
 test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }) => {
+    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
     assert(process.env.MOCK_DICTIONARY_DATA == "true", `MOCK_DICTIONARY_DATA must be enabled for the ${roomFlowTestNames.playerDiesIn3PlayerGame} e2e tests`);
 
     const TIMEOUT = 5000;
@@ -586,15 +588,46 @@ test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }) => 
         
         log('fill the current match letter on pageB - expect invalid word (current health should be 1)');
         domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click();
+        await domB.submitButton.click({timeout:TIMEOUT});
 
-        log('expect the input is error on pageB');
-        await expect(domB.page.getByText("Invalid word")).toBeVisible({ timeout: TIMEOUT });
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(0, { timeout: TIMEOUT });
+        log('expect there to be an svg icon (X instead of a heart)');
+        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(1, { timeout: TIMEOUT });
+
+        log('expect the input to be disabled');
+        await expect(domB.wordInput).toBeDisabled({ timeout: TIMEOUT });
+
+        log('expect the turn to be on Player3');
+        await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });
+        await expect(domB.wordInput).toBeDisabled({ timeout: TIMEOUT });
+        await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+
+        log('fill Player3 and go to next turn');
+        domC.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+        await domC.submitButton.click();
+
+        log('expect Player3 to be disabled')
+        await expect(domC.wordInput).toBeDisabled({ timeout: TIMEOUT });
+
+        log('expect Player1 to be enabled')
+        await expect(domA.wordInput).toBeEnabled({ timeout: TIMEOUT });
+
+        log('fill Player1 and go to next turn');
+        domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+        await domA.submitButton.click();
+
+        log('expect Player1 to be disabled')
+        await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+    
+        log('expect Player2 to be disabled (skipped)')
+        await expect(domB.wordInput).toBeDisabled({ timeout: TIMEOUT });
+
+        log('expect Player3 to be enabled')
+        await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });        
+
 
     } catch (err) {
         log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
         await testCleanUp(contexts, clientLogs, request, log);
     }
-})
+});

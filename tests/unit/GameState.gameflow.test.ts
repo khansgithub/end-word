@@ -6,6 +6,7 @@ import {
     createTestGameState,
     createTestPlayer,
 } from "./GameState.test-helpers";
+import { pp } from "@/shared/utils";
 
 // =============================================================================
 // GAME FLOW FUNCTIONS TESTS
@@ -14,8 +15,8 @@ import {
 describe("setPlayerLastWord", () => {
     it("should set lastWord for the current turn player", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
             null,
             null,
@@ -30,8 +31,8 @@ describe("setPlayerLastWord", () => {
 
     it("should update lastWord for the correct turn", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
             null,
             null,
@@ -57,7 +58,7 @@ describe("setPlayerLastWord", () => {
 
     it("should not mutate the original state", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
+            createTestPlayer("Player0", "uid0", 0),
             null,
             null,
             null,
@@ -75,8 +76,8 @@ describe("setPlayerLastWord", () => {
 describe("progressNextTurn", () => {
     it("should build match letter, set last word, and increment turn", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
             null,
             null,
             null,
@@ -93,9 +94,9 @@ describe("progressNextTurn", () => {
 
     it("should chain all three operations correctly", () => {
         const state = createGameStateWithPlayers([
-            createTestPlayer("Alice", "uid1", 0),
-            createTestPlayer("Bob", "uid2", 1),
-            createTestPlayer("Charlie", "uid3", 2),
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
+            createTestPlayer("Player2", "uid2", 2),
             null,
             null,
         ]);
@@ -108,6 +109,40 @@ describe("progressNextTurn", () => {
         expect(result.matchLetter.block).toBe("나");
         expect(result.players[2]?.lastWord).toBe("banana");
         expect(result.turn).toBe(3);
+    });
+
+    it("should skip dead players and set turn to next alive player after correct submission", () => {
+        // Create players: 0 (alive), 1 (dead), 2 (alive)
+        const player0 = createTestPlayer("Player0", "uid0", 0);
+        const player1 = createTestPlayer("Player1", "uid1", 1);
+        const player2 = createTestPlayer("Player2", "uid2", 2);
+
+        const state = createGameStateWithPlayers([
+            player0,
+            player1,
+            player2,
+            null,
+            null,
+        ]);
+
+        const action = {
+            type: "progressNextTurn" as const,
+            payload: [state, "나", "apple"] as [GameState, string, string],
+        };
+
+        player1.health = 0; // dead
+        state.turn = 0; // It's Player0's turn
+        state.status = "playing";
+
+        const result = gameStateReducer(state, action);
+
+        // matchLetter should be updated
+        expect(result.matchLetter.block).toBe("나");
+        // Player0's lastWord should be set to the submitted word
+        expect(result.players[0]?.lastWord).toBe("apple");
+        // It should now be Player2's turn (index 2), since Player1 is dead
+        expect(result.turn).toBe(2);
+        console.log(pp(result))
     });
 });
 

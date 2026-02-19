@@ -1,5 +1,5 @@
 import { GameStateActionsType, GameStateDispatch } from "../../shared/GameState";
-import { AckSubmitWordResponseParams, GameStateClient, GameStateEmit } from "../../shared/types";
+import { AckSubmitWordResponseParams, GameStateClient, GameStateEmit, PlayerWithId } from "../../shared/types";
 
 const L = `${__filename}: `
 const log = console.log;
@@ -28,7 +28,7 @@ export function submitWordCallback(
         wrongWord(
             gameState,
             dispatch,
-            response.endGameState ?? null,
+            response.gameState ?? null,
             setInputError,
             response.reason
         );
@@ -63,6 +63,9 @@ export function wrongWord(
     reason: string,
 ) {
     if (responseGameState) {
+        let _player = responseGameState.players[gameState.thisPlayer.seat!]!;
+        _player = { ...gameState.thisPlayer, ..._player };
+
         dispatch({
             type: "gameStateUpdateClient",
             payload: [responseGameState],
@@ -72,9 +75,11 @@ export function wrongWord(
             type: "decreasePlayerHealth",
             payload: [gameState, gameState.thisPlayer.health, gameState.thisPlayer.seat!],
         });
-        setInputError(true);
-        error(L, "submitWord failed", reason);
-    };
+    }
+    
+    setInputError(true);
+    error(L, "submitWord failed", reason);
+
     // if (gameState.thisPlayer.health == 1) {
 
     //     // TODO: show game over screen

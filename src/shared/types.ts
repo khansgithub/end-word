@@ -71,9 +71,9 @@ export type AckRegisterPlayerResponse =
 export type AckRegisterPlayer = (response: AckRegisterPlayerResponse) => void;
 export type AckUnregisterPlayer = (response: { success: boolean }) => void;
 export type AckIsReturningPlayer = (response: { found: boolean; player?: PlayerWithId }) => void;
-export type AckSubmitWordResponseParams = 
+export type AckSubmitWordResponseParams =
     | { success: true; gameState: GameStateEmit }
-    | { success: false; reason: string; endGameState?: GameStateEmit };
+    | { success: false; reason: string; gameState?: GameStateEmit };
 export type AckSubmitWordResponse = (response: AckSubmitWordResponseParams) => void;
 export type AckRequestFullState = (gameState: GameStateEmit) => void;
 
@@ -149,12 +149,12 @@ export type GameState = {
 
 export type GameStateEmit = (
     Omit<GameState, "thisPlayer" | "socketPlayerMap">
-    & {players: ClientPlayers}
+    & { players: ClientPlayers }
 );
 export type GameStateServer = Omit<GameState, "thisPlayer"> & Required<Pick<GameState, "socketPlayerMap">>;
 export type GameStateClient = (
     Omit<GameState, "socketPlayerMap">
-    & {thisPlayer: PlayerWithId}
+    & { thisPlayer: PlayerWithId }
 )
 
 export type GameStateFrozen = Readonly<GameState>;

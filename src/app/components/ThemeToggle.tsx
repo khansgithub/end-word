@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IconSun, IconMoon } from "./icons";
 
 export function ThemeToggle() {
     const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -35,17 +36,15 @@ export function ThemeToggle() {
             onClick={toggleTheme}
             className="fixed top-4 right-4 z-50 p-3 rounded-full border transition-all duration-200"
             style={{
-                background: theme === "dark" 
-                    ? "var(--gradient-button)" 
-                    : "var(--gradient-button)",
-                borderColor: "var(--border-default)",
-                color: "var(--text-primary)",
+                background: "var(--bg-primary)",
+                borderColor: "var(--bg-secondary-solid)",
+                color: "var(--color-neutral-light)",
                 boxShadow: "var(--shadow-button)",
             }}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         >
-            {theme === "dark" ? "☀️" : "🌙"}
+            {theme === "dark" ? <IconSun className="size-6" /> : <IconMoon className="size-6" />}
         </button>
     );
 }
