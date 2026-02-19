@@ -13,4 +13,5 @@ export default defineConfig({
         timeout: 120_000,
         reuseExistingServer: true,
     },
+    quiet: true
 });

@@ -1,7 +1,7 @@
 import { Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
 import { DEFAULT_HEALTH, MAX_PLAYERS } from "./consts";
-import { SocketEventName } from "./socket";
+import { SocketEventName } from "./socketEvents";
 
 /* --------------------------------------------------
  * Utility Types
@@ -97,6 +97,7 @@ export type ServerToClientEvents = SharedSocketEvents & {
  */
 type AllTypedSocketEvents = keyof (ClientToServerEvents & ServerToClientEvents);
 type AssertAllTypedEventsExistInSocketEvents = Exclude<AllTypedSocketEvents, SocketEventName> extends never ? true : false;
+// if this raises a type error - it means there is a mismatch with socket.ts
 export const socketEventSyncCheck: AssertAllTypedEventsExistInSocketEvents = true;
 
 /* --------------------------------------------------

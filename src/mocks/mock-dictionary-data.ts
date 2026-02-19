@@ -23,7 +23,7 @@ function* dataGenerator(): Generator<DictionaryResponse, void, unknown> {
 }
 
 export function writeMockData(_data: DictionaryResponse[]): void {
-    console.log("[writeMockData] writing data to file:", JSON.stringify(_data, null, 2));
+    console.log("[writeMockData] writing data to file:", JSON.stringify(_data));
     fs.writeFileSync(MOCK_DATA_FILE, JSON.stringify(_data, null, 2));
     console.log("[writeMockData] data written to file");
 }

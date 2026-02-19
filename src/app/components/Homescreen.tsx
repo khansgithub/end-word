@@ -2,9 +2,10 @@ import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { emitIsReturningPlayer, socketGetPlayerCount } from '../../shared/socketClient';
-import { Player } from '../../shared/types';
+import { GameStateEmit, Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
 import { getSocketManager } from './socketComponent';
+import { socketEvents } from '../../shared/socketEvents';
 
 
 export function Homescreen() {
@@ -42,6 +43,10 @@ export function Homescreen() {
         redirect("/room");
     }
 
+    function playerCountUpdateFromServer(state: GameStateEmit){
+        setPlayerCount(state.connectedPlayers);
+    }
+
     useEffect(() => {
         console.count("Homescreen");
         inputRef.current?.focus();
@@ -49,9 +54,12 @@ export function Homescreen() {
             socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
-        emitIsReturningPlayer(socket, clientId, setReturningPlayer)
+        socket.on(socketEvents.gameStateUpdate, playerCountUpdateFromServer);
+        emitIsReturningPlayer(socket, clientId, setReturningPlayer);
 
-        return () => { };
+        return () => {
+            socket?.off(socketEvents.gameStateUpdate);
+        };
     }, []);
 
     useEffect(() => {

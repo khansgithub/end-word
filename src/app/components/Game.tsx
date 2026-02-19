@@ -68,7 +68,7 @@ export default function Game(props: props) {
             <p>gameState is: {JSON.stringify(gameState)}</p>
             {/* Waiting Overlay */}
             {/* <WaitingOverlay status={gameState.status} /> */}
-            <GameOverlay status={gameState.status} />
+            <GameOverlay status={gameState.status} players={gameState.players} />
 
             {/* Round Number Badge */}
             <RoundNumberBadge turn={gameState.turn ?? 1} />

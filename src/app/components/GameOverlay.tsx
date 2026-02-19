@@ -1,9 +1,10 @@
 import { JSX } from "react";
-import { GameStatus } from "../../shared/types";
+import { GameStatus, PlayersArray } from "../../shared/types";
 import { gameStrings } from "./gameStrings";
 
 interface GameOverlayProps {
     status: GameStatus;
+    players: PlayersArray;
 }
 
 // type GameOverOverlayProps = {
@@ -12,7 +13,13 @@ interface GameOverlayProps {
 //     status: 'waiting'
 // }
 
-export default function GameOverlay({ status }: GameOverlayProps) {
+export default function GameOverlay({ status, players }: GameOverlayProps) {
+    function winnerName() {
+        const winner = players.find(p => p && p.health !== 0);
+        if (!winner) throw new Error ("unexpected error, not player with hp > 0 found in state.players");
+        return winner.name;
+    }
+
     const waitingJsx = (<>
         <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
         <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{gameStrings.waitingForGameToStart}</p>
@@ -22,8 +29,8 @@ export default function GameOverlay({ status }: GameOverlayProps) {
         <div className="stats shadow">
             <div className="stat">
                 <div className="stat-title">Winner:</div>
-                <div className="stat-value">"player name"</div>
-                <div className="stat-desc">Well Done: ...</div>
+                <div className="stat-value"> {winnerName()} </div>
+                <div className="stat-desc">Well Done</div>
             </div>
         </div>
     </>)
@@ -40,7 +47,6 @@ export default function GameOverlay({ status }: GameOverlayProps) {
 
     return (
         <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
-            <p>gameState is: {status}</p>
             <div className="panel" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
                 <div className="flex flex-col items-center p-6">
                     {mapping[status]}

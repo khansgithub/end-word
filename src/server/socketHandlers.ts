@@ -1,6 +1,6 @@
 import { decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
 import { assertIsPlayerWithId } from "../shared/guards";
-import { socketEvents } from "../shared/socket";
+import { socketEvents } from "../shared/socketEvents";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
 import { getAlivePlayerCount, pp } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
@@ -76,9 +76,7 @@ function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, 
 
     setRegisteredClients(newState.socketPlayerMap?.size ?? 0);
 
-    if (newState.connectedPlayers > 1) {
-        broadcastGameState(socket, newState);
-    }
+    broadcastGameState(socket, newState);
 
     ack({ success: true, gameState: clientGameState, player: thisPlayer });
 }
@@ -151,13 +149,12 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
     const end = playerDead && getAlivePlayerCount(state) == 2;
 
 
-    let nextState: GameState = { ...state };
+    let nextState: GameState = decreasePlayerHealth(state, player.health, player.seat!);
     if (end) {
         nextState = endGame(nextState);
-        // purge all sockets.
+        socket.removeAllListeners();
     }
-    else if (playerDead) nextState = nextTurn(decreasePlayerHealth(state, player.health, player.seat!));
-    else nextState = decreasePlayerHealth(state, player.health, player.seat!);
+    else if (playerDead) nextState = nextTurn(nextState);
 
     setGameState(nextState);
     broadcastGameState(socket, nextState);
@@ -172,7 +169,7 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
 export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketContext) {
     countSocketEvent("connect");
 
-    socket.on("getPlayerCount", (ack: AckGetPlayerCount) => {
+    socket.on(socketEvents.getPlayerCount, (ack: AckGetPlayerCount) => {
         countSocketEvent("getPlayerCount");
         ack(getPlayerCount());
     });
@@ -191,7 +188,6 @@ export function fml(socket: ServerPlayerSocket, socketContext: ServerSocketConte
         countSocketEvent("disconnect");
         unregisterPlayer(clientId);
         broadcastGameState(socket, toGameStateEmit(getGameState()));
-
         if (getGameState().connectedPlayers === 0) {
             setGameState({ ...getGameState(), status: "waiting", turn: 0 });
         }

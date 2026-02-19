@@ -1,4 +1,5 @@
-import { roomFlowTestNames, type RoomFlowTestName } from "./test-names";
+import { spawn } from "child_process";
+import { roomFlowTestNames as t, type RoomFlowTestName } from "./test-names";
 import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
 
 // Playwright internal APIs - not officially documented, may change between versions
@@ -6,20 +7,45 @@ import { runAllTestsWithConfig } from "playwright/lib/runner/testRunner";
 import { loadConfigFromFile } from "playwright/lib/common/configLoader";
 
 type RunTestConfig = {
-    testName: RoomFlowTestName;
     envVars: Partial<typeof process.env>;
     enableUi?: boolean;
     cb?: (...args: unknown[]) => void;
 };
 
-async function runTest({ testName, envVars, enableUi, cb }: RunTestConfig): Promise<string> {
-    if (enableUi) {
-        throw new Error("UI mode is not supported with in-process runner. Use spawn-based runner for --ui.");
-    }
+/** Spawn-based runner: runs Playwright in a subprocess. Supports --ui. */
+function runTestSpawn(testName: RoomFlowTestName, {envVars, enableUi, cb }: RunTestConfig) {
+    const envVarsString = Object.entries(envVars)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(" ");
+    const env = `cross-env CUSTOM_PLAYWRIGHT_RUNNER=true ${envVarsString}`;
+    const args = [
+        env,
+        "playwright test tests/e2e/room-flow.spec.ts",
+        "-g",
+        "--quiet",
+        testName,
+        enableUi ? "--ui" : ""
+    ];
+    if (cb) cb();
+    const command = `npx ${args.join(" ")}`;
+    console.log("Running test: ", testName);
+    console.log("Environment variables: ", envVars);
+    console.log("Command: ", command);
 
+    const child = spawn(command, { stdio: "inherit", shell: process.platform === "win32" });
+
+    child.on("exit", (code) => {
+        process.exit(code ?? 1);
+    });
+}
+
+/** In-process runner: uses Playwright internal APIs. Does not support --ui. */
+async function runTestInProcess(
+    testName: RoomFlowTestName,
+    { envVars, cb }: RunTestConfig
+): Promise<string> {
     if (cb) cb();
 
-    // Set env vars in current process (workers inherit process.env)
     process.env.CUSTOM_PLAYWRIGHT_RUNNER = "true";
     for (const [key, value] of Object.entries(envVars)) {
         if (value !== undefined) process.env[key] = String(value);
@@ -39,17 +65,19 @@ async function runTest({ testName, envVars, enableUi, cb }: RunTestConfig): Prom
     return status;
 }
 
-const testConfigs = {
-    [roomFlowTestNames.playerHealthDecreases]: {
-        testName: roomFlowTestNames.playerHealthDecreases,
+async function runTest(testName: RoomFlowTestName, config: RunTestConfig): Promise<string> {
+    return runTestInProcess(testName, config);
+}
+
+const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
+    [t.playerHealthDecreases]: {
         envVars: {
             MOCK_GET_RANDOM_WORD: "true",
             MOCK_LOOKUP_WORD: "true",
             MOCK_WORD_VALIDATION_FAIL: "true",
         },
     },
-    [roomFlowTestNames.playerDiesIn3PlayerGame]: {
-        testName: roomFlowTestNames.playerDiesIn3PlayerGame,
+    [t.playerDiesIn3PlayerGame]: {
         envVars: {
             MOCK_GET_RANDOM_WORD: "true",
             MOCK_LOOKUP_WORD: "true",
@@ -58,7 +86,23 @@ const testConfigs = {
         },
         enableUi: true,
         cb: setupMockDictionaryData,
-    }
+    },
+    [t.endGameWith2Players]: {
+        envVars: {
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
+            MOCK_WORD_VALIDATION_FAIL: "true",
+        },
+        enableUi: true,
+    },
+    [t.endGameWith3Players]: {
+        envVars: {
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
+            MOCK_WORD_VALIDATION_FAIL: "true",
+        },
+        enableUi: true,
+    },
 };
 
 function setupMockDictionaryData() {
@@ -74,7 +118,7 @@ async function main() {
 
     for (const [testName, testConfig] of Object.entries(testConfigs)) {
         try {
-            const status = await runTest({ ...testConfig, enableUi: false });
+            const status = await runTest(testName as RoomFlowTestName, { ...testConfig, enableUi: false });
             results.push({ name: testName, status });
         } catch (err) {
             console.error(`[Error] ${testName}:`, err);
@@ -94,5 +138,7 @@ async function main() {
 
     process.exit(failed.length > 0 ? 1 : 0);
 }
+
+// ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.endGameWith3Players)
 
 main();

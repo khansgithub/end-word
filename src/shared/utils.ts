@@ -156,3 +156,16 @@ export function buildMatchLetter(
 export function isSuppress(): boolean {
     return String(process.env.SUPPRESS).toLowerCase() === "true";
 }
+
+
+// ============================================================================
+// Typing Utilities
+// ============================================================================
+/**
+ * Creates a mapped type from an array of string.
+ */
+export function arrayToMapped<T extends readonly string[]>(arr: T) {
+    return Object.fromEntries(
+        arr.map((name) => [name, name])
+    ) as { [K in T[number]]: K };
+}

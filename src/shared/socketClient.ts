@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { GameStateDispatch } from "./GameState";
-import { socketEvents } from "./socket";
+import { socketEvents } from "./socketEvents";
 import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId } from "./types";
 import { pp } from "./utils";
 
@@ -93,7 +93,7 @@ export function emitIsReturningPlayer(
      * @param {string} clientId - The clientId to check.
      * @param {(player: Player) => void} setReturningPlayer - React setState callback to set the returning player.
      */
-    socket.emit("isReturningPlayer", clientId, (({ found, player }) => {
+    socket.emit(socketEvents.isReturningPlayer, clientId, (({ found, player }) => {
         log(L, "isReturningPlayer: ", found, player);
         if (found && player) setReturningPlayer(player);
     }));
@@ -102,7 +102,7 @@ export function emitIsReturningPlayer(
 export function socketGetPlayerCount(
     socket: ClientPlayerSocket,
     setPlayerCount: (count: number) => void) {
-    socket.emit("getPlayerCount", (count) => {
+    socket.emit(socketEvents.getPlayerCount, (count) => {
         log(L, "getPlayerCount: ", count);
         setPlayerCount(count);
     });

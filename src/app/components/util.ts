@@ -1,4 +1,4 @@
-import { socketEvents } from "../../shared/socket";
+import { socketEvents } from "../../shared/socketEvents";
 import { getSocketManager } from "./socketComponent";
 
 /**
