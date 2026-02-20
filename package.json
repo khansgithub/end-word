@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prod": "cross-env NODE_ENV=production tsx run.ts", 
     "dev": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
     "debug": "cross-env DEBUG=engine.io:* tsx watch src/server/server.ts",
     "build": "next build",
-    "start": "next start",
+    "start": " tsx src/server/server.ts",
     "lint": "eslint",
     "test:unit": "vitest --run",
     "test:watch": "vitest",

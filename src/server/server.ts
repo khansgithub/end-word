@@ -1,27 +1,40 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import next from "next";
 
 import { createServer } from "node:http";
-import { getRandomWordFromDictionary } from "./api";
-import { buildInitialGameState } from "../shared/GameState";
-import { setGameState } from "./state";
-import { createIOServer } from "./socket";
-import { setupRoutes } from "./routes";
-import { initLogging, log } from "./logging";
+import path from "node:path";
+import nextConfig from "../../next.config";
 import { NodeJS } from "../app/env";
+import { buildInitialGameState } from "../shared/GameState";
+import { getRandomWordFromDictionary } from "./api";
+import { initLogging, log } from "./logging";
+import { setupRoutes } from "./routes";
+import { createIOServer } from "./socket";
+import { setGameState } from "./state";
+
+const dotenvInject =  dotenv.config({ path: process.env.NODE_ENV === "production" ? ".env.prod" : ".env" });
+console.log(dotenvInject)
 
 // --- Logging lifecycle: init early ---
 initLogging();
 
-const app = next({ dev: true, dir: "src" });
+const app = next({
+    dev: process.env.NODE_ENV !== "production",
+    // customServer: true,
+    // dir: "src",
+    // conf: {
+    //     ...nextConfig,
+    //     // When dir is "src", Next.js resolves distDir relative to src/, so "src/.next/" becomes src/src/.next/.
+    //     // Override with absolute path so it finds the build at project_root/src/.next/
+    //     // distDir: path.resolve(process.cwd(), "src", ".next"),
+    // },
+    
+});
 const express_app = express();
 const server = createServer(express_app);
-
 const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
-
 const enableTestEndpoints = process.env.NODE_ENV === "test" || process.env.PLAYWRIGHT_TEST === "true";
-
 const envVars: Array<keyof NodeJS.ProcessEnv> = [
     "DICTIONARY_URL",
     "SERVER",
@@ -41,7 +54,7 @@ async function startServer(): Promise<void> {
     express_app.use(express.json());
     setupRoutes(express_app, app, enableTestEndpoints);
 
-    server.listen(port, () => {
+    server.listen(port, "0.0.0.0", () => {
         log(`server running at http://localhost:${port}`)();
     });
 }
@@ -63,6 +76,6 @@ function main() {
         });
 }
 
-log("Env variables:", envVars.map(v => `${v}=${process.env[v]}`).join(", "))();
+log("Env variables:", [...envVars, "NODE_ENV"].map(v => `${v}=${process.env[v]}`).join(", "))();
 
 main();
