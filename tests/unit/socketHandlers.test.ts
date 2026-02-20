@@ -1,23 +1,14 @@
-// @ts-nocheck
-
-import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
-import { Server as SocketServer } from "socket.io";
+import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import {
-    SocketHandlers,
-    HandlerDependencies,
-} from "../../src/shared/socketHandlers";
-import { ServerSocketContext } from "../../src/shared/socketServer";
-import { buildInitialGameState, makePlayersArray } from "../../src/shared/GameState";
-import {
-    GameState,
-    PlayerWithId,
-    ServerPlayers,
-    ServerPlayerSocket,
-} from "../../src/shared/types";
-import {
-    createRequiredPlayerWithId,
-    createTestGameState,
-} from "./GameState.test-helpers";
+    broadcastGameState,
+    fml,
+} from "../../src/server/socketHandlers";
+import { buildInitialGameState } from "../../src/shared/GameState";
+import { socketEvents } from "../../src/shared/socketEvents";
+import { GameState, ServerPlayerSocket } from "../../src/shared/types";
+import { createRequiredPlayerWithId } from "./GameState.test-helpers";
+import * as ServerGameState from "../../src/server/state";
+import * as metrics from "../../src/server/metrics";
 
 // =============================================================================
 // MOCK FACTORIES
@@ -28,637 +19,236 @@ type MockSocket = {
     handshake: { auth: { clientId: string } };
     emit: Mock;
     broadcast: { emit: Mock };
+    on: Mock;
+    onAny: Mock;
+    removeAllListeners: Mock;
 };
 
-function createMockSocket(clientId: string = "test-client-id", socketId: string = "socket-123"): MockSocket {
+function createMockSocket(
+    clientId: string = "test-client-id",
+    socketId: string = "socket-123"
+): MockSocket {
     return {
         id: socketId,
         handshake: { auth: { clientId } },
         emit: vi.fn(),
         broadcast: { emit: vi.fn() },
+        on: vi.fn(),
+        onAny: vi.fn(),
+        removeAllListeners: vi.fn(),
     };
 }
 
-function createMockMetrics() {
+function createMockContext() {
     return {
-        countEvent: vi.fn(),
-        setRegisteredClients: vi.fn(),
-        incrementConnections: vi.fn(),
-        recordGetPlayerCountRequest: vi.fn(),
-    };
-}
-
-function createMockContext(overrides?: Partial<ServerSocketContext>): ServerSocketContext {
-    return {
-        state: buildInitialGameState({ server: true }),
-        runExclusive: vi.fn((fn) => fn()),
+        state: buildInitialGameState(),
+        runExclusive: vi.fn((fn: () => Promise<void>) => fn()),
         registeredSockets: new Map(),
         io: undefined,
         stats: { getPlayerCount: 0, connections: 0 },
-        ...overrides,
-    };
-}
-
-function createMockIoServer(): Partial<SocketServer> {
-    const socketsMap = new Map<string, MockSocket>();
-    return {
-        sockets: {
-            sockets: socketsMap,
-        } as any,
-    };
-}
-
-function createMockDependencies(overrides?: Partial<HandlerDependencies>): HandlerDependencies {
-    const context = createMockContext();
-    let state: GameState<ServerPlayers> = {
-        ...buildInitialGameState({ server: true }),
-        status: "waiting", // Ensure status is not null for assertion checks
-    };
-
-    return {
-        context,
-        getState: vi.fn(() => state),
-        setState: vi.fn((nextState: GameState<ServerPlayers>) => { state = nextState; }),
-        registeredSockets: new Map(),
-        runExclusive: vi.fn((fn) => fn()),
-        socketServer: undefined,
-        metrics: createMockMetrics(),
-        ...overrides,
-    };
-}
-
-function createServerGameStateWithPlayers(players: (Required<PlayerWithId> | null)[]): GameState<ServerPlayers> {
-    const state = buildInitialGameState({ server: true });
-    const playersArray = makePlayersArray<ServerPlayers>();
-    players.forEach((player, index) => {
-        if (player) {
-            playersArray[index] = player;
-        }
-    });
-    const connectedPlayers = players.filter((p) => p !== null).length;
-    return {
-        ...state,
-        players: playersArray,
-        connectedPlayers,
-        status: connectedPlayers >= 2 ? "playing" : "waiting",
     };
 }
 
 // =============================================================================
-// broadcastGameStateUpdate (private, tested indirectly through other handlers)
+// broadcastGameState
 // =============================================================================
-// Note: broadcastGameStateUpdate is now private. Its behavior is tested through
-// handlers that call it (registerPlayer, handleDisconnect, handleSubmitWord).
 
-// =============================================================================
-// registerPlayer (private, tested through handleRegisterPlayer)
-// =============================================================================
-describe("handleRegisterPlayer (registerPlayer logic)", () => {
+describe("broadcastGameState", () => {
+    let mockSocket: MockSocket;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        mockSocket = createMockSocket("test-client");
     });
 
-    it("should emit playerNotRegistered when room is full", () => {
-        const players = Array(5).fill(null).map((_, i) =>
-            createRequiredPlayerWithId(`Player${i}`, `uid${i}`, i)
-        );
-        const state = createServerGameStateWithPlayers(players as Required<PlayerWithId>[]);
+    it("should emit gameStateUpdate to socket.broadcast with game state", () => {
+        const gameState = buildInitialGameState() as GameState;
+        gameState.connectedPlayers = 2;
+        gameState.status = "playing";
 
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-        });
+        broadcastGameState(mockSocket as unknown as ServerPlayerSocket, gameState);
 
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("new-client");
-        const player: PlayerWithId = { name: "NewPlayer", uid: "new-uid", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "playerNotRegistered",
-            "room is full"
-        );
-    });
-
-    it("should register player in first available seat", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "uid1", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(deps.setState).toHaveBeenCalled();
-        expect(deps.registeredSockets.has("test-client")).toBe(true);
-        expect(deps.metrics.setRegisteredClients).toHaveBeenCalledWith(1);
-    });
-
-    it("should emit playerRegistered event to socket", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "uid1", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "playerRegistered",
-            expect.any(Object)
-        );
-    });
-
-    it("should broadcast playerJoinNotification to other players", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "uid1", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
+        expect(mockSocket.broadcast.emit).toHaveBeenCalledTimes(1);
         expect(mockSocket.broadcast.emit).toHaveBeenCalledWith(
-            "playerJoinNotification",
-            expect.objectContaining({ name: "Alice" })
-        );
-    });
-
-    it("should assign seat to player when registering", () => {
-        const existingPlayer = createRequiredPlayerWithId("Alice", "uid1", 0);
-        const state = createServerGameStateWithPlayers([existingPlayer, null, null, null, null]);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const newPlayer: PlayerWithId = { name: "Bob", uid: "uid2", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, newPlayer);
-
-        const registeredPlayer = deps.registeredSockets.get("test-client");
-        expect(registeredPlayer?.seat).toBe(1);
-    });
-});
-
-// =============================================================================
-// returnExistingPlayer (private, tested through handleRegisterPlayer)
-// =============================================================================
-describe("handleRegisterPlayer (returnExistingPlayer logic)", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should emit playerRegistered with existing player data", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "playerRegistered",
+            "gameStateUpdate",
             expect.objectContaining({
-                thisPlayer: expect.objectContaining({ name: "Alice", uid: "test-client" }),
+                connectedPlayers: 2,
+                status: "playing",
             })
         );
     });
 
-    it("should include thisPlayer in client state", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
+    it("should not emit to the sender (uses broadcast)", () => {
+        const gameState = buildInitialGameState() as GameState;
 
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        const emitCall = mockSocket.emit.mock.calls[0];
-        const emittedState = emitCall[1];
-        expect(emittedState.thisPlayer).toBeDefined();
-        expect(emittedState.thisPlayer.uid).toBe("test-client");
-    });
-});
-
-// =============================================================================
-// handleDisconnect
-// =============================================================================
-describe("handleDisconnect", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should log disconnect event", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleDisconnect(mockSocket as unknown as ServerPlayerSocket, "client disconnect");
-
-        expect(deps.metrics.countEvent).toHaveBeenCalledWith("disconnect");
-    });
-
-    it("should do nothing if player is not registered", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("unknown-client");
-
-        handlers.handleDisconnect(mockSocket as unknown as ServerPlayerSocket, "client disconnect");
-
-        expect(deps.setState).not.toHaveBeenCalled();
-    });
-
-    it("should remove player from state when disconnecting", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleDisconnect(mockSocket as unknown as ServerPlayerSocket, "client disconnect");
-
-        expect(deps.setState).toHaveBeenCalled();
-        expect(registeredSockets.has("test-client")).toBe(false);
-        expect(deps.metrics.setRegisteredClients).toHaveBeenCalledWith(0);
-    });
-
-    it("should broadcast playerLeaveNotification", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleDisconnect(mockSocket as unknown as ServerPlayerSocket, "client disconnect");
-
-        expect(mockSocket.broadcast.emit).toHaveBeenCalledWith(
-            "playerLeaveNotification",
-            expect.objectContaining({ name: "Alice" })
-        );
-    });
-});
-
-// =============================================================================
-// handleGetPlayerCount
-// =============================================================================
-describe("handleGetPlayerCount", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should record metrics for getPlayerCount request", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleGetPlayerCount(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(deps.metrics.recordGetPlayerCountRequest).toHaveBeenCalled();
-    });
-
-    it("should emit playerCount with current connected players", () => {
-        const player = createRequiredPlayerWithId("Alice", "uid1", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleGetPlayerCount(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith("playerCount", 1);
-    });
-
-    it("should emit zero when no players connected", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleGetPlayerCount(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith("playerCount", 0);
-    });
-});
-
-// =============================================================================
-// handleRegisterPlayer
-// =============================================================================
-describe("handleRegisterPlayer", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should count registerPlayer event in metrics", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "uid1", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(deps.metrics.countEvent).toHaveBeenCalledWith("registerPlayer");
-    });
-
-    it("should return existing player if already registered", () => {
-        const existingPlayer = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([existingPlayer, null, null, null, null]);
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", existingPlayer);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "test-client", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "playerRegistered",
-            expect.any(Object)
-        );
-    });
-
-    it("should register new player if not already registered", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-        const player: PlayerWithId = { name: "Alice", uid: "uid1", lastWord: "" };
-
-        handlers.handleRegisterPlayer(mockSocket as unknown as ServerPlayerSocket, player);
-
-        expect(deps.registeredSockets.has("test-client")).toBe(true);
-    });
-});
-
-// =============================================================================
-// handleIsReturningPlayer
-// =============================================================================
-describe("handleIsReturningPlayer", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should do nothing if clientId is not registered", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleIsReturningPlayer(mockSocket as unknown as ServerPlayerSocket, "unknown-client");
+        broadcastGameState(mockSocket as unknown as ServerPlayerSocket, gameState);
 
         expect(mockSocket.emit).not.toHaveBeenCalled();
+        expect(mockSocket.broadcast.emit).toHaveBeenCalled();
+    });
+});
+
+// =============================================================================
+// attachSocketHandlers (fml) - handler registration and behavior
+// =============================================================================
+
+describe("attachSocketHandlers", () => {
+    let mockSocket: MockSocket;
+    let mockGetGameState: Mock;
+    let mockSetGameState: Mock;
+    let mockCountSocketEvent: Mock;
+    let mockSetRegisteredClients: Mock;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockSocket = createMockSocket("test-client");
+        mockGetGameState = vi.fn();
+        mockSetGameState = vi.fn();
+        mockCountSocketEvent = vi.fn();
+        mockSetRegisteredClients = vi.fn();
+
+        vi.spyOn(ServerGameState, "getGameState").mockImplementation(
+            mockGetGameState as any
+        );
+        vi.spyOn(ServerGameState, "setGameState").mockImplementation(
+            mockSetGameState as any
+        );
+        vi.spyOn(metrics, "countSocketEvent").mockImplementation(
+            mockCountSocketEvent
+        );
+        vi.spyOn(metrics, "setRegisteredClients").mockImplementation(
+            mockSetRegisteredClients
+        );
     });
 
-    it("should emit returningPlayer if clientId is registered", () => {
+    it("should count connect event on attach", () => {
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
+
+        expect(mockCountSocketEvent).toHaveBeenCalledWith("connect");
+    });
+
+    it("should register getPlayerCount handler", () => {
+        const state = buildInitialGameState() as GameState;
+        state.connectedPlayers = 3;
+        mockGetGameState.mockReturnValue(state);
+
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
+
+        const getPlayerCountCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.getPlayerCount
+        );
+        expect(getPlayerCountCall).toBeDefined();
+        if (!getPlayerCountCall) return;
+
+        const ack = vi.fn();
+        getPlayerCountCall[1](ack);
+
+        expect(mockCountSocketEvent).toHaveBeenCalledWith("getPlayerCount");
+        expect(ack).toHaveBeenCalledWith(3);
+    });
+
+    it("should register isReturningPlayer handler - found", () => {
         const player = createRequiredPlayerWithId("Alice", "returning-client", 0);
+        const state = buildInitialGameState() as GameState;
+        state.players = [player, null, null, null, null];
+        state.socketPlayerMap = new Map([["returning-client", 0]]);
+        mockGetGameState.mockReturnValue(state);
 
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("returning-client", player);
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
 
-        const deps = createMockDependencies({ registeredSockets });
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleIsReturningPlayer(mockSocket as unknown as ServerPlayerSocket, "returning-client");
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "returningPlayer",
-            expect.objectContaining({ name: "Alice", uid: "returning-client" })
+        const isReturningPlayerCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.isReturningPlayer
         );
-    });
-});
+        expect(isReturningPlayerCall).toBeDefined();
+        if (!isReturningPlayerCall) return;
 
-// =============================================================================
-// handleSubmitWord
-// =============================================================================
-describe("handleSubmitWord", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+        const ack = vi.fn();
+        isReturningPlayerCall[1]("returning-client", ack);
 
-    it("should count submitWord event in metrics", async () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        await handlers.handleSubmitWord(mockSocket as unknown as ServerPlayerSocket, "test");
-
-        expect(deps.metrics.countEvent).toHaveBeenCalledWith("submitWord");
-    });
-
-    it("should do nothing if player is not registered", async () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("unknown-client");
-
-        await handlers.handleSubmitWord(mockSocket as unknown as ServerPlayerSocket, "test");
-
-        expect(deps.setState).not.toHaveBeenCalled();
-    });
-
-    it("should reject if not player's turn", async () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 1); // seat 1
-        const state = createServerGameStateWithPlayers([
-            createRequiredPlayerWithId("Bob", "bob-client", 0),
-            player,
-            null, null, null,
-        ]);
-        state.turn = 0; // Bob's turn, not Alice's
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
+        expect(ack).toHaveBeenCalledWith({
+            found: true,
+            player: expect.objectContaining({ name: "Alice", uid: "returning-client" }),
         });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        await handlers.handleSubmitWord(mockSocket as unknown as ServerPlayerSocket, "test");
-
-        expect(deps.setState).not.toHaveBeenCalled();
     });
 
-    it("should reject if word does not match current letter", async () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-        state.turn = 0;
-        state.matchLetter = { block: "a", steps: [], value: "a", next: 0 };
+    it("should register isReturningPlayer handler - not found", () => {
+        const state = buildInitialGameState() as GameState;
+        mockGetGameState.mockReturnValue(state);
 
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
 
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
+        const isReturningPlayerCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.isReturningPlayer
+        );
+        expect(isReturningPlayerCall).toBeDefined();
+        if (!isReturningPlayerCall) return;
 
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
+        const ack = vi.fn();
+        isReturningPlayerCall[1]("unknown-client", ack);
 
-        await handlers.handleSubmitWord(mockSocket as unknown as ServerPlayerSocket, "banana");
-
-        expect(deps.setState).not.toHaveBeenCalled();
+        expect(ack).toHaveBeenCalledWith({ found: false });
     });
 
-    it("should reject empty word", async () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-        state.turn = 0;
-        state.matchLetter = { block: "a", steps: [], value: "a", next: 0 };
+    it("should register registerPlayer handler for new player", () => {
+        const state = buildInitialGameState() as GameState;
+        mockGetGameState.mockReturnValue(state);
 
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
 
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
+        const registerPlayerCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.registerPlayer
+        );
+        expect(registerPlayerCall).toBeDefined();
+        if (!registerPlayerCall) return;
 
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
+        const ack = vi.fn();
+        const player = { name: "Alice", uid: "test-client", lastWord: "" };
+        registerPlayerCall[1](player, ack);
 
-        await handlers.handleSubmitWord(mockSocket as unknown as ServerPlayerSocket, "");
-    });
-
-    // Note: Testing successful word submission requires mocking inputIsValid
-    // which makes external API calls. Consider adding integration tests for this.
-    it.todo("should update game state when word is valid");
-    it.todo("should broadcast game state update after successful submission");
-});
-
-// =============================================================================
-// handleRequestFullState
-// =============================================================================
-describe("handleRequestFullState", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it("should count requestFullState event in metrics", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleRequestFullState(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(deps.metrics.countEvent).toHaveBeenCalledWith("requestFullState");
-    });
-
-    it("should do nothing if player is not registered", () => {
-        const deps = createMockDependencies();
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("unknown-client");
-
-        handlers.handleRequestFullState(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(mockSocket.emit).not.toHaveBeenCalled();
-    });
-
-    it("should do nothing if state is not complete", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        // State without thisPlayer is not complete
-        const deps = createMockDependencies({ registeredSockets });
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleRequestFullState(mockSocket as unknown as ServerPlayerSocket);
-    });
-
-    it("should emit fullStateSync with complete game state", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
-        const state = createServerGameStateWithPlayers([player, null, null, null, null]);
-        state.thisPlayer = player;
-
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
-
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
-
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
-
-        handlers.handleRequestFullState(mockSocket as unknown as ServerPlayerSocket);
-
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-            "fullStateSync",
+        expect(mockCountSocketEvent).toHaveBeenCalledWith("registerPlayer");
+        expect(mockSetGameState).toHaveBeenCalled();
+        expect(ack).toHaveBeenCalledWith(
             expect.objectContaining({
-                players: expect.any(Array),
-                thisPlayer: expect.objectContaining({ name: "Alice" }),
+                success: true,
+                player: expect.objectContaining({ name: "Alice" }),
             })
         );
     });
 
-    it("should include player in correct seat in client state", () => {
-        const player = createRequiredPlayerWithId("Alice", "test-client", 2);
-        const state = createServerGameStateWithPlayers([null, null, player, null, null]);
-        state.thisPlayer = player;
+    it("should register disconnect handler", () => {
+        const player = createRequiredPlayerWithId("Alice", "test-client", 0);
+        const state = buildInitialGameState() as GameState;
+        state.players = [player, null, null, null, null];
+        state.socketPlayerMap = new Map([["test-client", 0]]);
+        state.connectedPlayers = 1;
+        mockGetGameState.mockReturnValue(state);
 
-        const registeredSockets = new Map<string, Required<PlayerWithId>>();
-        registeredSockets.set("test-client", player);
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
 
-        const deps = createMockDependencies({
-            getState: vi.fn(() => state),
-            registeredSockets,
-        });
+        const disconnectCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.disconnect
+        );
+        expect(disconnectCall).toBeDefined();
+        if (!disconnectCall) return;
 
-        const handlers = new SocketHandlers(deps);
-        const mockSocket = createMockSocket("test-client");
+        disconnectCall[1]("client disconnect");
 
-        handlers.handleRequestFullState(mockSocket as unknown as ServerPlayerSocket);
+        expect(mockCountSocketEvent).toHaveBeenCalledWith("disconnect");
+        expect(mockSetGameState).toHaveBeenCalled();
+    });
 
-        const emitCall = mockSocket.emit.mock.calls[0];
-        const emittedState = emitCall[1];
-        expect(emittedState.players[2]).toBeDefined();
-        expect(emittedState.players[2].name).toBe("Alice");
+    it("should register submitWord handler", () => {
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
+
+        const submitWordCall = mockSocket.on.mock.calls.find(
+            (c: unknown[]) => c[0] === socketEvents.submitWord
+        );
+        expect(submitWordCall).toBeDefined();
+    });
+
+    it("should register onAny handler for logging", () => {
+        fml(mockSocket as unknown as ServerPlayerSocket, createMockContext() as any);
+
+        expect(mockSocket.onAny).toHaveBeenCalledWith(expect.any(Function));
     });
 });

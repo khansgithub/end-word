@@ -154,7 +154,7 @@ export function Homescreen() {
                             placeholder="Enter your name"
                             required={true}
                             onKeyDown={onKeyDown}
-                            className="w-full text-base py-3 rounded-[0.55rem] border border-[var(--input-border-default)] font-mono outline-none transition-all duration-200 ease-in-out px-[0.75rem] placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-focus)] focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]"
+                            className="w-full text-base py-3 rounded-[0.55rem] border border-(--input-border-default) font-mono outline-none transition-all duration-200 ease-in-out px-3 placeholder:text-(--text-placeholder) focus:border-(--border-focus) focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]"
                             style={{
                                 background: 'var(--input-bg-solid)',
                                 boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',

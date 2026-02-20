@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { inputIsValid } from "../../src/shared/utils";
 import { lookUpWord } from "../../src/server/api";
+import { inputIsValid } from "@/server/utils";
 
 /**
  * Uses the mocks in `@/src/mocks/handlers.ts`. Don't even remember how msw works right now.

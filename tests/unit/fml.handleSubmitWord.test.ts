@@ -5,7 +5,7 @@ import * as GameState from "../../src/shared/GameState";
 import * as ServerGameState from "../../src/server/state";
 import { buildInitialGameState } from "../../src/shared/GameState";
 import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayerSocket } from "../../src/shared/types";
-import * as utils from "../../src/shared/utils";
+import * as utils from "../../src/server/utils";
 import { pp } from "../../src/shared/utils";
 import { createRequiredPlayerWithId } from "./GameState.test-helpers";
 

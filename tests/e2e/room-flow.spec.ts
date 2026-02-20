@@ -34,12 +34,11 @@ function assertEnvVarEquals(vars: Record<string, string>, testTitle: string) {
         }
     }
     if (errors.length > 0) {
-        throw new AssertionError({
-            message: errors.join('\n'),
-            actual: Object.fromEntries(Object.entries(vars).map(([k]) => [k, process.env[k]])),
-            expected: vars,
-            operator: "envVarEquals"
-        });
+        throw new Error(
+            errors.join('\n') +
+            "\nActual: " + JSON.stringify(Object.fromEntries(Object.entries(vars).map(([k]) => [k, process.env[k]])), null, 2) +
+            "\nExpected: " + JSON.stringify(vars, null, 2)
+        );
     }
 }
 

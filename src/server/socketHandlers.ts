@@ -7,9 +7,9 @@ import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getServerSocketContext, ServerSocketContext } from "./context";
 import { getGameState, setGameState } from "./state";
 import { log } from "./logging";
-import { inputIsValid } from "./util";
+import { inputIsValid } from "./utils";
 
-const L = "fml: ";
+const L = "socketHandler: ";
 
 // --- Client / socket helpers ---
 function getClientId(socket: ServerPlayerSocket) {

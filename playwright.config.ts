@@ -8,10 +8,14 @@ export default defineConfig({
         headless: true,
     },
     webServer: {
-        command: "npm run dev:e2e",
+        command: "npm run dev",
         url: "http://localhost:4000",
         timeout: 120_000,
         reuseExistingServer: true,
     },
-    quiet: true
+    quiet: true,
+    outputDir: "test-results/playwright/runner/",
+    reporter:[
+        ["json", {outputFile: "test-results/playwright/runner/out.json"}]
+    ]
 });
