@@ -14,4 +14,3 @@ export const gameStrings = {
     connectButtonText: "Connect",
     playIcon: "▶",
 } as const;
-

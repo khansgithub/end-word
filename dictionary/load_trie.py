@@ -66,7 +66,11 @@ def q():
     import ipdb; ipdb.set_trace()
     print(r)
 
-# p()
+def getWord(word: str):
+    w = dictionary.lookup(word)
+    return w
 
-x = dictionary.random()
-print(x)
+# p()
+# x = dictionary.random()
+# print(x)
+print(getWord("줄임"))

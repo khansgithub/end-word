@@ -104,6 +104,18 @@ export function isBoolMap(value: any): value is BoolMap {
     return typeof value === 'object';
 }
 
-export function isDictionaryEntry(value: object): value is DictionaryEntry {
+export function isDictionaryEntry(value: unknown): value is DictionaryEntry {
+    if (value == null || typeof value !== 'object') {
+        return false;
+    }
     return 'key' in value && 'data' in value;
+}
+
+export function isDictionaryResponse(value: unknown): value is DictionaryResponse {
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        (isDictionaryEntry(value as object) || Object.keys(value as object).length === 0)
+    );
 }

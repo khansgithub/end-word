@@ -22,6 +22,13 @@ export function ThemeToggle() {
         localStorage.setItem("theme", newTheme);
     };
 
+    const svgProps = {
+        className: "size-6",
+        stroke: "var(--color-neutral-dark)",
+    };
+
+    const iconComponent = theme === "dark" ? IconSun : IconMoon;
+
     useEffect(() => {
         // Load theme preference from localStorage on mount
         const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -36,15 +43,15 @@ export function ThemeToggle() {
             onClick={toggleTheme}
             className="fixed top-4 right-4 z-50 p-3 rounded-full border transition-all duration-200"
             style={{
-                background: "var(--bg-primary)",
+                background: "var(--color-neutral-light)",
                 borderColor: "var(--bg-secondary-solid)",
-                color: "var(--color-neutral-light)",
+                color: "var(--color-neutral-dark)",
                 boxShadow: "var(--shadow-button)",
             }}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         >
-            {theme === "dark" ? <IconSun className="size-6" /> : <IconMoon className="size-6" />}
+            {iconComponent({ ...svgProps })}
         </button>
     );
 }

@@ -1,6 +1,7 @@
 import { spawn } from "child_process";
 import { roomFlowTestNames as t, type RoomFlowTestName } from "./test-names";
 import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
+import { envSet, envGet } from "../../src/server/env";
 import {
     buildPlaywrightJsonReport,
     parseReportPath,
@@ -60,9 +61,9 @@ async function runTestInProcess(
 ): Promise<{ status: string; duration: number; error?: { message: string; stack?: string } }> {
     if (cb) cb();
 
-    process.env.CUSTOM_PLAYWRIGHT_RUNNER = "true";
+    envSet("CUSTOM_PLAYWRIGHT_RUNNER", "true");
     for (const [key, value] of Object.entries(envVars)) {
-        if (value !== undefined) process.env[key] = String(value);
+        if (value !== undefined) envSet(key as keyof typeof process.env, String(value));
     }
 
     console.log("Running test: ", testName);

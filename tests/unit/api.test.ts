@@ -1,17 +1,16 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { lookUpWord } from "../../src/server/api";
+import { lookUpWordApi } from "@/server/api";
 import { inputIsValid } from "@/server/utils";
+import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * Uses the mocks in `@/src/mocks/handlers.ts`. Don't even remember how msw works right now.
+ * Uses dynamic import so env vars are set before the api module loads (mock vs real is resolved at load time).
  */
 describe("dictionary APIs (msw)", () => {
-    beforeAll(() => {
-        process.env.DICTIONARY_URL = "http://localhost:8000";
-    });
+    beforeAll(async () => {});
 
     it("mocks external lookup API via http://localhost:8000/lookup/:word", async () => {
-        const res = await lookUpWord("melon");
+        const res = await lookUpWordApi("melon");
         expect(res).toMatchObject({
             key: "melon",
             data: expect.arrayContaining(["melon", "meloned", "meloning"]),

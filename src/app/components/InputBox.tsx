@@ -9,8 +9,8 @@ import {
     clearInput as _clearInput,
     continueInput as _continueInput,
     actionHandlers as validateWrapper
-} from "./inputValidation";
-import { gameStrings } from "./gameStrings";
+} from "../lib/inputValidation";
+import { gameStrings } from "../lib/gameStrings";
 import { IconLock } from "./icons";
 
 // Zustand store for input state to minimize re-renders
@@ -192,7 +192,7 @@ function InputBox({
         if (e.key === "Enter") {
             e.preventDefault();
             e.stopPropagation();
-            
+
             if (onSubmit && inputValue) {
                 onSubmit();
                 clearInput();
@@ -216,7 +216,7 @@ function InputBox({
             {/* {Last Key Display} */}
             <div
                 contentEditable={false}
-                onChange={() => {}}
+                onChange={() => { }}
                 className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold"
                 style={{
                     borderColor: 'var(--border-default)',
@@ -334,7 +334,7 @@ export const setInputError = (error: boolean) => useInputStore.getState().setIsE
 // Export a function to reset the input
 export const resetInput = () => {
     useInputStore.getState().reset();
-    // hacky
+    // FIXME: hacky
     const inputDom = document.querySelector('input[type="text"]:not([disabled])');
     if (inputDom) (inputDom as HTMLInputElement).focus();
 };

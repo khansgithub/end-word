@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
-import { emitIsReturningPlayer, socketGetPlayerCount } from '../../shared/socketClient';
+import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
 import { GameStateEmit, Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
-import { getSocketManager } from './socketComponent';
+import { getSocketManager } from '../lib/socket';
 import { socketEvents } from '../../shared/socketEvents';
 
 
@@ -54,7 +54,7 @@ export function Homescreen() {
             socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
-        socket.on(socketEvents.gameStateUpdate, playerCountUpdateFromServer);
+        onSocketEvent(socket, socketEvents.gameStateUpdate, playerCountUpdateFromServer);
         emitIsReturningPlayer(socket, clientId, setReturningPlayer);
 
         return () => {

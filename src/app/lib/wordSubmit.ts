@@ -41,11 +41,6 @@ export function correctWord(
     responseGameState: GameStateEmit,
     word: string,
 ) {
-    dispatch({
-        type: "gameStateUpdateClient",
-        payload: [responseGameState],
-    });
-
     if (gameState.thisPlayer) {
         // avoid race by passing in the response state here
         dispatch({
@@ -53,6 +48,11 @@ export function correctWord(
             payload: [{ ...responseGameState, thisPlayer: gameState.thisPlayer }, word],
         });
     }
+
+    dispatch({
+        type: "gameStateUpdateClient",
+        payload: [responseGameState],
+    });
 }
 
 export function wrongWord(

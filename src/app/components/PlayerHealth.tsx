@@ -2,7 +2,7 @@ import { IconHeart, IconCross } from "./icons";
 
 export function PlayerHealth({ health }: { health: number }) {
     return (
-        <div className="flex gap-1 min-w-0 w-full">
+        <div className="flex min-w-0 w-full">
             {health > 0
                 ? Array.from({ length: health }, (_, i) => (
                     <span key={i} className="flex-1 min-w-0 aspect-square inline-flex" style={{ maxHeight: "1.5rem" }}>

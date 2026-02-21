@@ -1,5 +1,5 @@
 import { MatchLetter } from "../../shared/types";
-import { gameStrings } from "./gameStrings";
+import { gameStrings } from "../lib/gameStrings";
 
 interface MatchLetterDisplayProps {
     matchLetter: MatchLetter;

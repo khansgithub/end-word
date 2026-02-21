@@ -1,4 +1,4 @@
-import { gameStrings } from "./gameStrings";
+import { gameStrings } from "../lib/gameStrings";
 
 export function RoundNumberBadge({ turn }: { turn: number }) {
     return (

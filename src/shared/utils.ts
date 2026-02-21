@@ -1,8 +1,7 @@
 import { buildSyllableSteps } from "../app/hangul-decomposer";
-import { ClientPlayers, ClientPlayerSocket, GameState, MatchLetter, Player, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { envGet } from "../server/env";
 import { DEFAULT_HEALTH } from "./consts";
-import { lookUpWord } from "../server/api";
-import { isDictionaryEntry } from "./guards";
+import { ClientPlayers, GameState, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
 
 // ============================================================================
 // Core Utilities
@@ -154,7 +153,7 @@ export function buildMatchLetter(
  * Returns true if SUPPRESS is set to true.
  */
 export function isSuppress(): boolean {
-    return String(process.env.SUPPRESS).toLowerCase() === "true";
+    return process.env["SUPPRESS"] === "true";
 }
 
 

@@ -4,21 +4,15 @@ import { arrayToMapped } from "./utils";
 const socketEventsArray = [
     "connect",
     "disconnect",
-    "fullStateSync",
     "gameStateUpdate",
     "getPlayerCount",
     "isReturningPlayer",
-    "playerCount",
-    "playerJoinNotification",
-    "playerLeaveNotification",
-    "playerNotRegistered",
-    "playerRegistered",
     "registerPlayer",
     "requestFullState",
-    "returningPlayer",
     "submitWord",
     "text",
     "unregisterPlayer",
+    "wordDefinition",
 ] as const;
 
 export type SocketEventName = (typeof socketEventsArray)[number];

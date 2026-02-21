@@ -1,4 +1,4 @@
-import { Socket } from "socket.io";
+import { DefaultEventsMap, Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
 import { DEFAULT_HEALTH, MAX_PLAYERS } from "./consts";
 import { SocketEventName } from "./socketEvents";
@@ -90,15 +90,22 @@ export type ClientToServerEvents = SharedSocketEvents & {
 
 export type ServerToClientEvents = SharedSocketEvents & {
     gameStateUpdate: (gameState: GameStateEmit) => void;
+    wordDefinition: (definition: DictionaryEntry) => void;
 };
 
 /**
- * Compile-time guard: if any typed event name isn't present in socketEvents, this assignment fails.
+ * Compile-time guard: typed events and socketEvents must stay in sync both ways.
+ * - Fails if a typed event isn't in socketEvents.ts (error shows missing event names)
+ * - Fails if a socketEvent isn't in the types (error shows untyped event names)
+ * Add event names to SocketEventsExcludedFromTypes to allow socketEvents without type definitions.
  */
 type AllTypedSocketEvents = keyof (ClientToServerEvents & ServerToClientEvents);
-type AssertAllTypedEventsExistInSocketEvents = Exclude<AllTypedSocketEvents, SocketEventName> extends never ? true : false;
-// if this raises a type error - it means there is a mismatch with socket.ts
-export const socketEventSyncCheck: AssertAllTypedEventsExistInSocketEvents = true;
+type SocketEventsExcludedFromTypes = "connect"; // Socket.IO built-in
+type MissingFromSocketEvents = Exclude<AllTypedSocketEvents, SocketEventName>;
+type MissingFromTypes = Exclude<SocketEventName, AllTypedSocketEvents | SocketEventsExcludedFromTypes>;
+type AssertTypedInSocketEvents = [MissingFromSocketEvents] extends [never] ? true : MissingFromSocketEvents;
+type AssertSocketEventsInTypes = [MissingFromTypes] extends [never] ? true : MissingFromTypes;
+export const socketEventSyncCheck: [AssertTypedInSocketEvents, AssertSocketEventsInTypes] = [true, true];
 
 /* --------------------------------------------------
  * Socket Types
@@ -122,17 +129,6 @@ export type MatchLetter = {
     value: string
     next: number
 }
-
-// export type GameState<T extends PlayersArray = PlayersArray> = {
-//     thisPlayer?: Required<PlayerWithId>, // optional for the server
-//     matchLetter: MatchLetter,
-//     status: GameStatus,
-//     players: T,
-//     connectedPlayers: number
-//     turn: number,
-//     socketPlayerMap?: WeakMap<String, Player>, // only on server
-// };
-
 
 export type GameState = {
     thisPlayer?: PlayerWithId,

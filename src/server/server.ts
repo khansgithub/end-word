@@ -1,26 +1,23 @@
-import dotenv from "dotenv";
+import "./env";
 import express from "express";
 import next from "next";
-
 import { createServer } from "node:http";
-import path from "node:path";
-import nextConfig from "../../next.config";
 import { NodeJS } from "../app/env";
+import { envGet } from "./env";
 import { buildInitialGameState } from "../shared/GameState";
 import { getRandomWordFromDictionary } from "./api";
 import { initLogging, log } from "./logging";
 import { setupRoutes } from "./routes";
 import { createIOServer } from "./socket";
 import { setGameState } from "./state";
+import { pp } from "../shared/utils";
 
-const dotenvInject =  dotenv.config({ path: process.env.NODE_ENV === "production" ? ".env.prod" : ".env" });
-console.log(dotenvInject)
 
 // --- Logging lifecycle: init early ---
 initLogging();
 
 const app = next({
-    dev: process.env.NODE_ENV !== "production",
+    dev: envGet("NODE_ENV") !== "production",
     // customServer: true,
     // dir: "src",
     // conf: {
@@ -29,12 +26,12 @@ const app = next({
     //     // Override with absolute path so it finds the build at project_root/src/.next/
     //     // distDir: path.resolve(process.cwd(), "src", ".next"),
     // },
-    
+
 });
 const express_app = express();
 const server = createServer(express_app);
-const port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
-const enableTestEndpoints = process.env.NODE_ENV === "test" || process.env.PLAYWRIGHT_TEST === "true";
+const port = envGet("PORT") ? parseInt(envGet("PORT")!, 10) : 4000;
+const enableTestEndpoints = envGet("NODE_ENV") === "test" || envGet("PLAYWRIGHT_TEST") === "true";
 const envVars: Array<keyof NodeJS.ProcessEnv> = [
     "DICTIONARY_URL",
     "SERVER",
@@ -76,6 +73,9 @@ function main() {
         });
 }
 
-log("Env variables:", [...envVars, "NODE_ENV"].map(v => `${v}=${process.env[v]}`).join(", "))();
+log(
+    "Env variables:",
+    pp([...envVars, "NODE_ENV"].map(v => `${v}=${envGet(v)}`))
+)();
 
 main();

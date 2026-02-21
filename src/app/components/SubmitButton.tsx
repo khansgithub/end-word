@@ -1,6 +1,6 @@
 'use client';
 
-import { gameStrings } from "./gameStrings";
+import { gameStrings } from "../lib/gameStrings";
 
 
 interface SubmitButtonProps {

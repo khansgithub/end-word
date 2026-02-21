@@ -1,3 +1,4 @@
+import type { RefObject } from "react";
 import { StoreApi } from "zustand";
 import { MatchLetter } from "../../shared/types";
 import { decomposeSyllable, decomposeSyllableNonRecursive } from "../hangul-decomposer";
@@ -104,7 +105,7 @@ export function calculateHighlightText(input: string, matchLetter: MatchLetter):
 
 export function clearInput(
     useInputStore: StoreApi<InputState>,
-    prevInputRef: React.RefObject<String>,
+    prevInputRef: RefObject<String>,
     matchLetter: MatchLetter
 ){
     const store = useInputStore.getState();
@@ -116,14 +117,14 @@ export function clearInput(
 
 export function blockInput(
     useInputStore: StoreApi<InputState>,
-    prevInputRef: React.RefObject<string>,
+    prevInputRef: RefObject<string>,
 ){
     useInputStore.getState().setInputValue(prevInputRef.current);
 }
 
 export function continueInput(
     useInputStore: StoreApi<InputState>,
-    prevInputRef: React.RefObject<string>,
+    prevInputRef: RefObject<string>,
     matchLetter: MatchLetter,
     input: string
 ){

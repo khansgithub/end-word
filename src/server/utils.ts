@@ -1,4 +1,6 @@
 import { lookUpWord } from "./api";
+import { DictionaryEntry, DictionaryResponse } from "../shared/types";
+import { isDictionaryEntry } from "../shared/guards";
 
 /**
  * Validates if a given input string is a valid word in the dictionary.
@@ -9,7 +11,7 @@ import { lookUpWord } from "./api";
  * @todo Add debounce to prevent excessive API calls
  * @todo Move API URL to constants
  */
-export async function inputIsValid(input: string): Promise<boolean> {
+export async function inputIsValid(input: string): Promise<[true, DictionaryEntry] | false > {
     // console.warn("skipping this for dev purposes");
     // return true
     if (input.length === 0) return false;
@@ -34,5 +36,6 @@ export async function inputIsValid(input: string): Promise<boolean> {
 
     // const res = await fetch("http://localhost:8000/lookup/" + input);
     const res = await lookUpWord(input);
-    return Object.keys(res).length > 0;
+    const isValid = isDictionaryEntry(res);
+    return isValid ? [true, res] : false;
 }

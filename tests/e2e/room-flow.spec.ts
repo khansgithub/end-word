@@ -1,6 +1,7 @@
 import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, Page } from "@playwright/test";
 import { expect, request, test } from "@playwright/test";
 import { decomposeSyllable } from "../../src/app/hangul-decomposer";
+import { envGet } from "../../src/server/env";
 import { roomFlowTestNames } from "./test-names";
 import { test as base } from '@playwright/test';
 import assert, { AssertionError } from "assert";
@@ -27,7 +28,7 @@ type DomEntry = {
 function assertEnvVarEquals(vars: Record<string, string>, testTitle: string) {
     const errors: string[] = [];
     for (const [varName, expectedValue] of Object.entries(vars)) {
-        if (process.env[varName] != expectedValue) {
+        if (envGet(varName as keyof typeof process.env) != expectedValue) {
             errors.push(
                 `${varName} must be ${expectedValue === "true" ? "enabled" : "disabled"} for the ${testTitle} e2e tests`
             );
@@ -36,7 +37,7 @@ function assertEnvVarEquals(vars: Record<string, string>, testTitle: string) {
     if (errors.length > 0) {
         throw new Error(
             errors.join('\n') +
-            "\nActual: " + JSON.stringify(Object.fromEntries(Object.entries(vars).map(([k]) => [k, process.env[k]])), null, 2) +
+            "\nActual: " + JSON.stringify(Object.fromEntries(Object.entries(vars).map(([k]) => [k, envGet(k as keyof typeof process.env)])), null, 2) +
             "\nExpected: " + JSON.stringify(vars, null, 2)
         );
     }
@@ -239,9 +240,9 @@ async function testCleanUp(contexts: BrowserContext[], clientLogs: LogEntry[], r
 }
 
 base.beforeEach(async ({ browser }, testInfo) => {
-    if (process.env.MOCK_GET_RANDOM_WORD != "true" || process.env.MOCK_LOOKUP_WORD != "true" || process.env.MOCK_WORD_VALIDATION_FAIL == "true") {
+    if (envGet("MOCK_GET_RANDOM_WORD") != "true" || envGet("MOCK_LOOKUP_WORD") != "true" || envGet("MOCK_WORD_VALIDATION_FAIL") == "true") {
         console.warn(
-            `[e2e WARNING] It is recommended to run e2e tests with MOCK_GET_RANDOM_WORD=true, MOCK_LOOKUP_WORD=true and MOCK_WORD_VALIDATION_FAIL!=true. Current: MOCK_GET_RANDOM_WORD=${process.env.MOCK_GET_RANDOM_WORD}, MOCK_LOOKUP_WORD=${process.env.MOCK_LOOKUP_WORD}, MOCK_WORD_VALIDATION_FAIL=${process.env.MOCK_WORD_VALIDATION_FAIL}`,
+            `[e2e WARNING] It is recommended to run e2e tests with MOCK_GET_RANDOM_WORD=true, MOCK_LOOKUP_WORD=true and MOCK_WORD_VALIDATION_FAIL!=true. Current: MOCK_GET_RANDOM_WORD=${envGet("MOCK_GET_RANDOM_WORD")}, MOCK_LOOKUP_WORD=${envGet("MOCK_LOOKUP_WORD")}, MOCK_WORD_VALIDATION_FAIL=${envGet("MOCK_WORD_VALIDATION_FAIL")}`,
         );
     }
 });
@@ -518,7 +519,7 @@ test(roomFlowTestNames.gameStartsAfterBothPlayersJoin, async ({ browser, request
 // ========================================
 
 test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }, testInfo) => {
-    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
+    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
     assertEnvVarEquals(
         { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
         testInfo.title
@@ -572,7 +573,7 @@ test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }, testI
 });
 
 test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }, testInfo) => {
-    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
+    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
     assertEnvVarEquals({ MOCK_DICTIONARY_DATA: "true" }, testInfo.title);
 
     const TIMEOUT = 5000;
@@ -677,7 +678,7 @@ test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }, tes
 // End Screen Releated
 
 test(roomFlowTestNames.endGameWith2Players, async ({ browser, request }, testInfo) => {
-    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
+    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
     assertEnvVarEquals(
         { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
         testInfo.title
@@ -729,7 +730,7 @@ test(roomFlowTestNames.endGameWith2Players, async ({ browser, request }, testInf
 });
 
 test(roomFlowTestNames.endGameWith3Players, async ({ browser, request }, testInfo) => {
-    if (process.env.CUSTOM_PLAYWRIGHT_RUNNER !== "true") test.skip();
+    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
     assertEnvVarEquals(
         { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
         testInfo.title

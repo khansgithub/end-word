@@ -12,7 +12,7 @@ export default function InputSection({ matchLetter, disabled, onSubmit }: InputS
     const opacity = disabled ? 0.5 : 1;
 
     return (
-        <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+        <div className="panel w-full" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
             <div className="flex flex-col items-center p-4">
                 <div className="flex flex-row w-full justify-center items-center gap-4">
                     <InputBox

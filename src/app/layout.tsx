@@ -29,8 +29,7 @@ export default function RootLayout({
                 `${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen p-0 m-0`
             } style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
                 <ThemeToggle />
-                <main className="w-full min-h-screen">
-                <ThemeToggle />
+                <main className="w-full min-h-screen flex flex-col items-center justify-center">
                     {children}
                 </main>
             </body>

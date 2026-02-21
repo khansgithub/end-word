@@ -31,7 +31,6 @@ function startDictionaryServer() {
     const child = spawn(pythonCmd, {
         stdio: "inherit",
         shell: true,
-        detached: true,
         cwd: dictDir,
     });
 
@@ -39,7 +38,14 @@ function startDictionaryServer() {
         console.error("Failed to spawn dictionary python main:", err);
     });
 
-    child.unref();
+    // Kill Python when parent Node process exits
+    const killChild = () => {
+        if (child.killed) return;
+        child.kill("SIGTERM");
+    };
+    process.on("exit", killChild);
+    process.on("SIGINT", () => { killChild(); process.exit(); });
+    process.on("SIGTERM", () => { killChild(); process.exit(); });
 }
 
 function startNpmServer() {

@@ -1,6 +1,6 @@
 import { GameStateClient } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
-import { gameStrings } from "./gameStrings";
+import { gameStrings } from "../lib/gameStrings";
 import Player from "./Player";
 
 interface PlayersSectionProps {
@@ -9,7 +9,7 @@ interface PlayersSectionProps {
 
 export default function PlayersSection({ gameState }: PlayersSectionProps) {
     return (
-        <div className="panel w-full max-w-4xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+        <div className="panel w-full" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
             <div className="p-4">
                 <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{gameStrings.players}</h3>
                 <div className="flex flex-row flex-wrap gap-4 justify-center items-start" id="players">

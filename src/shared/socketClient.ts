@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { GameStateDispatch } from "./GameState";
-import { socketEvents } from "./socketEvents";
-import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId } from "./types";
+import { SocketEventName, socketEvents } from "./socketEvents";
+import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId, ServerToClientEvents } from "./types";
 import { pp } from "./utils";
 
 const L = "socketClient: "
@@ -10,6 +10,7 @@ const log = console.log;
 
 // Used to ensure we only attach a single handler set per client socket.
 const clientSocketsWithHandlers = new WeakSet<ClientPlayerSocket>();
+const clientSocketEventHandlers = new Map<SocketEventName, unknown>();
 
 export function emitSubmitWord(
     socket: ClientPlayerSocket,
@@ -106,4 +107,16 @@ export function socketGetPlayerCount(
         log(L, "getPlayerCount: ", count);
         setPlayerCount(count);
     });
+}
+
+export function onSocketEvent<T extends keyof ServerToClientEvents>(
+    socket: ClientPlayerSocket,
+    event: T,
+    callback: ServerToClientEvents[T]
+) {
+    if (clientSocketEventHandlers.has(event)) {
+        return;
+    }
+    clientSocketEventHandlers.set(event, callback);
+    socket.on(event, callback as any);
 }

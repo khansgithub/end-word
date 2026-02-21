@@ -1,6 +1,6 @@
 import { JSX } from "react";
 import { GameStatus, PlayersArray } from "../../shared/types";
-import { gameStrings } from "./gameStrings";
+import { gameStrings } from "../lib/gameStrings";
 
 interface GameOverlayProps {
     status: GameStatus;
@@ -28,9 +28,9 @@ export default function GameOverlay({ status, players }: GameOverlayProps) {
     const finishedJsx = (<>
         <div className="stats shadow">
             <div className="stat">
-                <div className="stat-title">Winner:</div>
-                <div className="stat-value"> {winnerName()} </div>
-                <div className="stat-desc">Well Done</div>
+                <div className="stat-title">Winner is:</div>
+                <div className="stat-value text-center"> {winnerName()} </div>
+                <div className="stat-desc text-center text-lg">Well Done</div>
             </div>
         </div>
     </>)

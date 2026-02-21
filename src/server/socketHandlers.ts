@@ -1,4 +1,4 @@
-import { decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
+import { buildInitialGameState, decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
 import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socketEvents";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
@@ -6,6 +6,7 @@ import { getAlivePlayerCount, pp } from "../shared/utils";
 import { countSocketEvent, setRegisteredClients } from "./metrics";
 import { getServerSocketContext, ServerSocketContext } from "./context";
 import { getGameState, setGameState } from "./state";
+import { getRandomWordFromDictionary } from "./api";
 import { log } from "./logging";
 import { inputIsValid } from "./utils";
 
@@ -121,7 +122,7 @@ export async function handleSubmitWord(socket: ServerPlayerSocket, word: string,
     }
 
     const validWord = await inputIsValid(word);
-    if (!validWord) {
+    if (validWord === false) {
         const reason = `submitWord: word (${word}) is not valid`;
         invalidWord(socket, reason, ack);
         return;
@@ -132,6 +133,8 @@ export async function handleSubmitWord(socket: ServerPlayerSocket, word: string,
     setGameState(nextState);
     const emitState = toGameStateEmit(nextState);
     broadcastGameState(socket, emitState);
+    // socket.broadcast.emit("wordDefinition", validWord[1]);
+    getServerSocketContext()?.io?.emit("wordDefinition", validWord[1]);
     ack({ success: true, gameState: emitState });
 }
 /**
@@ -152,17 +155,31 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
     let nextState: GameState = decreasePlayerHealth(state, player.health, player.seat!);
     if (end) {
         nextState = endGame(nextState);
+        resetGameState()
         socket.removeAllListeners();
     }
     else if (playerDead) nextState = nextTurn(nextState);
 
-    setGameState(nextState);
+    // setGameState(nextState);
     broadcastGameState(socket, nextState);
     ack({
         success: false,
         reason: reason,
         ... (end || playerDead ? { gameState: toGameStateEmit(nextState) } : {})
     });
+}
+
+/**
+ * Totally resets the game state as if the server just started.
+ * Fetches a new random word, builds fresh initial state, clears metrics, and disconnects all clients.
+ */
+export async function resetGameState(): Promise<void> {
+    const word = await getRandomWordFromDictionary();
+    const newState = buildInitialGameState(word.slice(-1));
+    setGameState(newState);
+    setRegisteredClients(0);
+    const ctx = getServerSocketContext();
+    ctx?.io?.disconnectSockets();
 }
 
 // --- Main entry: attach socket handlers ---
