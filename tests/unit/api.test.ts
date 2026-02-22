@@ -7,7 +7,7 @@ import { beforeAll, describe, expect, it } from "vitest";
  * Uses dynamic import so env vars are set before the api module loads (mock vs real is resolved at load time).
  */
 describe("dictionary APIs (msw)", () => {
-    beforeAll(async () => {});
+    beforeAll(async () => { });
 
     it("mocks external lookup API via http://localhost:8000/lookup/:word", async () => {
         const res = await lookUpWordApi("melon");
@@ -19,6 +19,18 @@ describe("dictionary APIs (msw)", () => {
 
     it("mocks app route /dictionary/word/:word", async () => {
         const result = await inputIsValid("berry");
-        expect(result).toBe(true);
+        const expected = [
+            true,
+            {
+                "data": [
+                    {
+                        "definition": "bar",
+                        "word": "foo",
+                    },
+                ],
+                "key": "foo",
+            },
+        ]
+        expect(result).toStrictEqual(expected);
     });
 });

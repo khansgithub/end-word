@@ -160,7 +160,7 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
     }
     else if (playerDead) nextState = nextTurn(nextState);
 
-    // setGameState(nextState);
+    setGameState(nextState);
     broadcastGameState(socket, nextState);
     ack({
         success: false,
