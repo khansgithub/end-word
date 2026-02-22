@@ -11,7 +11,7 @@ function getActivationCommand(dictDir: string) {
     if (platform() === "win32") {
         return `"${path.join(dictDir, ".venv", "Scripts", "activate.bat")}"`;
     } else {
-        return `./"${path.join(dictDir, ".venv", "bin", "activate")}"`;
+        return `. "${path.join(dictDir, ".venv", "bin", "activate")}"`;
     }
 }
 
