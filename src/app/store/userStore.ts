@@ -34,8 +34,9 @@ const _userStore = (set: any) => ({
 });
 
 export const useUserStore = createStore<PlayerSession>()(
-    // persist(_userStore, { name: "user-storage" })
-    _userStore
+    // FIXME: can't connect to game when localstorage is being used
+    persist(_userStore, { name: "user-storage" })
+    // _userStore
 );
 
 export const useSocketStore = createStore<Socket>()(

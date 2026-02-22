@@ -59,8 +59,10 @@ function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPl
 
 function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, ack: AckRegisterPlayer) {
     const clientId = getClientId(socket);
+    console.log("[isReturningPlayer]", getGameState().socketPlayerMap);
     const isReturningPlayerFlag = socketToSeat(getGameState(), clientId);
     if (isReturningPlayerFlag !== false) {
+        log("registerPlayerSocket: returning player")();
         return reconnectingPlayerSocket(socket, ack);
     }
 

@@ -48,11 +48,11 @@
 
   /* FSM Panel Style */
   .panel, .player-panel {
-    background: var(--gradient-panel);
+    background: var(--bg-secondary-solid);
     border-radius: 0.9rem;
     border: 1px solid var(--border-default);
     box-shadow: var(--shadow-panel);
-    padding: 0.75rem 0.85rem 0.85rem;
+    padding: clamp(0.5rem, 2vw, 1.15rem) clamp(0.65rem, 3vw, 1.25rem) clamp(0.6rem, 2.5vw, 1.2rem);
     position: relative;
     overflow: hidden;
   }

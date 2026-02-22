@@ -7,7 +7,7 @@ interface MatchLetterDisplayProps {
 
 export default function MatchLetterDisplay({ matchLetter }: MatchLetterDisplayProps) {
     return (
-        <div className="panel w-full max-w-2xl" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+        <div className="panel w-auto md:w-full max-w-2xl">
             <div className="flex flex-col items-center p-6">
                 <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{gameStrings.matchLetter}</h2>
                 <div className="text-8xl font-bold mb-4" style={{

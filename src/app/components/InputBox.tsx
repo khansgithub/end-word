@@ -209,7 +209,7 @@ function InputBox({
     }, []);
 
     // Shared base classes for both input elements
-    const sharedInputClasses = "col-start-1 row-start-1 w-full h-20 text-5xl rounded-[0.55rem] font-mono outline-none transition-all duration-200 ease-in-out py-[0.7rem] px-[0.75rem]";
+    const sharedInputClasses = "col-start-1 row-start-1 md:w-full md:h-20 md:text-5xl rounded-[0.55rem] font-mono outline-none transition-all duration-200 ease-in-out py-[0.7rem] px-[0.75rem]";
 
     return (
         <div className="flex flex-row items-center justify-center gap-2">
@@ -217,7 +217,7 @@ function InputBox({
             <div
                 contentEditable={false}
                 onChange={() => { }}
-                className="flex justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold"
+                className="flex justify-center items-center md:w-16 md:h-16 md:rounded-lg border md:text-4xl font-bold"
                 style={{
                     borderColor: 'var(--border-default)',
                     background: 'var(--gradient-input)',
@@ -226,8 +226,8 @@ function InputBox({
             >
                 <p>{lastKey}</p>
             </div>
-            <div className="form-control w-full">
-                <div className="grid grid-cols-1 grid-rows-1 relative w-full">
+            <div className="form-control md:w-full">
+                <div className="grid grid-cols-1 grid-rows-1 relative md:w-full">
                     {/* Highlight layer - shows the match letter */}
                     <input
                         type="text"

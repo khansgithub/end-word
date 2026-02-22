@@ -82,7 +82,6 @@ function GameContainer() {
     const StatusPanel = ({ children, hasError = false }: { children: React.ReactNode; hasError?: boolean }) => (
         <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'transparent' }}>
             <div className="panel max-w-md" style={{
-                backgroundColor: 'var(--bg-secondary-solid)',
                 ...(hasError && { borderColor: 'var(--border-error)' }),
             }}>
                 {children}

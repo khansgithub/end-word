@@ -18,7 +18,7 @@ function Definitions() {
         });
     }, []);
     return (
-        <div className="panel flex flex-col w-full p-0! h-full overflow-x-hidden overflow-y-scroll" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+        <div className="panel flex flex-col w-full p-0! h-full overflow-x-hidden overflow-y-scroll">
             <div className="flex-1 w-full overflow-y-scroll">
                 <table className="table p-0!#">
                     <thead>

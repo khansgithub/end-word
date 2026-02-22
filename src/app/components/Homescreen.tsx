@@ -127,7 +127,7 @@ export function Homescreen() {
                 </div>
             </header>
 
-            <div className="panel w-full max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+            <div className="panel w-full max-w-md">
                 <div className="flex flex-col items-center text-center p-6">
                     <div className="stats stats-horizontal mb-4 w-full" style={{
                         background: 'var(--gradient-chip)',

@@ -15,6 +15,7 @@ import InputSection from "./InputSection";
 import MatchLetterDisplay from "./MatchLetterDisplay";
 import PlayersSection from "./PlayersSection";
 import { RoundNumberBadge } from "./RoundNumberBadge";
+import { redirect } from "next/navigation";
 
 const L = `${__filename}: `
 const log = console.log;
@@ -64,9 +65,11 @@ export default function Game(props: props) {
         if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
     }, []);
 
+    if (gameState.connectedPlayers === 0) redirect("/");
+
     return (
-        <div className="flex flex-col w-screen min-h-screen items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <div className="flex flex-col max-w-4xl items-center justify-center p-3 gap-3">
+        <div className="flex flex-col w-dvw min-h-screen items-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <div className="flex flex-col md:max-w-4xl items-center justify-center p-3 gap-3">
                 <p>gameState is: {JSON.stringify(gameState)}</p>
                 {/* Waiting Overlay */}
                 {/* <WaitingOverlay status={gameState.status} /> */}
@@ -81,17 +84,17 @@ export default function Game(props: props) {
                 {/* Health Display */}
                 <HealthDisplay health={gameState.thisPlayer.health} />
 
-                {/* Input Section */}
-                <div className="relative flex flex-row w-full gap-1">
-                    <div className="w-8/12 shrink-0">
+                {/* Input Section  w-8/12 shrink-0*/}
+                <div className="relative flex flex-col md:flex-row gap-1">
+                    <div className="md:w-8/12 shrink-0"> 
                         <InputSection
                             matchLetter={gameState.matchLetter}
                             disabled={isDisabled}
                             onSubmit={submitButton}
                         />
                     </div>
-                    <div className="w-4/12 shrink-0" aria-hidden />
-                    <div className="absolute right-0 top-0 bottom-0 w-4/12">
+                    <div className="md:w-4/12 shrink-0" aria-hidden />
+                    <div className="md:absolute md:right-0 md:top-0 md:bottom-0 w-full md:w-4/12">
                         <Definitions />
                     </div>
                 </div>

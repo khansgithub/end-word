@@ -11,7 +11,7 @@ function LoadingScreen(props: props){
     }
     return (
         <div className="flex flex-col w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <div className="panel w-full max-w-md" style={{ backgroundColor: 'var(--bg-secondary-solid)' }}>
+            <div className="panel w-full max-w-md">
                 <div className="flex flex-col items-center text-center p-6">
                     <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
                         {gameStrings.connectionRequired}
