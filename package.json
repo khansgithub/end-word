@@ -8,6 +8,7 @@
     "dev": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
     "check": "tsc --noEmit",
     "lint": "eslint",
+    "install-python-venv": "cd dictionary && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt || .venv/bin/pip install -r requirements.txt",
     "prod": "cross-env NODE_ENV=production tsx run.ts",
     "start": " tsx src/server/server.ts",
     "test:all": "tsx tests/test-all.ts",
