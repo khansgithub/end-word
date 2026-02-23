@@ -1,4 +1,5 @@
 import { AssertionError } from "assert";
+import { GameStateHasNoThisPlayerError } from "./errors";
 import { BoolMap, DictionaryEntry, DictionaryResponse, GameState, GameStateClient, GameStateFrozen, GameStateServer, Player, PlayerWithId, PlayerWithoutId } from "./types";
 
 /* --------------------------------------------------
@@ -61,7 +62,7 @@ export function assertIsRequiredPlayerWithoutId(player: PlayerWithoutId): assert
 
 export function assertHasThisPlayer(state: GameState): asserts state is GameState & { thisPlayer: Player } {
     if (!state.thisPlayer) {
-        throw new Error("unexpected error");
+        throw new GameStateHasNoThisPlayerError();
     }
 }
 

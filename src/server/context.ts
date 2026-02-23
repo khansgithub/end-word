@@ -3,6 +3,7 @@
  * Holds the active context singleton, used by handlers and test endpoints.
  */
 import { Server as SocketServer } from "socket.io";
+import { GameStateNotInitializedError } from "../shared/errors";
 import {
     type GameState,
     type PlayerWithId,
@@ -53,7 +54,7 @@ export function createServerSocketContext(
 ): ServerSocketContext {
     const gameState = getGameState();
     if (!gameState) {
-        throw new Error("Game state not initialized");
+        throw new GameStateNotInitializedError();
     }
     return {
         state: initialState ?? gameState,

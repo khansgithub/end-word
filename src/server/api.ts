@@ -1,5 +1,11 @@
 // import { Message, Player } from "@/app/types";
 import { getMockedData } from "../mocks/mock-dictionary-data";
+import {
+    DictionaryLookupFailedError,
+    DictionaryRandomWordFailedError,
+    DictionaryUrlNotSetError,
+    InvalidDictionaryResponseError,
+} from "../shared/errors";
 import { AppEnv, envGet } from "./env";
 import { isDictionaryEntry, isDictionaryResponse } from "../shared/guards";
 import { DictionaryResponse } from "../shared/types";
@@ -8,17 +14,17 @@ import { log } from "./logging";
 export async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
     const dictionaryUrl = envGet("DICTIONARY_URL");
     if (!dictionaryUrl) {
-        throw new Error("Dictionary URL is not set");
+        throw new DictionaryUrlNotSetError();
     }
     const res = await fetch(`${dictionaryUrl}/lookup/${word}`);
     if (res.ok) {
         const data = await res.json();
         if (!isDictionaryResponse(data)) {
-            throw new Error("Invalid dictionary response");
+            throw new InvalidDictionaryResponseError();
         }
         return data;
     } else {
-        throw new Error(`Failed to get look up word: \${word}`);
+        throw new DictionaryLookupFailedError(word);
     }
 }
 
@@ -50,17 +56,17 @@ export async function getRandomWordFromDictionaryMock(): Promise<string> {
 export async function getRandomWordFromDictionaryApi(): Promise<string> {
     const dictionaryUrl = envGet("DICTIONARY_URL");
     if (!dictionaryUrl) {
-        throw new Error("Dictionary URL is not set");
+        throw new DictionaryUrlNotSetError();
     }
     const res = await fetch(`${dictionaryUrl}/random`);
     if (res.ok) {
         const data = await res.json();
         if (!isDictionaryEntry(data)) {
-            throw new Error("Invalid dictionary response");
+            throw new InvalidDictionaryResponseError();
         }
         return data.key;
     } else {
-        throw new Error("Failed to get random word from dictionary");
+        throw new DictionaryRandomWordFailedError();
     }
 }
 

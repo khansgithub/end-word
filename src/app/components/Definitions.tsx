@@ -31,7 +31,7 @@ function Definitions() {
                         {
                             Array.from(definitions.current).reverse().map(([k, v], i) => {
                                 return (
-                                    <tr key={i} className={i === 0 ? "bg-base-200" : ""}>
+                                    <tr key={i} className={i === 0 ? "bg-gray-800" : ""}>
                                         <td><p className="text-xs">{k}</p></td>
                                         <td><p className="text-xs">{v.data[0].definition}</p></td>
                                     </tr>

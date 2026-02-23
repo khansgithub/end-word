@@ -53,7 +53,7 @@ describe("setPlayerLastWord", () => {
             type: "setPlayerLastWord" as const,
             payload: [state, "word"] as [GameState, string],
         };
-        expect(() => gameStateReducer(state, action)).toThrow("unexpected error");
+        expect(() => gameStateReducer(state, action)).toThrow("Game state has no thisPlayer");
     });
 
     it("should not mutate the original state", () => {
@@ -154,7 +154,7 @@ describe("gameStateReducer", () => {
             payload: [] as any,
         };
         expect(() => gameStateReducer(state, invalidAction)).toThrow(
-            "couldn't find unknownAction in GameStateActions"
+            "Unknown action type: unknownAction"
         );
     });
 
@@ -182,8 +182,8 @@ describe("gameStateReducer", () => {
             try {
                 gameStateReducer(state, action);
             } catch (error: any) {
-                // Should not throw "couldn't find" error
-                expect(error.message).not.toContain("couldn't find");
+                // Should not throw "Unknown action type" error
+                expect(error.message).not.toContain("Unknown action type");
             }
         });
     });

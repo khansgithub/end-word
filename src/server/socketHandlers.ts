@@ -1,4 +1,5 @@
 import { buildInitialGameState, decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
+import { PlayerUndefinedError, SeatNotAssignedError, ThisPlayerUndefinedError } from "../shared/errors";
 import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socketEvents";
 import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
@@ -49,7 +50,7 @@ function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPl
     if (playerSeat != false) {
         const newState = getGameState();
         const player = newState.players[playerSeat];
-        if (!player) throw new Error("Unexpected error; player is undefined");
+        if (!player) throw new PlayerUndefinedError("", {players: newState.players});
         assertIsPlayerWithId(player);
         ack({ success: true, gameState: toGameStateEmit(newState), player: player });
         return true;
@@ -72,9 +73,9 @@ function registerPlayerSocket(socket: ServerPlayerSocket, player: PlayerWithId, 
 
     const { thisPlayer } = newState;
     const clientGameState = toGameStateEmit(newState);
-    if (thisPlayer === undefined) throw new Error("thisPlayer cannot be undefined here");
+    if (thisPlayer === undefined) throw new ThisPlayerUndefinedError();
     assertIsPlayerWithId(thisPlayer);
-    if (thisPlayer.seat === undefined) throw new Error("seat must be assigned before adding to socketPlayerMap");
+    if (thisPlayer.seat === undefined) throw new SeatNotAssignedError();
     newState.socketPlayerMap?.set(clientId, thisPlayer.seat);
 
     setRegisteredClients(newState.socketPlayerMap?.size ?? 0);
@@ -149,7 +150,7 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
     const state = getGameState();
     const clientId = getClientId(socket);
     const player = getPlayerByClientId(state, clientId);
-    if (!player) throw new Error("Unexpected error; player is undefined");
+    if (!player) throw new PlayerUndefinedError();
     const playerDead = player.health == 1;
     const end = playerDead && getAlivePlayerCount(state) == 2;
 

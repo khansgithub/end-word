@@ -1,6 +1,7 @@
 import { buildSyllableSteps } from "../app/hangul-decomposer";
 import { envGet } from "../server/env";
 import { DEFAULT_HEALTH } from "./consts";
+import { InvalidSyllableError } from "./errors";
 import { ClientPlayers, GameState, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
 
 // ============================================================================
@@ -133,7 +134,7 @@ export function buildMatchLetter(
     block: string
 ): MatchLetter {
     if (block.length > 1) {
-        throw new Error("Must be 1 syllable");
+        throw new InvalidSyllableError();
     }
 
     const arr = buildSyllableSteps(block);

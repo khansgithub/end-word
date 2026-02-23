@@ -123,7 +123,7 @@ describe("addPlayer", () => {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
-        expect(() => gameStateReducer(state, action)).toThrow("unexpected error");
+        expect(() => gameStateReducer(state, action)).toThrow("No available seat");
     });
 
     it("should throw error when player name is missing", () => {
@@ -133,7 +133,7 @@ describe("addPlayer", () => {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
-        expect(() => gameStateReducer(state, action)).toThrow("unexpected error");
+        expect(() => gameStateReducer(state, action)).toThrow("Player name is missing");
     });
 });
 
@@ -181,7 +181,7 @@ describe("removePlayer", () => {
             type: "removePlayer" as const,
             payload: [state, playerWithoutSeat] as [GameState, Player],
         };
-        expect(() => gameStateReducer(state, action)).toThrow("unexpected error");
+        expect(() => gameStateReducer(state, action)).toThrow("Player UID is undefined");
     });
 
     it("should not mutate the original state", () => {

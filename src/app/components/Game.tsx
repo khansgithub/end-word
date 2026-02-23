@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useRef } from "react";
 import { gameStateReducer } from "../../shared/GameState";
+import { ThisPlayerUndefinedError } from "../../shared/errors";
 import { emitSubmitWord, registerClientSocketHandlers as handleSocket } from "../../shared/socketClient";
 import { GameStateClient } from "../../shared/types";
 import { isPlayerTurn } from "../../shared/utils";
@@ -62,7 +63,7 @@ export default function Game(props: props) {
     handleSocket(socket.current, gameState, dispatch);
 
     useEffect(() => {
-        if (gameState.thisPlayer === undefined) throw new Error("unexpted error");
+        if (gameState.thisPlayer === undefined) throw new ThisPlayerUndefinedError("", gameState);
     }, []);
 
     if (gameState.connectedPlayers === 0) redirect("/");

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
+import { SocketUnavailableError } from "../../shared/errors";
 import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
 import { GameStateEmit, Player } from '../../shared/types';
 import { useSocketStore, useUserStore } from "../store/userStore";
@@ -63,7 +64,7 @@ export function Homescreen() {
     }, []);
 
     useEffect(() => {
-        if (socket === null) throw new Error("This should not happen");
+        if (socket === null) throw new SocketUnavailableError();
 
         if (!socket.connected) {
             console.warn(`Could not connect to socket on retry: ${retryCount}`)

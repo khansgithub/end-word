@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
+import { UnexpectedConnectionStateError } from '../../shared/errors';
 import { assertIsGameStateClient } from '../../shared/guards';
 import { AckRegisterPlayerResponse, ClientPlayerSocket, GameStateClient, PlayerWithId } from '../../shared/types';
 import { makeNewPlayer } from '../../shared/utils';
@@ -125,7 +126,7 @@ function GameContainer() {
             )
         default:
             console.error(`unexpted error: ${userIsConnected}`);
-            throw new Error(`unexpted error: ${userIsConnected}`);
+            throw new UnexpectedConnectionStateError(userIsConnected);
     }
 }
 

@@ -1,5 +1,6 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
+import { ServerContextNotSetupError } from "../shared/errors";
 import { createServerSocketContext } from "./context";
 import { GameState, ServerPlayerSocket } from "../shared/types";
 import { fml } from "./socketHandlers";
@@ -21,7 +22,7 @@ export function createIOServer(server: http.Server): SocketServer {
 export function setUpIOServer(socketServer: SocketServer): SocketServer {
     const socketConextWrapper = (socket: ServerPlayerSocket) => {
         const ctx = getServerSocketContext();
-        if (!ctx) throw new Error("Server context not setup");
+        if (!ctx) throw new ServerContextNotSetupError();
         fml(socket, ctx);
     };
     socketServer.on("connection", socketConextWrapper);

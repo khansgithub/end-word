@@ -2,6 +2,7 @@ import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, P
 import { expect, request, test } from "@playwright/test";
 import { decomposeSyllable } from "../../src/app/hangul-decomposer";
 import { envGet } from "../../src/server/env";
+import { E2ETestAssertionError, TestEnvError } from "../../src/shared/errors";
 import { roomFlowTestNames } from "./test-names";
 import { test as base } from '@playwright/test';
 import assert, { AssertionError } from "assert";
@@ -35,7 +36,7 @@ function assertEnvVarEquals(vars: Record<string, string>, testTitle: string) {
         }
     }
     if (errors.length > 0) {
-        throw new Error(
+        throw new TestEnvError(
             errors.join('\n') +
             "\nActual: " + JSON.stringify(Object.fromEntries(Object.entries(vars).map(([k]) => [k, envGet(k as keyof typeof process.env)])), null, 2) +
             "\nExpected: " + JSON.stringify(vars, null, 2)
@@ -399,7 +400,7 @@ test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }, 
 
     async function assertHighlightValue(dom: { matchLetterDisplay: Locator }, highlightInputLocator: Locator) {
         const currentMatchLetterDisplay = await dom.matchLetterDisplay.textContent();
-        if (!currentMatchLetterDisplay) throw new Error("No match letter found");
+        if (!currentMatchLetterDisplay) throw new E2ETestAssertionError("Match letter display not found");
         const highlightInputValue = await highlightInputLocator.inputValue();
         const highlightExpectValue = decomposeSyllable(currentMatchLetterDisplay)[0];
         log(`assertHighlightValue: highlightInputValue: ${highlightInputValue}, highlightExpectValue: ${highlightExpectValue}`);
@@ -538,7 +539,7 @@ test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }, testI
         // type an invalid word on page A
         log('type an invalid word on A');
         const currentMatchLetter = (await dom[0].matchLetterDisplay.textContent());
-        if (!currentMatchLetter) throw new Error("matchLetterDisplay for pageA did not resolve");
+        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
         await dom[0].wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
 
         // submit the word on page A
@@ -586,7 +587,7 @@ test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }, tes
 
         log('get the current match letter for pageA');
         const currentMatchLetter = await domA.matchLetterDisplay.textContent();
-        if (!currentMatchLetter) throw new Error("matchLetterDisplay for pageA did not resolve");
+        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
 
         log('fill the current match letter on pageA');
         domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
@@ -692,7 +693,7 @@ test(roomFlowTestNames.endGameWith2Players, async ({ browser, request }, testInf
     try {
         await navigateToGameStart(pages, dom, log);
         const currentMatchLetter = (await domA.matchLetterDisplay.textContent({timeout: TIMEOUT}));
-        if (!currentMatchLetter) throw new Error("matchLetterDisplay for pageA did not resolve");
+        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
 
         for (let i = 0, max = 4; i < max; i++) {
             log(`type an invalid word on A (${i+1}/${max})`);
@@ -744,7 +745,7 @@ test(roomFlowTestNames.endGameWith3Players, async ({ browser, request }, testInf
     try {
         await navigateToGameStart(pages, dom, log);
         const currentMatchLetter = (await domA.matchLetterDisplay.textContent({timeout: TIMEOUT}));
-        if (!currentMatchLetter) throw new Error("matchLetterDisplay for pageA did not resolve");
+        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
 
         for (let i = 0, max = 5; i < max; i++) {
             log(`type an invalid word on A (${i+1}/${max})`);

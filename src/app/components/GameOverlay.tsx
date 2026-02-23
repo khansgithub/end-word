@@ -1,4 +1,5 @@
 import { JSX } from "react";
+import { NoWinnerFoundError } from "../../shared/errors";
 import { GameStatus, PlayersArray } from "../../shared/types";
 import { gameStrings } from "../lib/gameStrings";
 
@@ -16,7 +17,7 @@ interface GameOverlayProps {
 export default function GameOverlay({ status, players }: GameOverlayProps) {
     function winnerName() {
         const winner = players.find(p => p && p.health !== 0);
-        if (!winner) throw new Error("unexpected error, not player with hp > 0 found in state.players");
+        if (!winner) throw new NoWinnerFoundError({players});
         return winner.name;
     }
 

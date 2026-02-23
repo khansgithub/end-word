@@ -1,3 +1,4 @@
+import { LookupBoolMapError } from "../../shared/errors";
 import { BoolMap, GameState, PropertyBoolMap } from "../../shared/types";
 
 // TODO: this is just overkill i think, i think i can just use tailwind classes instead ugh
@@ -108,7 +109,7 @@ export function lookupBoolMap(map: BoolMap, bools: boolean[]): string {
     }
 
     if (!result) {
-        throw new Error(`unexpected error in lookupBoolMap: ${JSON.stringify(map)} ${bools}`);
+        throw new LookupBoolMapError(map, bools);
     }
 
     return result;

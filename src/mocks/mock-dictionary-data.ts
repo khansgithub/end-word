@@ -3,6 +3,7 @@
  */
 
 import path from "path";
+import { MockDataNotLoadedError, MockDataParseError } from "../shared/errors";
 import { DictionaryResponse } from "../shared/types";
 import fs from "fs";
 import {log} from "../server/logging";
@@ -16,7 +17,7 @@ let data: DictionaryResponse[] | null = null;
 
 function* dataGenerator(): Generator<DictionaryResponse, void, unknown> {
     if (!data) {
-        throw new Error("Data is not loaded");
+        throw new MockDataNotLoadedError();
     }
     log("[dataGenerator] data:", JSON.stringify(data, null, 2))();
     yield data.shift() ?? {};
@@ -31,7 +32,7 @@ export function writeMockData(_data: DictionaryResponse[]): void {
 export function getMockedData(): Generator<DictionaryResponse, void, unknown> {
     if (data === null) {
         data = JSON.parse(fs.readFileSync(MOCK_DATA_FILE, "utf-8"));
-        if (!data) throw new Error("Data not parsed correctly");
+        if (!data) throw new MockDataParseError();
     }
     return dataGenerator();
 }

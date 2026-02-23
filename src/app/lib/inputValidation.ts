@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import { StoreApi } from "zustand";
+import { UnexpectedActionTypeError } from "../../shared/errors";
 import { MatchLetter } from "../../shared/types";
 import { decomposeSyllable, decomposeSyllableNonRecursive } from "../hangul-decomposer";
 import { InputState } from "../store/userStore";
@@ -164,7 +165,7 @@ export function actionHandlers(
     
     const action = validateInput(input, prev, letter, composing, matchLetter);
     const f = actionHandlerMap[action.type];
-    if (f === null) throw new Error(`unexpected action type: ${action.type}`);
+    if (f === null) throw new UnexpectedActionTypeError(action.type);
     const args = action.type === "CONTINUE" ? [action.input] : [];
     f(...args);
 }

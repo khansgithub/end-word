@@ -1,4 +1,5 @@
 import { io } from "socket.io-client";
+import { ClientIdRequiredError } from "../../shared/errors";
 import { socketEvents } from "../../shared/socketEvents";
 import type { ClientPlayerSocket } from "../../shared/types";
 import { useSocketStore } from "../store/userStore";
@@ -19,7 +20,7 @@ import { useSocketStore } from "../store/userStore";
 export function getSocketManager(clientId?: string): ClientPlayerSocket {
     let socket = useSocketStore.getState().socket;
     if (socket === null) {
-        if (clientId === undefined) throw new Error("clientId is needed for initial socket connection")
+        if (clientId === undefined) throw new ClientIdRequiredError()
         socket = io({
             auth: { clientId },
         });

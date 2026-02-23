@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { NullValueError } from "../shared/errors";
 import { BoolMap, PropertyBoolMap } from "../shared/types";
 import { pp } from "../shared/utils";
 
@@ -96,7 +97,7 @@ function lookupBoolMap(map: BoolMap, ...bools: boolean[]): string | boolean | nu
         if (isBoolMap(temp)) traverser = temp;
         else value = temp;
     }
-    if (value === null) throw new Error('Value is null');
+    if (value === null) throw new NullValueError();
     return value;
 }
 
