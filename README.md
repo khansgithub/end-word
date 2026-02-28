@@ -62,3 +62,6 @@ A HTML visualising the test results can be found under `test-results/dashboard.h
 npm run test:all
 ```
 
+# To-Do
+Currently the project uses Node.js as the server to manage the game state, and Socket.io for communications.
+This can be changed to use Supabase Realtime for socket communication, Supabase database to maintain the game state. This will allow for the project to be hosted on Vercel, not requiring any specific server configurations.
