@@ -2,9 +2,9 @@ import http from "http";
 import { Server as SocketServer } from "socket.io";
 import { ServerContextNotSetupError } from "../shared/errors";
 import { createServerSocketContext } from "./context";
-import { GameState, ServerPlayerSocket } from "../shared/types";
 import { fml } from "./socketHandlers";
 import { getServerSocketContext, setActiveServerContext } from "./context";
+import { ServerPlayerSocket } from "../shared/socketTypes";
 
 let socketServer: SocketServer | null = null;
 

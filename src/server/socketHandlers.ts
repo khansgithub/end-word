@@ -1,14 +1,27 @@
-import { buildInitialGameState, decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
+import {
+    buildInitialGameState,
+    decreasePlayerHealth,
+    endGame,
+    GameState,
+    getPlayerByClientId,
+    nextTurn,
+    progressNextTurn,
+    registerPlayer as registerPlayerToState,
+    removePlayer,
+    socketToSeat,
+    toGameStateEmit
+} from "../shared/GameState";
 import { PlayerUndefinedError, SeatNotAssignedError, ThisPlayerUndefinedError } from "../shared/errors";
 import { assertIsPlayerWithId } from "../shared/guards";
 import { socketEvents } from "../shared/socketEvents";
-import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, ServerPlayerSocket } from "../shared/socketTypes";
+import { PlayerWithId } from "../shared/types";
 import { getAlivePlayerCount, pp } from "../shared/utils";
-import { countSocketEvent, setRegisteredClients } from "./metrics";
-import { getServerSocketContext, ServerSocketContext } from "./context";
-import { getGameState, setGameState } from "./state";
 import { getRandomWordFromDictionary } from "./api";
+import { getServerSocketContext, ServerSocketContext } from "./context";
 import { log } from "./logging";
+import { countSocketEvent, setRegisteredClients } from "./metrics";
+import { getGameState, setGameState } from "./state";
 import { inputIsValid } from "./utils";
 
 const L = "socketHandler: ";
@@ -50,7 +63,7 @@ function reconnectingPlayerSocket(socket: ServerPlayerSocket, ack: AckRegisterPl
     if (playerSeat != false) {
         const newState = getGameState();
         const player = newState.players[playerSeat];
-        if (!player) throw new PlayerUndefinedError("", {players: newState.players});
+        if (!player) throw new PlayerUndefinedError("", { players: newState.players });
         assertIsPlayerWithId(player);
         ack({ success: true, gameState: toGameStateEmit(newState), player: player });
         return true;

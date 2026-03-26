@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { SocketUnavailableError } from "../../shared/errors";
 import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
-import { GameStateEmit, Player } from '../../shared/types';
-import { useSocketStore, useUserStore } from "../store/userStore";
-import { getSocketManager } from '../lib/socket';
 import { socketEvents } from '../../shared/socketEvents';
+import { GameStateEmit, Player } from '../../shared/types';
+import { getSocketManager } from '../lib/socket';
+import { useSocketStore, useUserStore } from "../store/userStore";
 
 
 export function Homescreen() {

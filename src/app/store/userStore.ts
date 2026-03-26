@@ -1,6 +1,6 @@
 import { createStore } from "zustand";
 import { persist } from "zustand/middleware";
-import { ClientPlayerSocket } from "../../shared/types";
+import { ClientPlayerSocket } from "../../shared/socketTypes";
 
 interface PlayerSession {
     playerName: string;

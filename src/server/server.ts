@@ -18,14 +18,6 @@ initLogging();
 
 const app = next({
     dev: envGet("NODE_ENV") !== "production",
-    // customServer: true,
-    // dir: "src",
-    // conf: {
-    //     ...nextConfig,
-    //     // When dir is "src", Next.js resolves distDir relative to src/, so "src/.next/" becomes src/src/.next/.
-    //     // Override with absolute path so it finds the build at project_root/src/.next/
-    //     // distDir: path.resolve(process.cwd(), "src", ".next"),
-    // },
 
 });
 const express_app = express();

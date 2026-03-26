@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 import { ClientIdRequiredError } from "../../shared/errors";
 import { socketEvents } from "../../shared/socketEvents";
-import type { ClientPlayerSocket } from "../../shared/types";
+import type { ClientPlayerSocket } from "../../shared/socketTypes";
 import { useSocketStore } from "../store/userStore";
 
 
