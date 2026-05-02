@@ -1,13 +1,21 @@
 {
-    "python.analysis.stubPath": "dictionary/stubs",
-    "files.associations": {
-        "*.css": "tailwindcss"
+    "[ms-sql]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
     },
-    "eslint.rules.customizations": [
-        {
-            "rule": "no-explicit-any",
-            "severity": "off"
-        }
+    "[sql]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4,
+    "files.associations": {
+        "*.css": "tailwindcss",
+        "*.sql": "sql"
+    },
+    "prettier.documentSelectors": [
+        "**/*.sql"
     ],
-    "cursorpyright.analysis.stubPath": "dictionary/stubs"
+    "workbench.statusBar.visible": true
 }

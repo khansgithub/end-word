@@ -1,0 +1,16 @@
+{
+  "tabWidth": 4,
+  "useTabs": false,
+  "plugins": [
+    "prettier-plugin-sql"
+  ],
+  "overrides": [
+    {
+      "files": "*.sql",
+      "options": {
+        "parser": "sql",
+        "language": "postgresql"
+      }
+    }
+  ]
+}
