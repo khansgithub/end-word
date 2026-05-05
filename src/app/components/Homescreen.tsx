@@ -2,8 +2,12 @@ import { redirect } from 'next/navigation';
 import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { SocketUnavailableError } from "../../shared/errors";
+
 import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
 import { socketEvents } from '../../shared/socketEvents';
+import { getSupabaseClient } from '../lib/supabase';
+
+
 import { GameStateEmit, Player } from '../../shared/types';
 import { getSocketManager } from '../lib/socket';
 import { useSocketStore, useUserStore } from "../store/userStore";
@@ -44,7 +48,7 @@ export function Homescreen() {
         redirect("/room");
     }
 
-    function playerCountUpdateFromServer(state: GameStateEmit){
+    function playerCountUpdateFromServer(state: GameStateEmit) {
         setPlayerCount(state.connectedPlayers);
     }
 
@@ -55,11 +59,27 @@ export function Homescreen() {
             socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
             setSocket(socket);
         }
-        onSocketEvent(socket, socketEvents.gameStateUpdate, playerCountUpdateFromServer);
+        // --------------------------------------------------------------------
+        // const supabase = getSupabaseClient();
+        // const channel = supabase.channel("room_count", { config: { private: true } });
+        // channel.on(
+        //     "broadcast",
+        //     { event: "*" },
+        //     (payload: unknown) => {
+        //         playerCountUpdateFromServer(payload as GameStateEmit);
+        //     }
+        // ).subscribe();
+        // --------------------------------------------------------------------
+        onSocketEvent(
+            socket,
+            socketEvents.gameStateUpdate,
+            playerCountUpdateFromServer
+        );
         emitIsReturningPlayer(socket, clientId, setReturningPlayer);
 
         return () => {
             socket?.off(socketEvents.gameStateUpdate);
+            // supabase.removeChannel(channel);
         };
     }, []);
 

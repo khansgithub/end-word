@@ -1,8 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
-import { GameStateDispatch } from "./GameState";
+import { GameState, GameStateDispatch } from "./GameState";
 import { SocketEventName, socketEvents } from "./socketEvents";
-import type { AckRegisterPlayerResponse, AckSubmitWordResponseParams, ClientPlayerSocket, GameState, Player, PlayerWithId, ServerToClientEvents } from "./types";
 import { pp } from "./utils";
+import { ClientPlayerSocket, AckSubmitWordResponseParams, AckRegisterPlayerResponse, ServerToClientEvents } from "./socketTypes";
+import { PlayerWithId, Player } from "./types";
 
 const L = "socketClient: "
 const log = console.log;
