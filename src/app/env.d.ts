@@ -40,5 +40,7 @@ export declare namespace NodeJS {
          * Intended to suppress verbose output; usages in pp() and socketClient are commented out.
          */
         SUPPRESS: string
+        NEXT_PUBLIC_SUPABASE_URL: string
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: string
     }
 }

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_PLAYERS } from "../../shared/consts";
 import { SocketUnavailableError } from "../../shared/errors";
 
-import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
+// import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
+import { onSocketEvent, socketGetPlayerCount } from '../../shared/realtimeClient';
 import { socketEvents } from '../../shared/socketEvents';
 import { getSupabaseClient } from '../lib/supabase';
 
@@ -23,8 +24,6 @@ export function Homescreen() {
 
     const { setSocket } = useSocketStore.getState();
     let { socket } = useSocketStore.getState();
-
-    // --------------------------------------------------------------------
 
     function onClick(event: React.MouseEvent) {
         if (!inputRef.current) return blockEvent(event);
@@ -52,30 +51,21 @@ export function Homescreen() {
         setPlayerCount(state.connectedPlayers);
     }
 
+    // on start up 
     useEffect(() => {
         console.count("Homescreen");
         inputRef.current?.focus();
-        if (socket === null) {
-            socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
-            setSocket(socket);
-        }
-        // --------------------------------------------------------------------
-        // const supabase = getSupabaseClient();
-        // const channel = supabase.channel("room_count", { config: { private: true } });
-        // channel.on(
-        //     "broadcast",
-        //     { event: "*" },
-        //     (payload: unknown) => {
-        //         playerCountUpdateFromServer(payload as GameStateEmit);
-        //     }
-        // ).subscribe();
-        // --------------------------------------------------------------------
+        // if (socket === null) {
+        //     socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
+        //     setSocket(socket);
+        // }
+
         onSocketEvent(
             socket,
             socketEvents.gameStateUpdate,
             playerCountUpdateFromServer
         );
-        emitIsReturningPlayer(socket, clientId, setReturningPlayer);
+        // emitIsReturningPlayer(socket, clientId, setReturningPlayer);
 
         return () => {
             socket?.off(socketEvents.gameStateUpdate);
@@ -83,30 +73,32 @@ export function Homescreen() {
         };
     }, []);
 
+    // on each retry
     useEffect(() => {
-        if (socket === null) throw new SocketUnavailableError();
+        // if (socket === null) throw new SocketUnavailableError();
 
-        if (!socket.connected) {
-            console.warn(`Could not connect to socket on retry: ${retryCount}`)
-            setTimeout(() => setRetryCount(c => c + 1), 1000);
-            return
-        }
+        // if (!socket.connected) {
+        //     console.warn(`Could not connect to socket on retry: ${retryCount}`)
+        //     setTimeout(() => setRetryCount(c => c + 1), 1000);
+        //     return
+        // }
 
         // check if there exists a player with the socket.id
-        emitIsReturningPlayer(socket, clientId, setReturningPlayer)
-        socketGetPlayerCount(socket, setPlayerCount);
-        console.log(`Connected to socket after ${retryCount} attempts.`);
-        return () => {
-            if (!socket) return;
-        }
+        // emitIsReturningPlayer(socket, clientId, setReturningPlayer)
+        // socketGetPlayerCount(socket, setPlayerCount);
+        // console.log(`Connected to socket after ${retryCount} attempts.`);
+        // return () => {
+        //     if (!socket) return;
+        // }
     }, [retryCount]);
 
-    useEffect(() => {
-        console.log("reutrning player values -> ", returningPlayer)
-        if (returningPlayer) {
-            redirectToRoom(returningPlayer.name); // TODO: maybe this can be stored in zustand or smth
-        }
-    }, [returningPlayer]);
+    // if the user is a returning player
+    // useEffect(() => {
+    //     console.log("reutrning player values -> ", returningPlayer)
+    //     if (returningPlayer) {
+    //         redirectToRoom(returningPlayer.name); // TODO: maybe this can be stored in zustand or smth
+    //     }
+    // }, [returningPlayer]);
 
     return (
         <div className="flex flex-col w-full h-full min-h-screen justify-center items-center p-3" style={{

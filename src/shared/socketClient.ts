@@ -86,15 +86,15 @@ export function registerClientSocketHandlers(
     });
 }
 
+/**
+ * @param {ClientPlayerSocket} socket - The socket instance to use for communication.
+ * @param {string} clientId - The clientId to check.
+ * @param {(player: Player) => void} setReturningPlayer - React setState callback to set the returning player.
+ */
 export function emitIsReturningPlayer(
     socket: ClientPlayerSocket,
     clientId: string,
     setReturningPlayer: Dispatch<SetStateAction<Player | null>>) {
-    /**
-     * @param {ClientPlayerSocket} socket - The socket instance to use for communication.
-     * @param {string} clientId - The clientId to check.
-     * @param {(player: Player) => void} setReturningPlayer - React setState callback to set the returning player.
-     */
     socket.emit(socketEvents.isReturningPlayer, clientId, (({ found, player }) => {
         log(L, "isReturningPlayer: ", found, player);
         if (found && player) setReturningPlayer(player);

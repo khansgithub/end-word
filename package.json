@@ -6,6 +6,7 @@
     "build": "next build",
     "debug": "cross-env DEBUG=engine.io:* tsx watch src/server/server.ts",
     "dev": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
+    "dev:mock": "cross-env MOCK_GET_RANDOM_WORD=true next dev",
     "check": "tsc --noEmit",
     "lint": "eslint",
     "install-python-venv": "cd dictionary && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt || .venv/bin/pip install -r requirements.txt",
