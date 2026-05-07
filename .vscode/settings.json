@@ -17,5 +17,5 @@
     "prettier.documentSelectors": [
         "**/*.sql"
     ],
-    "workbench.statusBar.visible": false
+    "workbench.statusBar.visible": true
 }

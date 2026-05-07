@@ -21,7 +21,7 @@ export function Homescreen() {
     const { clientId, setName } = useUserStore.getState();
     const inputRef = useRef<HTMLInputElement>(null);
     const blockEvent = (e: React.MouseEvent | React.KeyboardEvent) => e.preventDefault();
-
+    const rooms: any[] = [1,2,3,4,5,6,7,8];
     const { setSocket } = useSocketStore.getState();
     let { socket } = useSocketStore.getState();
 
@@ -154,6 +154,71 @@ export function Homescreen() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="w-full mb-4">
+                        <div
+                            className="panel"
+                            style={{
+                                background: 'var(--gradient-chip)',
+                                border: '1px solid var(--border-default)',
+                                borderRadius: '0.55rem',
+                                padding: '1rem',
+                                marginBottom: '0.5rem',
+                                minHeight: '4rem'
+                            }}
+                        >
+                            <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '0.5rem', fontSize: '1rem' }}>
+                                Active Rooms
+                            </div>
+                            <div>
+                                {rooms && rooms.length > 0 ? (
+                                    <div
+                                        className="grid"
+                                        style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(5, 1fr)',
+                                            gap: '0.5rem'
+                                        }}
+                                    >
+                               
+                                        {rooms.map((room: any) => (
+                                            <div
+                                                key={room.id}
+                                                className="flex flex-col items-center justify-center max-w-fit mb-2.5 py-2 px-3 rounded-md bg-base-200 text-base-content"
+                                                style={{
+                                                    minWidth: 0, // Allow grid compression if needed
+                                                    minHeight: 0 // Allow grid to control cell height
+                                                }}
+                                            >
+                                       
+                                                <span>
+                                                    <strong>{room.name}</strong>
+                                                    {room.playerCount !== undefined &&
+                                                        <span style={{ marginLeft: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9em' }}>
+                                                            {room.playerCount} player{room.playerCount !== 1 && 's'}
+                                                        </span>
+                                                    }
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="btn-fsm py-1 px-3"
+                                                    style={{ fontSize: '0.95em' }}
+                                                    // onClick={() => onJoinRoom(room.id)}
+                                                >
+                                                    Join
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                        No rooms available.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
 
                     <div className="form-control w-full mb-4">
                         <label className="label" htmlFor="name">
