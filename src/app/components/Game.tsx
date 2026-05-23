@@ -1,13 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useReducer, useRef } from "react";
-import { gameStateReducer } from "../../shared/GameState";
-import { ThisPlayerUndefinedError } from "../../shared/errors";
-import { emitSubmitWord, registerClientSocketHandlers as handleSocket } from "../../shared/socketClient";
-import { GameStateClient } from "../../shared/types";
-import { isPlayerTurn } from "../../shared/utils";
-import { getSocketManager } from "../lib/socket";
-import { submitWordCallback } from "../lib/wordSubmit";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
+import { ThisPlayerUndefinedError } from "@/shared/errors";
+import type { GameStateClient } from "@/shared/types";
+import { isPlayerTurn } from "@/shared/utils";
+import { submitWordApi } from "@/app/lib/roomApi";
+import { submitWordCallback } from "@/app/lib/wordSubmit";
 import Definitions from "./Definitions";
 import GameOverlay from "./GameOverlay";
 import HealthDisplay from "./HealthDisplay";
@@ -16,93 +15,98 @@ import InputSection from "./InputSection";
 import MatchLetterDisplay from "./MatchLetterDisplay";
 import PlayersSection from "./PlayersSection";
 import { RoundNumberBadge } from "./RoundNumberBadge";
-import { redirect } from "next/navigation";
+import type { DictionaryEntry } from "@/shared/types";
+import { useRoomRealtime } from "@/app/hooks/useRoomRealtime";
 
-const L = `${__filename}: `
-const log = console.log;
-const error = console.error;
-
-interface props {
-    gameState: GameStateClient,
+interface GameProps {
+  roomId: string;
+  gameState: GameStateClient;
+  onStateChange: (state: GameStateClient) => void;
+  language?: "en" | "ko";
 }
 
-export default function Game(props: props) {
-    const [gameState, dispatch] = useReducer(
-        gameStateReducer,
-        props.gameState
-    );
+export default function Game({ roomId, gameState: initialState, onStateChange, language = "ko" }: GameProps) {
+  const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
+  const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
 
-    const isDisabled = gameState.thisPlayer?.seat === undefined || !isPlayerTurn(gameState, gameState.thisPlayer.seat);
+  const syncParent = useCallback(
+    (next: GameStateClient) => {
+      onStateChange(next);
+    },
+    [onStateChange]
+  );
 
-    const socket = useRef(getSocketManager());
+  const applyRemote = useCallback(
+    (emit: Parameters<typeof gameStateUpdateClient>[0]) => {
+      dispatch({
+        type: "gameStateUpdateClient",
+        payload: [emit],
+      });
+    },
+    []
+  );
 
-    async function submitButton(e?: React.FormEvent<HTMLButtonElement>) {
-        if (gameState.status === "finished") return;
-        if (e) e.preventDefault();
+  useRoomRealtime(roomId, applyRemote);
 
-        const word = getInputValue();
-        if (!word || word.length === 0) {
-            setInputError(true);
-            return;
-        }
-        log(L, "[submitButton] Submitting word:", word, "by player:", gameState.thisPlayer.uid, "seat:", gameState.thisPlayer.seat);
-        emitSubmitWord(
-            socket.current,
-            word,
-            (response) => submitWordCallback(
-                gameState,
-                dispatch,
-                setInputError,
-                response,
-                word,
-            )
-        );
-        resetInput();
+  useEffect(() => {
+    syncParent(gameState);
+  }, [gameState, syncParent]);
+
+  useEffect(() => {
+    if (gameState.thisPlayer === undefined) {
+      throw new ThisPlayerUndefinedError("", gameState);
+    }
+  }, [gameState]);
+
+  const isDisabled =
+    gameState.thisPlayer?.seat === undefined ||
+    !isPlayerTurn(gameState, gameState.thisPlayer.seat) ||
+    gameState.status !== "playing";
+
+  async function submitButton(e?: React.FormEvent<HTMLButtonElement>) {
+    if (gameState.status === "finished") return;
+    if (e) e.preventDefault();
+
+    const word = getInputValue();
+    if (!word || word.length === 0) {
+      setInputError(true);
+      return;
     }
 
-    handleSocket(socket.current, gameState, dispatch);
+    const response = await submitWordApi(roomId, word);
+    if (response.success && response.definition) {
+      setLastDefinition(response.definition);
+    }
+    submitWordCallback(gameState, dispatch, setInputError, response, word);
+    resetInput();
+  }
 
-    useEffect(() => {
-        if (gameState.thisPlayer === undefined) throw new ThisPlayerUndefinedError("", gameState);
-    }, []);
-
-    if (gameState.connectedPlayers === 0) redirect("/");
-
-    return (
-        <div className="flex flex-col w-dvw min-h-screen items-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-            <div className="flex flex-col md:max-w-4xl items-center justify-center p-3 gap-3">
-                <p>gameState is: {JSON.stringify(gameState)}</p>
-                {/* Waiting Overlay */}
-                {/* <WaitingOverlay status={gameState.status} /> */}
-                <GameOverlay status={gameState.status} players={gameState.players} />
-
-                {/* Round Number Badge */}
-                <RoundNumberBadge turn={gameState.turn ?? 1} />
-
-                {/* Match Letter Display */}
-                <MatchLetterDisplay matchLetter={gameState.matchLetter} />
-
-                {/* Health Display */}
-                <HealthDisplay health={gameState.thisPlayer.health} />
-
-                {/* Input Section  w-8/12 shrink-0*/}
-                <div className="relative flex flex-col md:flex-row gap-1">
-                    <div className="md:w-8/12 shrink-0"> 
-                        <InputSection
-                            matchLetter={gameState.matchLetter}
-                            disabled={isDisabled}
-                            onSubmit={submitButton}
-                        />
-                    </div>
-                    <div className="md:w-4/12 shrink-0" aria-hidden />
-                    <div className="md:absolute md:right-0 md:top-0 md:bottom-0 w-full md:w-4/12">
-                        <Definitions />
-                    </div>
-                </div>
-
-                {/* Players Section */}
-                <PlayersSection gameState={gameState} />
-            </div>
+  return (
+    <div
+      className="flex flex-col w-dvw min-h-screen items-center"
+      style={{ backgroundColor: "var(--bg-primary)" }}
+    >
+      <div className="flex flex-col md:max-w-4xl items-center justify-center p-3 gap-3">
+        <GameOverlay status={gameState.status} players={gameState.players} />
+        <RoundNumberBadge turn={gameState.turn ?? 1} />
+        <MatchLetterDisplay matchLetter={gameState.matchLetter} />
+        <HealthDisplay health={gameState.thisPlayer.health} />
+        <div className="relative flex flex-col md:flex-row gap-1">
+          <div className="md:w-8/12 shrink-0">
+            <InputSection
+              matchLetter={gameState.matchLetter}
+              disabled={isDisabled}
+              onSubmit={submitButton}
+              language={language}
+            />
+          </div>
+          <div className="md:w-4/12 shrink-0" aria-hidden />
+          <div className="md:absolute md:right-0 md:top-0 md:bottom-0 w-full md:w-4/12">
+            <Definitions definition={lastDefinition} />
+          </div>
         </div>
-    );
+        <PlayersSection gameState={gameState} />
+      </div>
+    </div>
+  );
 }

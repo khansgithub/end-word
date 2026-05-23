@@ -1,181 +1,60 @@
-import { redirect } from 'next/navigation';
-import { useEffect, useRef, useState } from "react";
-import { MAX_PLAYERS } from "../../shared/consts";
-import { SocketUnavailableError } from "../../shared/errors";
-import { emitIsReturningPlayer, onSocketEvent, socketGetPlayerCount } from '../../shared/socketClient';
-import { GameStateEmit, Player } from '../../shared/types';
-import { useSocketStore, useUserStore } from "../store/userStore";
-import { getSocketManager } from '../lib/socket';
-import { socketEvents } from '../../shared/socketEvents';
+"use client";
 
+import { useRouter } from "next/navigation";
+import { useRef } from "react";
+import { useUserStore } from "../store/userStore";
 
 export function Homescreen() {
-    const [playerCount, setPlayerCount] = useState(0);
-    const [retryCount, setRetryCount] = useState(0);
-    const [returningPlayer, setReturningPlayer] = useState<Player | null>(null);
-    const { clientId, setName } = useUserStore.getState();
-    const inputRef = useRef<HTMLInputElement>(null);
-    const blockEvent = (e: React.MouseEvent | React.KeyboardEvent) => e.preventDefault();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const setName = useUserStore((s) => s.setName);
 
-    const { setSocket } = useSocketStore.getState();
-    let { socket } = useSocketStore.getState();
+  function goToLobby() {
+    const name = inputRef.current?.value.trim();
+    if (!name) return;
+    setName(name);
+    router.push("/lobby");
+  }
 
-    // --------------------------------------------------------------------
+  return (
+    <div
+      className="flex flex-col w-full min-h-screen justify-center items-center p-3"
+      style={{ background: "var(--bg-primary)" }}
+    >
+      <header className="w-full max-w-md mb-4 panel p-4">
+        <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
+          End Word
+        </h1>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          Korean 끝말잇기 & English word chains
+        </p>
+      </header>
 
-    function onClick(event: React.MouseEvent) {
-        if (!inputRef.current) return blockEvent(event);
-
-        const inputData = inputRef.current.value;
-        if (inputData.length < 1) return blockEvent(event);
-        redirectToRoom(inputData);
-    }
-
-    function onKeyDown(event: React.KeyboardEvent) {
-        if (event.key !== "Enter") return;
-
-        const playerName = inputRef.current?.value;
-        if (playerName === undefined) return;
-
-        redirectToRoom(playerName);
-    }
-
-    function redirectToRoom(playerName: string) {
-        setName(playerName);
-        redirect("/room");
-    }
-
-    function playerCountUpdateFromServer(state: GameStateEmit){
-        setPlayerCount(state.connectedPlayers);
-    }
-
-    useEffect(() => {
-        console.count("Homescreen");
-        inputRef.current?.focus();
-        if (socket === null) {
-            socket = getSocketManager(clientId); // TODO: Should the handler be already attached here?
-            setSocket(socket);
-        }
-        onSocketEvent(socket, socketEvents.gameStateUpdate, playerCountUpdateFromServer);
-        emitIsReturningPlayer(socket, clientId, setReturningPlayer);
-
-        return () => {
-            socket?.off(socketEvents.gameStateUpdate);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (socket === null) throw new SocketUnavailableError();
-
-        if (!socket.connected) {
-            console.warn(`Could not connect to socket on retry: ${retryCount}`)
-            setTimeout(() => setRetryCount(c => c + 1), 1000);
-            return
-        }
-
-        // check if there exists a player with the socket.id
-        emitIsReturningPlayer(socket, clientId, setReturningPlayer)
-        socketGetPlayerCount(socket, setPlayerCount);
-        console.log(`Connected to socket after ${retryCount} attempts.`);
-        return () => {
-            if (!socket) return;
-        }
-    }, [retryCount]);
-
-    useEffect(() => {
-        console.log("reutrning player values -> ", returningPlayer)
-        if (returningPlayer) {
-            redirectToRoom(returningPlayer.name); // TODO: maybe this can be stored in zustand or smth
-        }
-    }, [returningPlayer]);
-
-    return (
-        <div className="flex flex-col w-full h-full min-h-screen justify-center items-center p-3" style={{
-            background: 'var(--bg-primary)',
-        }}>
-            {/* Header */}
-            <header className="w-full max-w-md mb-4" style={{
-                padding: '0.75rem 1.25rem',
-                background: 'var(--gradient-header)',
-                borderBottom: '1px solid var(--border-medium)',
-                borderRadius: '0.9rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '1rem',
-            }}>
-                <div>
-                    <h1 style={{
-                        margin: 0,
-                        fontSize: '1.1rem',
-                        letterSpacing: '0.03em',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        color: 'var(--text-primary)',
-                    }}>
-                        <span style={{
-                            width: '0.9rem',
-                            height: '0.9rem',
-                            borderRadius: '999px',
-                            background: 'conic-gradient(from 180deg, var(--color-primary), var(--color-secondary), var(--color-accent), var(--color-primary))',
-                            boxShadow: '0 0 14px var(--interactive-focus-strong)',
-                        }}></span>
-                        End Word
-                    </h1>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        Join a game room
-                    </div>
-                </div>
-            </header>
-
-            <div className="panel w-full max-w-md">
-                <div className="flex flex-col items-center text-center p-6">
-                    <div className="stats stats-horizontal mb-4 w-full" style={{
-                        background: 'var(--gradient-chip)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: '0.55rem',
-                    }}>
-                        <div className="stat place-items-center py-2">
-                            <div className="stat-title text-xs" style={{ color: 'var(--text-secondary)' }}>Players</div>
-                            <div className="stat-value text-2xl" style={{ color: 'var(--text-primary)' }}>
-                                {playerCount}/{MAX_PLAYERS}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="form-control w-full mb-4">
-                        <label className="label" htmlFor="name">
-                            <span className="label-text text-base" style={{ color: 'var(--text-primary)' }}>Your Name</span>
-                        </label>
-                        <input
-                            ref={inputRef}
-                            id="name"
-                            name="name"
-                            type="text"
-                            placeholder="Enter your name"
-                            required={true}
-                            onKeyDown={onKeyDown}
-                            className="w-full text-base py-3 rounded-[0.55rem] border border-(--input-border-default) font-mono outline-none transition-all duration-200 ease-in-out px-3 placeholder:text-(--text-placeholder) focus:border-(--border-focus) focus:shadow-[0_0_0_1px_var(--input-focus-border),0_0_18px_var(--interactive-focus-light)]"
-                            style={{
-                                background: 'var(--input-bg-solid)',
-                                boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
-                                color: 'var(--text-primary)',
-                            }}
-                            onBlur={(e) => {
-                                e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--input-box-shadow)';
-                            }}
-                        />
-                    </div>
-
-                    <button
-                        className="btn-fsm px-6 py-3 text-base"
-                        onClick={onClick}
-                    >
-                        <span>▶</span>
-                        Join Game
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
+      <div className="panel w-full max-w-md p-6">
+        <label className="label" htmlFor="name">
+          <span className="label-text" style={{ color: "var(--text-primary)" }}>
+            Your name
+          </span>
+        </label>
+        <input
+          ref={inputRef}
+          id="name"
+          type="text"
+          placeholder="Enter your name"
+          className="input w-full mb-4"
+          style={{
+            background: "var(--input-bg-solid)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-default)",
+            borderRadius: "0.55rem",
+            padding: "0.75rem",
+          }}
+          onKeyDown={(e) => e.key === "Enter" && goToLobby()}
+        />
+        <button type="button" className="btn-fsm w-full" onClick={goToLobby}>
+          Go to lobby
+        </button>
+      </div>
+    </div>
+  );
 }

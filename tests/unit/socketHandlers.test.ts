@@ -150,7 +150,7 @@ describe("attachSocketHandlers", () => {
     it("should register isReturningPlayer handler - found", () => {
         const player = createRequiredPlayerWithId("Alice", "returning-client", 0);
         const state = buildInitialGameState() as GameState;
-        state.players = [player, null, null, null, null];
+        state.players = [player, null, null, null];
         state.socketPlayerMap = new Map([["returning-client", 0]]);
         mockGetGameState.mockReturnValue(state);
 
@@ -218,7 +218,7 @@ describe("attachSocketHandlers", () => {
     it("should register disconnect handler", () => {
         const player = createRequiredPlayerWithId("Alice", "test-client", 0);
         const state = buildInitialGameState() as GameState;
-        state.players = [player, null, null, null, null];
+        state.players = [player, null, null, null];
         state.socketPlayerMap = new Map([["test-client", 0]]);
         state.connectedPlayers = 1;
         mockGetGameState.mockReturnValue(state);

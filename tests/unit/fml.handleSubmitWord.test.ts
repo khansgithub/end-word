@@ -46,7 +46,7 @@ function createTestGameStateWithMatchLetter(matchLetter: string): GameStateType 
             value: matchLetter,
             next: 0,
         },
-        players: [testPlayer, testPlayer2, null, null, null],
+        players: [testPlayer, testPlayer2, null, null],
         connectedPlayers: 2,
         status: "playing",
         thisPlayer: testPlayer, // Required for invalidWord to work
@@ -97,7 +97,7 @@ describe("handleSubmitWord - validation logic", () => {
                     value: letter,
                     next: 0,
                 },
-                players: [player1, player2, null, null, null],
+                players: [player1, player2, null, null],
                 connectedPlayers: 2,
                 status: "playing",
                 thisPlayer: player2, // Required for invalidWord to work

@@ -5,12 +5,13 @@
   "scripts": {
     "build": "next build",
     "debug": "cross-env DEBUG=engine.io:* tsx watch src/server/server.ts",
-    "dev": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
+    "dev": "next dev",
+    "dev:legacy": "cross-env SUPPRESS=true tsx watch src/server/server.ts",
     "check": "tsc --noEmit",
     "lint": "eslint",
     "install-python-venv": "cd dictionary && python -m venv .venv && .venv/Scripts/pip install -r requirements.txt || .venv/bin/pip install -r requirements.txt",
     "prod": "cross-env NODE_ENV=production tsx run.ts",
-    "start": " tsx src/server/server.ts",
+    "start": "next start",
     "test:all": "tsx tests/test-all.ts",
     "test:dashboard": "tsx scripts/build-test-dashboard.ts",
     "test:playwright:custom": "tsx tests/e2e/custom-runner.ts",
@@ -22,6 +23,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.106.1",
+    "an-array-of-english-words": "^2.0.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "framer-motion": "^12.23.26",
@@ -34,6 +38,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tsx": "^4.21.0",
+    "wink-lexicon": "^2.2.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

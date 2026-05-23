@@ -38,7 +38,7 @@ function createStateWithPlayer(
     const player = createRequiredPlayerWithId("TestPlayer", clientId, 0);
     player.health = health;
 
-    const players: ServerPlayers = [player, null, null, null, null];
+    const players: ServerPlayers = [player, null, null, null];
     for (let i = 1; i < alivePlayerCount; i++) {
         players[i] = createRequiredPlayerWithId(`Player${i + 1}`, `client-${i + 1}`, i);
     }

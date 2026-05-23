@@ -69,12 +69,14 @@ interface InputBoxProps {
     matchLetter: MatchLetter;
     disabled: boolean;
     onSubmit: (...args: any[]) => void;
+    language?: "en" | "ko";
 }
 
 function InputBox({
     matchLetter,
     disabled,
     onSubmit,
+    language = "ko",
 }: InputBoxProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const prevInputRef = useRef<string>("");
@@ -161,6 +163,13 @@ function InputBox({
         const prev = prevInputRef.current;
         const store = useInputStore.getState();
 
+        if (language === "en") {
+            if (isError) store.setIsError(false);
+            store.setInputValue(input);
+            prevInputRef.current = input;
+            return;
+        }
+
         // Clear error state when user starts typing
         if (isError) {
             store.setIsError(false);
@@ -176,7 +185,7 @@ function InputBox({
         store.setLastKey(letter.slice(-1));
 
         validateInput(input, prev, letter, isComposing);
-    }, [isComposing, isError, validateInput]);
+    }, [isComposing, isError, validateInput, language]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.repeat) {

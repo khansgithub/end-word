@@ -26,7 +26,7 @@ import {
 } from "./errors";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
-import { buildMatchLetter, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "./utils";
+import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "./utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -112,7 +112,8 @@ export function progressNextTurn(
 ): GameState {
     let nextState: GameState = { ...state };
     let nextTurnPlayer;
-    nextState.matchLetter = buildMatchLetter(block);
+    const language = state.language ?? "ko";
+    nextState.matchLetter = buildMatchLetterForLanguage(block, language);
     nextState = setPlayerLastWord(nextState, playerLastWord);
     nextState = nextTurn(nextState);
 
@@ -355,17 +356,21 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
 // =============================================================================
 // OTHER FUNCTIONS
 // =============================================================================
-export function buildInitialGameState(block?: string): GameState {
+export function buildInitialGameState(
+    block?: string,
+    language: "en" | "ko" = "ko"
+): GameState {
     const players = makePlayersArray<ServerPlayers>();
     const socketPlayerMap = new Map<string, number>();
+    const defaultBlock = language === "en" ? "a" : "다";
     return {
-        matchLetter: buildMatchLetter(block ?? "다"),
+        matchLetter: buildMatchLetterForLanguage(block ?? defaultBlock, language),
         status: "waiting",
         players: players,
         turn: 0,
         connectedPlayers: 0,
         socketPlayerMap: socketPlayerMap,
-    }
+    };
 }
 
 export function makePlayersArray<T extends PlayersArray>(): T {

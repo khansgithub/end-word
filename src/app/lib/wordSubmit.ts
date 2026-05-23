@@ -1,5 +1,9 @@
 import { GameStateActionsType, GameStateDispatch } from "../../shared/GameState";
-import { AckSubmitWordResponseParams, GameStateClient, GameStateEmit, PlayerWithId } from "../../shared/types";
+import { GameStateClient, GameStateEmit } from "../../shared/types";
+
+export type SubmitWordResponse =
+  | { success: true; gameState: GameStateEmit }
+  | { success: false; reason: string; gameState?: GameStateEmit };
 
 const L = `${__filename}: `
 const log = console.log;
@@ -14,7 +18,7 @@ export function submitWordCallback(
     gameState: GameStateClient,
     dispatch: GameStateDispatch,
     setInputError: (error: boolean) => void,
-    response: AckSubmitWordResponseParams,
+    response: SubmitWordResponse,
     word: string) {
     log(L, "submitWord response", response);
     if (response.success) {

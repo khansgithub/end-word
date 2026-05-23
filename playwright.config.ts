@@ -4,12 +4,12 @@ export default defineConfig({
     timeout: 120_000,
     retries: 0,
     use: {
-        baseURL: "http://localhost:4000",
+        baseURL: "http://localhost:3000",
         headless: true,
     },
     webServer: {
         command: "npm run dev",
-        url: "http://localhost:4000",
+        url: "http://localhost:3000",
         timeout: 120_000,
         reuseExistingServer: true,
     },

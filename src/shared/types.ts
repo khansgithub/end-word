@@ -130,6 +130,8 @@ export type MatchLetter = {
     next: number
 }
 
+export type GameLanguage = "en" | "ko";
+
 export type GameState = {
     thisPlayer?: PlayerWithId,
     matchLetter: MatchLetter,
@@ -137,6 +139,7 @@ export type GameState = {
     players: PlayersArray,
     connectedPlayers: number
     turn: number,
+    language?: GameLanguage,
     // socketPlayerMap?: WeakMap<string, Player>, // only on server - don't really know if using a weakmap is necessary here
     // socketPlayerMap?: Map<string, Player>,
     // socketPlayerMap?: Map<string, PlayerWithId>,

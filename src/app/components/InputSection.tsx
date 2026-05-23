@@ -6,9 +6,10 @@ interface InputSectionProps {
     matchLetter: MatchLetter;
     disabled: boolean;
     onSubmit: (...args: any[]) => void;
+    language?: "en" | "ko";
 }
 
-export default function InputSection({ matchLetter, disabled, onSubmit }: InputSectionProps) {
+export default function InputSection({ matchLetter, disabled, onSubmit, language = "ko" }: InputSectionProps) {
     const opacity = disabled ? 0.5 : 1;
 
     return (
@@ -19,6 +20,7 @@ export default function InputSection({ matchLetter, disabled, onSubmit }: InputS
                         matchLetter={matchLetter}
                         disabled={disabled}
                         onSubmit={onSubmit}
+                        language={language}
                     />
                 </div>
 

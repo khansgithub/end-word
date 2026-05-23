@@ -146,6 +146,24 @@ export function buildMatchLetter(
     } satisfies MatchLetter;
 }
 
+/** English: single-letter match (no Hangul decomposition). */
+export function buildEnglishMatchLetter(letter: string): MatchLetter {
+    const block = letter.toLowerCase().slice(0, 1);
+    return {
+        block,
+        steps: [block],
+        value: block,
+        next: 0,
+    };
+}
+
+export function buildMatchLetterForLanguage(
+    block: string,
+    language: "en" | "ko"
+): MatchLetter {
+    return language === "en" ? buildEnglishMatchLetter(block) : buildMatchLetter(block);
+}
+
 // ============================================================================
 // Environment Utilities
 // ============================================================================
