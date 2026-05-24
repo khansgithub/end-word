@@ -1,4 +1,4 @@
-import { arrayToMapped } from "./utils";
+import { arrayToMapped } from "@/shared/utils";
 
 // Canonical list of socket event names used by both client and server.
 const socketEventsArray = [

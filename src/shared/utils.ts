@@ -1,8 +1,8 @@
-import { buildSyllableSteps } from "../app/hangul-decomposer";
-import { envGet } from "../server/env";
-import { DEFAULT_HEALTH } from "./consts";
-import { InvalidSyllableError } from "./errors";
-import { ClientPlayers, GameState, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { buildSyllableSteps } from "@/app/hangul-decomposer";
+import { envGet } from "@/server/env";
+import { DEFAULT_HEALTH } from "@/shared/consts";
+import { InvalidSyllableError } from "@/shared/errors";
+import { ClientPlayers, GameState, MatchLetter, Player, PlayerWithId, PlayerWithoutId, PlayersArray, RunExclusive, ServerPlayers } from "@/shared/types";
 
 // ============================================================================
 // Core Utilities
@@ -105,6 +105,18 @@ export function getAlivePlayerCount(state: GameState): number {
         (count, player) =>
             (player && player.health > 0 ? count + 1 : count),
         0);
+}
+
+/** True when a hit at 1 HP leaves at most one survivor (solo or final duel). */
+export function shouldEndGameOnPlayerDeath(
+    state: GameState,
+    healthBeforeHit: number
+): boolean {
+    return healthBeforeHit === 1 && getAlivePlayerCount(state) <= 2;
+}
+
+export function getWinnerPlayer(players: PlayersArray): Player | null {
+    return players.find((p) => p != null && p.health > 0) ?? null;
 }
 
 /**

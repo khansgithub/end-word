@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { UnexpectedConnectionStateError } from "@/shared/errors";
 import { assertIsGameStateClient } from "@/shared/guards";
 import type { GameStateClient } from "@/shared/types";
 import { useUserStore } from "@/app/store/userStore";
-import { joinRoomApi, startRoomApi } from "@/app/lib/roomApi";
+import { gameStrings } from "@/app/lib/gameStrings";
+import { joinRoomApi, leaveRoomApi, startRoomApi } from "@/app/lib/roomApi";
 import type { GameLanguage } from "@/lib/dictionary";
-import Game from "./Game";
+import Game from "@/app/components/Game";
 
 const CONNECTED = 0;
 const CONNECTING = 1;
@@ -22,7 +23,21 @@ export default function GameContainer({ roomId }: { roomId: string }) {
   );
   const [gameState, setGameState] = useState<GameStateClient | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [language, setLanguage] = useState<GameLanguage>("ko");
+  const [roomClosedMessage, setRoomClosedMessage] = useState<string | null>(null);
+  const hostLeaveContextRef = useRef({ isHost: false, roomId, connected: false });
+  const hostLeaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  hostLeaveContextRef.current = {
+    isHost,
+    roomId,
+    connected: connection === CONNECTED,
+  };
+
+  const handleStateChange = useCallback((next: GameStateClient) => {
+    setGameState((prev) => (prev === next ? prev : next));
+  }, []);
 
   useEffect(() => {
     if (!playerName) {
@@ -38,11 +53,14 @@ export default function GameContainer({ roomId }: { roomId: string }) {
         const {
           data: { user },
         } = await (await import("@/lib/supabase/client")).createClient().auth.getUser();
-        if (user) setIsHost(meta.room.host_user_id === user.id);
+        if (user) {
+          setUserId(user.id);
+          setIsHost(meta.room.host_user_id === user.id);
+        }
       }
 
       const response = await joinRoomApi({ roomId, displayName: playerName });
-      if (response.success) {
+      if (response.success && response.player) {
         setGameState({
           ...response.gameState,
           thisPlayer: response.player,
@@ -53,6 +71,54 @@ export default function GameContainer({ roomId }: { roomId: string }) {
       }
     })();
   }, [roomId, playerName, router]);
+
+  const handleRoomClosed = useCallback(() => {
+    if (isHost) {
+      router.replace("/lobby");
+      return;
+    }
+    setRoomClosedMessage(gameStrings.hostLeftTheRoom);
+  }, [router, isHost]);
+
+  useEffect(() => {
+    if (!roomClosedMessage) return;
+    const timeout = setTimeout(() => router.replace("/lobby"), 2500);
+    return () => clearTimeout(timeout);
+  }, [roomClosedMessage, router]);
+
+  // Cancel a pending host-leave from React Strict Mode's dev-only remount cycle.
+  useEffect(() => {
+    if (hostLeaveTimeoutRef.current) {
+      clearTimeout(hostLeaveTimeoutRef.current);
+      hostLeaveTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Tab close / refresh — do not call leave in effect cleanup (that runs on dep changes too).
+  useEffect(() => {
+    if (!isHost || connection !== CONNECTED) return;
+
+    const leaveAsHost = () => {
+      void leaveRoomApi(roomId);
+    };
+
+    window.addEventListener("pagehide", leaveAsHost);
+    return () => {
+      window.removeEventListener("pagehide", leaveAsHost);
+    };
+  }, [isHost, roomId, connection]);
+
+  // Leaving the room page (client navigation or unmount) — debounced to ignore Strict Mode remounts.
+  useEffect(() => {
+    return () => {
+      const { isHost: wasHost, roomId: id, connected } = hostLeaveContextRef.current;
+      if (!wasHost || !connected) return;
+
+      hostLeaveTimeoutRef.current = setTimeout(() => {
+        void leaveRoomApi(id);
+      }, 100);
+    };
+  }, []);
 
   async function handleStartGame() {
     const result = await startRoomApi(roomId);
@@ -70,21 +136,43 @@ export default function GameContainer({ roomId }: { roomId: string }) {
   switch (connection) {
     case CONNECTED:
       assertIsGameStateClient(gameState!);
+      if (!userId) return null;
       return (
         <>
-          {isHost && gameState!.status === "waiting" && (
-            <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50">
-              <button type="button" className="btn-fsm" onClick={handleStartGame}>
-                Start game
-              </button>
-            </div>
-          )}
           <Game
             roomId={roomId}
+            userId={userId}
             gameState={gameState!}
             language={language}
-            onStateChange={setGameState}
+            onStateChange={handleStateChange}
+            onRoomClosed={handleRoomClosed}
+            isHost={isHost}
+            onStartGame={handleStartGame}
           />
+          {roomClosedMessage && (
+            <div
+              className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"
+              style={{ backgroundColor: "var(--bg-overlay)" }}
+              role="alertdialog"
+              aria-live="assertive"
+              aria-labelledby="room-closed-title"
+            >
+              <div className="panel">
+                <div className="flex flex-col items-center p-6 gap-2">
+                  <p
+                    id="room-closed-title"
+                    className="text-lg text-center"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {roomClosedMessage}
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    {gameStrings.returningToLobby}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       );
     case CONNECTING:

@@ -1,5 +1,5 @@
-import { GameState } from "../shared/GameState";
-import { GameStateNotInitializedError } from "../shared/errors";
+import { GameState } from "@/shared/GameState";
+import { GameStateNotInitializedError } from "@/shared/errors";
 
 let gameState: GameState | null = null;
 

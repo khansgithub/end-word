@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { NodeJS as _NodeJs } from "../app/env";
+import { NodeJS as _NodeJs } from "@/app/env";
 
 export type AppEnv = _NodeJs.ProcessEnv & NodeJS.ProcessEnv;
 

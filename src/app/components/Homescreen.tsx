@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef } from "react";
-import { useUserStore } from "../store/userStore";
+import { useUserStore } from "@/app/store/userStore";
 
 export function Homescreen() {
   const inputRef = useRef<HTMLInputElement>(null);

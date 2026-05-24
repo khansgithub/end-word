@@ -1,16 +1,16 @@
-import "./env";
+import "@/server/env";
 import express from "express";
 import next from "next";
 import { createServer } from "node:http";
-import { NodeJS } from "../app/env";
-import { envGet } from "./env";
-import { buildInitialGameState } from "../shared/GameState";
-import { getRandomWordFromDictionary } from "./api";
-import { initLogging, log } from "./logging";
-import { setupRoutes } from "./routes";
-import { createIOServer } from "./socket";
-import { setGameState } from "./state";
-import { pp } from "../shared/utils";
+import { NodeJS } from "@/app/env";
+import { envGet } from "@/server/env";
+import { buildInitialGameState } from "@/shared/GameState";
+import { getRandomWordFromDictionary } from "@/server/api";
+import { initLogging, log } from "@/server/logging";
+import { setupRoutes } from "@/server/routes";
+import { createIOServer } from "@/server/socket";
+import { setGameState } from "@/server/state";
+import { pp } from "@/shared/utils";
 
 
 // --- Logging lifecycle: init early ---

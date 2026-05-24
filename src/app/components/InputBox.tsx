@@ -2,16 +2,16 @@
 
 import React, { memo, useCallback, useEffect, useRef } from "react";
 import { create } from "zustand";
-import { MatchLetter } from "../../shared/types";
-import { InputState } from "../store/userStore";
+import { MatchLetter } from "@/shared/types";
+import { InputState } from "@/app/store/userStore";
 import {
     blockInput as _blockInput,
     clearInput as _clearInput,
     continueInput as _continueInput,
     actionHandlers as validateWrapper
-} from "../lib/inputValidation";
-import { gameStrings } from "../lib/gameStrings";
-import { IconLock } from "./icons";
+} from "@/app/lib/inputValidation";
+import { gameStrings } from "@/app/lib/gameStrings";
+import { IconLock } from "@/app/components/icons";
 
 // Zustand store for input state to minimize re-renders
 const useInputStore = create<InputState>((set) => ({
@@ -20,11 +20,16 @@ const useInputStore = create<InputState>((set) => ({
     isComposing: false,
     isError: false,
     lastKey: "",
-    setInputValue: (value: string) => set({ inputValue: value }),
-    setHighlightValue: (value: string) => set({ highlightValue: value }),
-    setIsComposing: (value: boolean) => set({ isComposing: value }),
-    setIsError: (value: boolean) => set({ isError: value }),
-    setLastKey: (value: string) => set({ lastKey: value }),
+    setInputValue: (value: string) =>
+        set((state) => (state.inputValue === value ? state : { inputValue: value })),
+    setHighlightValue: (value: string) =>
+        set((state) => (state.highlightValue === value ? state : { highlightValue: value })),
+    setIsComposing: (value: boolean) =>
+        set((state) => (state.isComposing === value ? state : { isComposing: value })),
+    setIsError: (value: boolean) =>
+        set((state) => (state.isError === value ? state : { isError: value })),
+    setLastKey: (value: string) =>
+        set((state) => (state.lastKey === value ? state : { lastKey: value })),
     reset: () => set({
         inputValue: "",
         highlightValue: "",
@@ -68,13 +73,15 @@ const useInputStore = create<InputState>((set) => ({
 interface InputBoxProps {
     matchLetter: MatchLetter;
     disabled: boolean;
-    onSubmit: (...args: any[]) => void;
+    pending?: boolean;
+    onSubmit: () => void | Promise<void>;
     language?: "en" | "ko";
 }
 
 function InputBox({
     matchLetter,
     disabled,
+    pending = false,
     onSubmit,
     language = "ko",
 }: InputBoxProps) {
@@ -88,12 +95,19 @@ function InputBox({
     const isComposing = useInputStore((state) => state.isComposing);
     const lastKey = useInputStore((state) => state.lastKey);
 
-    // Initialize highlight value when matchLetter changes
+    const matchBlock = matchLetter.block;
+    const firstStep = matchLetter.steps[0] ?? "";
+
+    // Reset highlight only when the match letter block changes (new turn).
+    // Depend on primitives — parent re-renders often pass a new matchLetter object reference.
     useEffect(() => {
-        if (matchLetter.steps[0]) {
-            useInputStore.getState().setHighlightValue(matchLetter.steps[0]);
-        }
-    }, [matchLetter]);
+        if (!firstStep) return;
+
+        const store = useInputStore.getState();
+        if (store.inputValue !== "" || store.highlightValue === firstStep) return;
+
+        store.setHighlightValue(firstStep);
+    }, [matchBlock, firstStep]);
 
     // Focus input on mount
     useEffect(() => {
@@ -163,13 +177,6 @@ function InputBox({
         const prev = prevInputRef.current;
         const store = useInputStore.getState();
 
-        if (language === "en") {
-            if (isError) store.setIsError(false);
-            store.setInputValue(input);
-            prevInputRef.current = input;
-            return;
-        }
-
         // Clear error state when user starts typing
         if (isError) {
             store.setIsError(false);
@@ -188,6 +195,8 @@ function InputBox({
     }, [isComposing, isError, validateInput, language]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (disabled) return;
+
         if (e.repeat) {
             e.preventDefault();
             e.stopPropagation();
@@ -203,15 +212,14 @@ function InputBox({
             e.stopPropagation();
 
             if (onSubmit && inputValue) {
-                onSubmit();
-                clearInput();
+                void onSubmit();
             }
             return;
         }
         if (e.key === "Backspace" && inputValue === "") {
             useInputStore.getState().setLastKey("");
         }
-    }, [inputValue, onSubmit, clearInput]);
+    }, [disabled, inputValue, onSubmit]);
 
     const handleBeforeInput = useCallback((e: React.FormEvent<HTMLInputElement>) => {
         // console.log("before input: ", e.data);
@@ -297,23 +305,31 @@ function InputBox({
                     {/* Disabled overlay with lock icon */}
                     {disabled && (
                         <div
-                            className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+                            className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
                             style={{
                                 background: 'var(--input-overlay-disabled)',
                                 borderRadius: '0.55rem',
                             }}
                         >
                             <div className="flex flex-col items-center gap-1">
-                                <IconLock
-                                    width={24}
-                                    height={24}
-                                    style={{ color: "var(--input-text-disabled)" }}
-                                />
+                                {pending ? (
+                                    <span
+                                        className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin"
+                                        style={{ color: "var(--input-text-disabled)" }}
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <IconLock
+                                        width={24}
+                                        height={24}
+                                        style={{ color: "var(--input-text-disabled)" }}
+                                    />
+                                )}
                                 <span
                                     className="text-xs font-medium"
                                     style={{ color: 'var(--input-text-disabled)' }}
                                 >
-                                    {gameStrings.inputDisabledText}
+                                    {pending ? gameStrings.inputPendingText : gameStrings.inputDisabledText}
                                 </span>
                             </div>
                         </div>

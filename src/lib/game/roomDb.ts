@@ -8,9 +8,9 @@ import type {
   MatchLetter,
   ServerPlayers,
 } from "@/shared/types";
-import { buildMatchLetterForLanguage } from "@/shared/utils";
+import { buildMatchLetterForLanguage, getAlivePlayerCount } from "@/shared/utils";
 import type { GameLanguage } from "@/lib/dictionary";
-import type { RoomListItem, RoomRow } from "./roomTypes";
+import type { RoomListItem, RoomRow } from "@/lib/game/roomTypes";
 
 const INVITE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -117,6 +117,26 @@ export async function persistRoomState(
   if (error) throw error;
 }
 
+/** True when the room was archived after a normal match (one survivor). */
+export function isCompletedGameRow(row: RoomRow): boolean {
+  if (row.status !== "finished" || !row.archived_at) return false;
+  return getAlivePlayerCount(rowToGameState(row)) === 1;
+}
+
+export async function persistAndArchiveRoom(
+  admin: SupabaseClient,
+  roomId: string,
+  state: GameState
+): Promise<void> {
+  const patch = {
+    ...gameStateToRowPatch(state),
+    status: "finished" as const,
+    archived_at: new Date().toISOString(),
+  };
+  const { error } = await admin.from("rooms").update(patch).eq("roomid", roomId);
+  if (error) throw error;
+}
+
 export async function archiveRoom(
   admin: SupabaseClient,
   roomId: string,
@@ -131,6 +151,14 @@ export async function archiveRoom(
     })
     .eq("roomid", roomId);
   if (error) throw error;
+}
+
+/** Removes a room from the lobby by archiving it (idempotent). */
+export async function dissolveRoom(admin: SupabaseClient, roomId: string): Promise<boolean> {
+  const row = await fetchRoom(admin, roomId);
+  if (!row || row.archived_at) return false;
+  await archiveRoom(admin, roomId, row.status === "playing" ? "finished" : "waiting");
+  return true;
 }
 
 export function toClientEmit(

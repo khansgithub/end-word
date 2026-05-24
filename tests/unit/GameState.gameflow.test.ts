@@ -1,16 +1,76 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../../src/shared/GameState";
-import { GameState } from "../../src/shared/types";
+import {
+    decreasePlayerHealth,
+    endGame,
+    gameStateReducer,
+    toGameStateEmit,
+} from "@/shared/GameState";
+import { GameState } from "@/shared/types";
 import {
     createGameStateWithPlayers,
     createTestGameState,
     createTestPlayer,
-} from "./GameState.test-helpers";
+    createTestPlayerWithId,
+} from "@tests/unit/GameState.test-helpers";
 import { pp } from "@/shared/utils";
 
 // =============================================================================
 // GAME FLOW FUNCTIONS TESTS
 // =============================================================================
+
+describe("endGame", () => {
+    it("works on server state without thisPlayer", () => {
+        const state = {
+            ...createGameStateWithPlayers([
+                createTestPlayer("loser", "uid1", 0),
+                createTestPlayer("winner", "uid2", 1),
+                null,
+                null,
+            ]),
+            status: "playing" as const,
+            connectedPlayers: 2,
+        };
+        const afterHit = decreasePlayerHealth(state, 1, 0);
+        const finished = endGame(afterHit);
+        expect(finished.status).toBe("finished");
+        expect(finished.players[0]?.health).toBe(0);
+        expect(finished.players[1]?.health).toBe(5);
+    });
+
+    it("keeps thisPlayer on client state", () => {
+        const thisPlayer = createTestPlayerWithId("me", "uid1", 0);
+        const state = {
+            ...createGameStateWithPlayers([
+                thisPlayer,
+                createTestPlayer("other", "uid2", 1),
+                null,
+                null,
+                null,
+            ]),
+            thisPlayer,
+            status: "playing" as const,
+        };
+        const result = gameStateReducer(state, { type: "endGame", payload: [] });
+        expect(result.status).toBe("finished");
+        expect(result.thisPlayer).toEqual(thisPlayer);
+    });
+});
+
+describe("replaceGameState", () => {
+    it("preserves thisPlayer when new state is emit-only", () => {
+        const thisPlayer = createTestPlayerWithId("me", "uid1", 0);
+        const currentState = {
+            ...createTestGameState(),
+            thisPlayer,
+        };
+        const emitOnly = toGameStateEmit(currentState);
+        const result = gameStateReducer(currentState, {
+            type: "replaceGameState",
+            payload: [emitOnly],
+        });
+        expect(result.thisPlayer).toEqual(thisPlayer);
+    });
+});
 
 describe("setPlayerLastWord", () => {
     it("should set lastWord for the current turn player", () => {

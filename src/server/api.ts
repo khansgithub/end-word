@@ -1,15 +1,15 @@
 // import { Message, Player } from "@/app/types";
-import { getMockedData } from "../mocks/mock-dictionary-data";
+import { getMockedData } from "@/mocks/mock-dictionary-data";
 import {
     DictionaryLookupFailedError,
     DictionaryRandomWordFailedError,
     DictionaryUrlNotSetError,
     InvalidDictionaryResponseError,
-} from "../shared/errors";
-import { AppEnv, envGet } from "./env";
-import { isDictionaryEntry, isDictionaryResponse } from "../shared/guards";
-import { DictionaryResponse } from "../shared/types";
-import { log } from "./logging";
+} from "@/shared/errors";
+import { AppEnv, envGet } from "@/server/env";
+import { isDictionaryEntry, isDictionaryResponse } from "@/shared/guards";
+import { DictionaryResponse } from "@/shared/types";
+import { log } from "@/server/logging";
 
 export async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
     const dictionaryUrl = envGet("DICTIONARY_URL");

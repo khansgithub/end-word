@@ -12,7 +12,7 @@ import {
 } from "@/shared/GameState";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import type { DictionaryEntry, GameState, GameStateEmit, PlayerWithId } from "@/shared/types";
-import { buildMatchLetterForLanguage, getAlivePlayerCount } from "@/shared/utils";
+import { buildMatchLetterForLanguage, shouldEndGameOnPlayerDeath } from "@/shared/utils";
 import {
   matchLetterFromWord,
   randomWord,
@@ -20,16 +20,18 @@ import {
   wordStartsWithMatchLetter,
   type GameLanguage,
 } from "@/lib/dictionary";
+import { broadcastRoomGameState } from "@/lib/game/roomBroadcast";
 import {
   archiveRoom,
   buildFreshRoomState,
+  dissolveRoom,
   fetchRoom,
   fetchRoomByInviteCode,
   generateInviteCode,
   persistRoomState,
   rowToGameState,
-} from "./roomDb";
-import type { RoomListItem, RoomRow } from "./roomTypes";
+} from "@/lib/game/roomDb";
+import type { RoomListItem, RoomRow } from "@/lib/game/roomTypes";
 
 export type JoinResult =
   | { success: true; roomId: string; gameState: GameStateEmit; player: PlayerWithId }
@@ -38,6 +40,17 @@ export type JoinResult =
 export type SubmitResult =
   | { success: true; gameState: GameStateEmit; definition?: DictionaryEntry }
   | { success: false; reason: string; gameState?: GameStateEmit };
+
+function findPlayerByUserId(state: GameState, userId: string): PlayerWithId | null {
+  const fromMap = getPlayerByClientId(state, userId);
+  if (fromMap) return fromMap;
+
+  const fromArray = state.players.find(
+    (p) => p != null && "uid" in p && p.uid === userId
+  );
+  if (!fromArray || !("uid" in fromArray) || !fromArray.uid) return null;
+  return fromArray as PlayerWithId;
+}
 
 export async function createRoom(
   admin: SupabaseClient,
@@ -57,6 +70,7 @@ export async function createRoom(
     const { data, error } = await admin
       .from("rooms")
       .insert({
+        roomid: crypto.randomUUID(),
         roomname: options.roomName,
         playercount: 0,
         invite_code: inviteCode,
@@ -92,8 +106,11 @@ export async function joinRoom(
   }
 
   let state: GameState = { ...rowToGameState(row), language: row.language };
-  const existing = getPlayerByClientId(state, userId);
+  const existing = findPlayerByUserId(state, userId);
   if (existing) {
+    if (existing.seat !== undefined) {
+      state.socketPlayerMap?.set(userId, existing.seat);
+    }
     return {
       success: true,
       roomId,
@@ -114,10 +131,15 @@ export async function joinRoom(
   };
 
   state = { ...addPlayer(state, player), language: row.language };
-  state.socketPlayerMap?.set(userId, player.seat!);
+
+  const joined = findPlayerByUserId(state, userId);
+  if (!joined || joined.seat === undefined) {
+    return { success: false, reason: "Failed to join room" };
+  }
+
+  state.socketPlayerMap?.set(userId, joined.seat);
   await persistRoomState(admin, roomId, state);
 
-  const joined = getPlayerByClientId(state, userId)!;
   return {
     success: true,
     roomId,
@@ -149,8 +171,12 @@ export async function startGame(
   }
 
   let state: GameState = { ...rowToGameState(row), language: row.language };
-  if (state.connectedPlayers < 1) {
-    return { success: false, reason: "Need at least one player" };
+  if (state.connectedPlayers < 2) {
+    return { success: false, reason: "Need at least two players to start" };
+  }
+
+  if (state.status === "playing") {
+    return { success: true, gameState: toGameStateEmit(state) };
   }
 
   state = { ...state, status: "playing" };
@@ -219,17 +245,21 @@ async function invalidWord(
   }
 
   const playerDead = player.health === 1;
-  const shouldEndGame = playerDead && getAlivePlayerCount(state) === 2;
+  const shouldEndGame = shouldEndGameOnPlayerDeath(state, player.health);
 
   let nextState = decreasePlayerHealth(state, player.health, player.seat);
   if (shouldEndGame) {
     nextState = endGame(nextState);
+    const emit = toGameStateEmit(nextState);
+    // Persist finished state before archive so Realtime delivers to other players
+    // (RLS blocks SELECT on archived rows for postgres_changes subscribers).
     await persistRoomState(admin, roomId, nextState);
+    await broadcastRoomGameState(admin, roomId, emit);
     await archiveRoom(admin, roomId, "finished");
     return {
       success: false,
       reason,
-      gameState: toGameStateEmit(nextState),
+      gameState: emit,
     };
   }
 
@@ -241,7 +271,7 @@ async function invalidWord(
   return {
     success: false,
     reason,
-    ...(playerDead ? { gameState: toGameStateEmit(nextState) } : {}),
+    gameState: toGameStateEmit(nextState),
   };
 }
 
@@ -249,21 +279,42 @@ export async function leaveRoom(
   admin: SupabaseClient,
   roomId: string,
   userId: string
-): Promise<GameStateEmit | null> {
+): Promise<{ dissolved: boolean; gameState: GameStateEmit | null }> {
   const row = await fetchRoom(admin, roomId);
-  if (!row) return null;
+  if (!row) return { dissolved: false, gameState: null };
+
+  if (row.host_user_id === userId) {
+    await dissolveRoom(admin, roomId);
+    return { dissolved: true, gameState: null };
+  }
 
   let state: GameState = { ...rowToGameState(row), language: row.language };
   const player = getPlayerByClientId(state, userId);
-  if (!player) return toGameStateEmit(state);
+  if (!player) return { dissolved: false, gameState: toGameStateEmit(state) };
 
   state = { ...removePlayer(state, player), language: row.language };
   if (state.connectedPlayers === 0) {
     state = { ...state, status: "waiting", turn: 0 };
   }
   await persistRoomState(admin, roomId, state);
-  return toGameStateEmit(state);
+  return { dissolved: false, gameState: toGameStateEmit(state) };
 }
 
-export { listPublicRooms } from "./roomDb";
+/** Called by remaining players when presence shows the host disconnected. */
+export async function dissolveRoomAsMember(
+  admin: SupabaseClient,
+  roomId: string,
+  userId: string
+): Promise<{ dissolved: boolean }> {
+  const row = await fetchRoom(admin, roomId);
+  if (!row || row.archived_at) return { dissolved: false };
+  if (row.host_user_id === userId) return { dissolved: false };
+
+  if (row.player_user_map[userId] === undefined) return { dissolved: false };
+
+  const dissolved = await dissolveRoom(admin, roomId);
+  return { dissolved };
+}
+
+export { listPublicRooms } from "@/lib/game/roomDb";
 export type { RoomListItem };

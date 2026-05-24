@@ -1,4 +1,4 @@
-import { PlayerHealth } from "./PlayerHealth";
+import { PlayerHealth } from "@/app/components/PlayerHealth";
 
 interface HealthDisplayProps {
     health: number;

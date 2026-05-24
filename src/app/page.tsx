@@ -1,9 +1,9 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { buildInitialGameState } from "../shared/GameState";
-import InputBox from "./components/InputBox";
-import { Homescreen } from "./components/Homescreen";
+import { buildInitialGameState } from "@/shared/GameState";
+import InputBox from "@/app/components/InputBox";
+import { Homescreen } from "@/app/components/Homescreen";
 
 export default function () {
     const [data, setData] = useState(0);

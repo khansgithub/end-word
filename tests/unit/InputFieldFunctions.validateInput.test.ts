@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { MatchLetter } from "../../src/shared/types";
-import { validateInput } from "../../src/app/lib/inputValidation";
+import { MatchLetter } from "@/shared/types";
+import { validateInput } from "@/app/lib/inputValidation";
 
 // TODO: Look over these tests
 describe("validateInput", () => {

@@ -1,8 +1,8 @@
-import { BoolMap, PropertyBoolMap } from "../../shared/types";
-import type { Player as PlayerType } from "../../shared/types";
-import { buildStyles } from "../lib/playerUtil";
-import { PlayerHealth } from "./PlayerHealth";
-import { PlayerPanel } from "./PlayerPanel";
+import { BoolMap, PropertyBoolMap } from "@/shared/types";
+import type { Player as PlayerType } from "@/shared/types";
+import { buildStyles } from "@/app/lib/playerUtil";
+import { PlayerHealth } from "@/app/components/PlayerHealth";
+import { PlayerPanel } from "@/app/components/PlayerPanel";
 
 interface Props {
     player: PlayerType

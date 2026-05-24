@@ -1,4 +1,4 @@
-import { IconHeart, IconCross } from "./icons";
+import { IconHeart, IconCross } from "@/app/components/icons";
 
 export function PlayerHealth({ health }: { health: number }) {
     return (

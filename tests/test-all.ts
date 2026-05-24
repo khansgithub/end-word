@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import dashboard from "@/../scripts/build-test-dashboard";
+import dashboard from "@scripts/build-test-dashboard";
 
 const outDir = "test-results";
 const paths = {

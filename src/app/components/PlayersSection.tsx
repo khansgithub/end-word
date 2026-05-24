@@ -1,8 +1,8 @@
-import { GameStateClient, PlayersArray, PlayerWithId } from "../../shared/types";
-import { isPlayerTurn } from "../../shared/utils";
-import { gameStrings } from "../lib/gameStrings";
-import Player from "./Player";
-import { PlayerPanel } from "./PlayerPanel";
+import { GameStateClient, PlayersArray, PlayerWithId } from "@/shared/types";
+import { isPlayerTurn } from "@/shared/utils";
+import { gameStrings } from "@/app/lib/gameStrings";
+import Player from "@/app/components/Player";
+import { PlayerPanel } from "@/app/components/PlayerPanel";
 
 interface PlayersSectionProps {
     gameState: GameStateClient;

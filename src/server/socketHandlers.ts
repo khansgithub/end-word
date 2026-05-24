@@ -1,15 +1,15 @@
-import { buildInitialGameState, decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "../shared/GameState";
-import { PlayerUndefinedError, SeatNotAssignedError, ThisPlayerUndefinedError } from "../shared/errors";
-import { assertIsPlayerWithId } from "../shared/guards";
-import { socketEvents } from "../shared/socketEvents";
-import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "../shared/types";
-import { getAlivePlayerCount, pp } from "../shared/utils";
-import { countSocketEvent, setRegisteredClients } from "./metrics";
-import { getServerSocketContext, ServerSocketContext } from "./context";
-import { getGameState, setGameState } from "./state";
-import { getRandomWordFromDictionary } from "./api";
-import { log } from "./logging";
-import { inputIsValid } from "./utils";
+import { buildInitialGameState, decreasePlayerHealth, endGame, getPlayerByClientId, nextTurn, progressNextTurn, registerPlayer as registerPlayerToState, removePlayer, socketToSeat, toGameStateEmit } from "@/shared/GameState";
+import { PlayerUndefinedError, SeatNotAssignedError, ThisPlayerUndefinedError } from "@/shared/errors";
+import { assertIsPlayerWithId } from "@/shared/guards";
+import { socketEvents } from "@/shared/socketEvents";
+import { AckGetPlayerCount, AckIsReturningPlayer, AckRegisterPlayer, AckSubmitWordResponse, GameState, PlayerWithId, ServerPlayerSocket } from "@/shared/types";
+import { pp, shouldEndGameOnPlayerDeath } from "@/shared/utils";
+import { countSocketEvent, setRegisteredClients } from "@/server/metrics";
+import { getServerSocketContext, ServerSocketContext } from "@/server/context";
+import { getGameState, setGameState } from "@/server/state";
+import { getRandomWordFromDictionary } from "@/server/api";
+import { log } from "@/server/logging";
+import { inputIsValid } from "@/server/utils";
 
 const L = "socketHandler: ";
 
@@ -152,7 +152,7 @@ export function invalidWord(socket: ServerPlayerSocket, reason: string, ack: Ack
     const player = getPlayerByClientId(state, clientId);
     if (!player) throw new PlayerUndefinedError();
     const playerDead = player.health == 1;
-    const end = playerDead && getAlivePlayerCount(state) == 2;
+    const end = shouldEndGameOnPlayerDeath(state, player.health);
 
 
     let nextState: GameState = decreasePlayerHealth(state, player.health, player.seat!);

@@ -1,5 +1,5 @@
-import { GameStatus } from "../../shared/types";
-import { gameStrings } from "../lib/gameStrings";
+import { GameStatus } from "@/shared/types";
+import { gameStrings } from "@/app/lib/gameStrings";
 
 interface WaitingOverlayProps {
     status: GameStatus;

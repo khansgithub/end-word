@@ -1,6 +1,6 @@
-import { lookUpWord } from "./api";
-import { DictionaryEntry, DictionaryResponse } from "../shared/types";
-import { isDictionaryEntry } from "../shared/guards";
+import { lookUpWord } from "@/server/api";
+import { DictionaryEntry, DictionaryResponse } from "@/shared/types";
+import { isDictionaryEntry } from "@/shared/guards";
 
 /**
  * Validates if a given input string is a valid word in the dictionary.

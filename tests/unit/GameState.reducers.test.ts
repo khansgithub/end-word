@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../../src/shared/GameState";
-import { GameState, PlayerWithId } from "../../src/shared/types";
+import { gameStateReducer } from "@/shared/GameState";
+import { GameState, PlayerWithId } from "@/shared/types";
 import {
     createGameStateWithPlayers,
     createTestGameState,
     createTestPlayer,
     createTestPlayerWithId,
-} from "./GameState.test-helpers";
+} from "@tests/unit/GameState.test-helpers";
 
 // =============================================================================
 // REDUCER FUNCTIONS TESTS
@@ -69,7 +69,7 @@ describe("nextTurn", () => {
 
 // Testing _postPlayerCountUpdateState indirectly through functions that use it
 describe("_postPlayerCountUpdateState (via addPlayer)", () => {
-    it("should set status to 'waiting' when less than 2 players", () => {
+    it("should set status to 'playing' for solo (1 player)", () => {
         const state = createTestGameState();
         const player = createTestPlayerWithId("Player0", "uid0");
         const action = {
@@ -77,11 +77,11 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
-        expect(result.status).toBe("waiting");
+        expect(result.status).toBe("playing");
         expect(result.connectedPlayers).toBe(1);
     });
 
-    it("should set status to 'playing' when 2 or more players", () => {
+    it("should set status to 'waiting' when a second player joins", () => {
         const state = createGameStateWithPlayers([
             createTestPlayer("Player0", "uid0", 0),
             null,
@@ -89,14 +89,34 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
             null,
             null,
         ]);
+        state.status = "playing";
         const player = createTestPlayerWithId("Player1", "uid1");
         const action = {
             type: "addPlayer" as const,
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
-        expect(result.status).toBe("playing");
+        expect(result.status).toBe("waiting");
         expect(result.connectedPlayers).toBe(2);
+    });
+
+    it("should keep status 'playing' when host-started multiplayer gains a player", () => {
+        const state = createGameStateWithPlayers([
+            createTestPlayer("Player0", "uid0", 0),
+            createTestPlayer("Player1", "uid1", 1),
+            null,
+            null,
+            null,
+        ]);
+        state.status = "playing";
+        const player = createTestPlayerWithId("Player2", "uid2");
+        const action = {
+            type: "addPlayer" as const,
+            payload: [state, player] as [GameState, PlayerWithId],
+        };
+        const result = gameStateReducer(state, action);
+        expect(result.connectedPlayers).toBe(3);
+        expect(result.status).toBe("playing");
     });
 
     it("should correctly count connected players", () => {
@@ -107,6 +127,7 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
             createTestPlayer("Player2", "uid2", 3),
             null,
         ]);
+        state.status = "waiting";
         const player = createTestPlayerWithId("Player3", "uid3");
         const action = {
             type: "addPlayer" as const,
@@ -114,6 +135,6 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
         };
         const result = gameStateReducer(state, action);
         expect(result.connectedPlayers).toBe(4);
-        expect(result.status).toBe("playing");
+        expect(result.status).toBe("waiting");
     });
 });

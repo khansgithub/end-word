@@ -1,5 +1,5 @@
-import { LookupBoolMapError } from "../../shared/errors";
-import { BoolMap, GameState, PropertyBoolMap } from "../../shared/types";
+import { LookupBoolMapError } from "@/shared/errors";
+import { BoolMap, GameState, PropertyBoolMap } from "@/shared/types";
 
 // TODO: this is just overkill i think, i think i can just use tailwind classes instead ugh
 export const stylesMap = {

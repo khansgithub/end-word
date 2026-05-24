@@ -5,8 +5,8 @@ import {
   lookupEnglishWord,
   normalizeEnglishWord,
   randomEnglishWord,
-} from "./english";
-import { randomKoreanWord, validateKoreanWord } from "./korean";
+} from "@/lib/dictionary/english";
+import { randomKoreanWord, validateKoreanWord } from "@/lib/dictionary/korean";
 
 export type GameLanguage = "en" | "ko";
 

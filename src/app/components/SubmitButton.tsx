@@ -1,29 +1,34 @@
 'use client';
 
-import { gameStrings } from "../lib/gameStrings";
+import { gameStrings } from "@/app/lib/gameStrings";
 
 
 interface SubmitButtonProps {
-    onClick: (...args: any[]) => void;
+    onClick: () => void | Promise<void>;
     disabled: boolean;
+    pending: boolean;
     opacity: number;
 };
 
 SubmitButton.displayName = 'SubmitButton';
 
-export default function SubmitButton({ onClick, disabled, opacity }: SubmitButtonProps) {
-    // hardcoded left margin to match the position of the input box.
-    // takes witdh of the key display (w-16) + gap (gap-2)
-    // const leftMargin = "calc(var(--spacing) * 16 + var(--spacing) * 2)";
-
+export default function SubmitButton({ onClick, disabled, pending, opacity }: SubmitButtonProps) {
     return (
         <button
+            type="button"
             onClick={onClick}
             disabled={disabled}
-            className={`btn-fsm mt-4 px-6 py-3 text-base md:ml-18`}
-            // style={{ opacity, marginLeft: leftMargin }}
+            aria-busy={pending}
+            className={`btn-fsm mt-4 px-6 py-3 text-base md:ml-18 inline-flex items-center justify-center gap-2 min-w-[10rem] ${pending ? "cursor-wait" : ""}`}
+            style={{ opacity }}
         >
-            <span>{gameStrings.submitButtonText}</span>
+            {pending && (
+                <span
+                    className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
+                    aria-hidden="true"
+                />
+            )}
+            <span>{pending ? gameStrings.submitButtonPendingText : gameStrings.submitButtonText}</span>
         </button>
     );
 }

@@ -1,10 +1,10 @@
 import { invalidWord } from "@/server/socketHandlers";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
-import * as ServerGameState from "../../src/server/state";
-import { buildInitialGameState } from "../../src/shared/GameState";
-import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayers, ServerPlayerSocket } from "../../src/shared/types";
-import { createRequiredPlayerWithId } from "./GameState.test-helpers";
+import * as ServerGameState from "@/server/state";
+import { buildInitialGameState } from "@/shared/GameState";
+import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayers, ServerPlayerSocket } from "@/shared/types";
+import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";
 
 // =============================================================================
 // MOCK FACTORIES

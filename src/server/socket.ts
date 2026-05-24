@@ -1,10 +1,10 @@
 import http from "http";
 import { Server as SocketServer } from "socket.io";
-import { ServerContextNotSetupError } from "../shared/errors";
-import { createServerSocketContext } from "./context";
-import { GameState, ServerPlayerSocket } from "../shared/types";
-import { fml } from "./socketHandlers";
-import { getServerSocketContext, setActiveServerContext } from "./context";
+import { ServerContextNotSetupError } from "@/shared/errors";
+import { createServerSocketContext } from "@/server/context";
+import { GameState, ServerPlayerSocket } from "@/shared/types";
+import { fml } from "@/server/socketHandlers";
+import { getServerSocketContext, setActiveServerContext } from "@/server/context";
 
 let socketServer: SocketServer | null = null;
 

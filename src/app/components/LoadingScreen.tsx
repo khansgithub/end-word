@@ -1,5 +1,5 @@
 import { Dispatch } from "react";
-import { gameStrings } from "../lib/gameStrings";
+import { gameStrings } from "@/app/lib/gameStrings";
 
 interface props {
     setUserIsConnected: Dispatch<boolean>,

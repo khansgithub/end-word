@@ -1,5 +1,6 @@
-import { GameStateActionsType, GameStateDispatch } from "../../shared/GameState";
-import { GameStateClient, GameStateEmit } from "../../shared/types";
+import { GameStateDispatch } from "@/shared/GameState";
+import { GameStateClient, GameStateEmit } from "@/shared/types";
+import { shouldEndGameOnPlayerDeath } from "@/shared/utils";
 
 export type SubmitWordResponse =
   | { success: true; gameState: GameStateEmit }
@@ -64,40 +65,31 @@ export function wrongWord(
     dispatch: GameStateDispatch,
     responseGameState: null | GameStateEmit,
     setInputError: (error: boolean) => void,
-    reason: string,
+    reason: string | undefined,
 ) {
     if (responseGameState) {
-        let _player = responseGameState.players[gameState.thisPlayer.seat!]!;
-        _player = { ...gameState.thisPlayer, ..._player };
-
         dispatch({
             type: "gameStateUpdateClient",
             payload: [responseGameState],
         });
+        return;
+    }
+
+    const health = gameState.thisPlayer.health;
+    const seat = gameState.thisPlayer.seat!;
+    if (shouldEndGameOnPlayerDeath(gameState, health)) {
+        dispatch({
+            type: "decreasePlayerHealth",
+            payload: [gameState, health, seat],
+        });
+        dispatch({
+            type: "endGame",
+            payload: [],
+        });
     } else {
         dispatch({
             type: "decreasePlayerHealth",
-            payload: [gameState, gameState.thisPlayer.health, gameState.thisPlayer.seat!],
+            payload: [gameState, health, seat],
         });
     }
-    
-    setInputError(true);
-    error(L, "submitWord failed", reason);
-
-    // if (gameState.thisPlayer.health == 1) {
-
-    //     // TODO: show game over screen
-    //     dispatch({
-    //         type: "endGame",
-    //         payload: []
-    //     });
-
-    // } else {
-    //     dispatch({
-    //         type: "decreasePlayerHealth",
-    //         payload: [gameState, gameState.thisPlayer.health, gameState.thisPlayer.seat!],
-    //     });
-    //     setInputError(true);
-    //     error(L, "submitWord failed", reason);
-    // }
 }

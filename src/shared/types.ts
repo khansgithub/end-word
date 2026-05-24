@@ -1,7 +1,7 @@
 import { DefaultEventsMap, Socket } from "socket.io";
 import { Socket as SocketClient } from "socket.io-client";
-import { DEFAULT_HEALTH, MAX_PLAYERS } from "./consts";
-import { SocketEventName } from "./socketEvents";
+import { DEFAULT_HEALTH, MAX_PLAYERS } from "@/shared/consts";
+import { SocketEventName } from "@/shared/socketEvents";
 
 /* --------------------------------------------------
  * Utility Types

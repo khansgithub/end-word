@@ -3,14 +3,14 @@
  * Holds the active context singleton, used by handlers and test endpoints.
  */
 import { Server as SocketServer } from "socket.io";
-import { GameStateNotInitializedError } from "../shared/errors";
+import { GameStateNotInitializedError } from "@/shared/errors";
 import {
     type GameState,
     type PlayerWithId,
     type RunExclusive,
-} from "../shared/types";
-import { createSocketMutex } from "../shared/utils";
-import { getGameState } from "./state";
+} from "@/shared/types";
+import { createSocketMutex } from "@/shared/utils";
+import { getGameState } from "@/server/state";
 
 type PlayerUid = Exclude<PlayerWithId["uid"], undefined>;
 

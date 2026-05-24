@@ -13,8 +13,8 @@ export async function POST(_request: Request, { params }: Params) {
   try {
     const { roomId } = await params;
     const admin = getAdmin();
-    const gameState = await leaveRoom(admin, roomId, user.id);
-    return NextResponse.json({ gameState });
+    const result = await leaveRoom(admin, roomId, user.id);
+    return NextResponse.json(result);
   } catch (e) {
     console.error("[POST /api/rooms/:id/leave]", e);
     return NextResponse.json({ error: "Leave failed" }, { status: 500 });

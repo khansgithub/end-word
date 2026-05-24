@@ -6,7 +6,7 @@ Notes from gpt:
 ***/
 
 import { ActionDispatch } from "react";
-import { MAX_PLAYERS } from "./consts";
+import { MAX_PLAYERS } from "@/shared/consts";
 import {
     CannotProgressTurnError,
     CurrentStateRequiredError,
@@ -23,10 +23,10 @@ import {
     SocketPlayerMapUndefinedError,
     ThisPlayerUndefinedError,
     UnknownActionTypeError,
-} from "./errors";
-import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "./guards";
-import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "./types";
-import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "./utils";
+} from "@/shared/errors";
+import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "@/shared/guards";
+import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "@/shared/types";
+import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "@/shared/utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -133,15 +133,14 @@ export function progressNextTurn(
     return nextState;
 }
 
-export function endGame(currentState?: GameState): GameState {
-    const loser = currentState?.thisPlayer;
-    if (!loser) throw new ThisPlayerUndefinedError();
-    const nextState: GameState = {
-        ...currentState,
-        status: "finished"
+export function endGame(_state?: GameState, currentState?: GameState): GameState {
+    const base = currentState ?? _state;
+    if (!base) throw new CurrentStateRequiredError();
+    return {
+        ...base,
+        status: "finished",
     };
-    return toGameStateEmit(nextState);
-};
+}
 
 // ========================================
 // Player State Modification
@@ -189,18 +188,22 @@ export function decreasePlayerHealth(
     if (currentHealth <= 0) throw new HealthInvalidError();
     if (state.status != "playing") throw new GameStatusInvalidError();
 
-    const nextState: GameState = { ...state };
-    
-    // If `thisPlayer` is in the state value, update its health
-    const updateThisPlayer = nextState.thisPlayer && nextState.thisPlayer.seat == playerSeat;
+    const updatedPlayers = clonePlayersArray(state.players);
+    const player = updatedPlayers[playerSeat];
+    if (!player) {
+        throw new PlayerNotFoundError(
+            `No player found at seat ${playerSeat} in players: ${JSON.stringify(state.players)}`
+        );
+    }
+    updatedPlayers[playerSeat] = { ...player, health: newHealth };
 
-    const player = nextState.players[playerSeat];
-    if (!player) throw new PlayerNotFoundError(`No player found at seat ${playerSeat} in players: ${JSON.stringify(nextState.players)}`);
+    const nextState: GameState = {
+        ...state,
+        players: updatedPlayers,
+    };
 
-    player.health = newHealth;
-
-    if (updateThisPlayer) {
-        nextState.thisPlayer!.health = newHealth;
+    if (nextState.thisPlayer && nextState.thisPlayer.seat === playerSeat) {
+        nextState.thisPlayer = { ...nextState.thisPlayer, health: newHealth };
     }
 
     return nextState;
@@ -209,16 +212,45 @@ export function decreasePlayerHealth(
 // ========================================
 // Player Registration & Array Management
 // ========================================
-function _postPlayerCountUpdateState(state: GameState): GameState {
-    /**
-     * This function will update values which depend on the number of players connected to the game.
-     */
-    const connectedPlayers = state.players.filter((p) => p != null).length;
-    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+function countConnectedPlayers(state: GameState): number {
+    return state.players.filter((p) => p != null).length;
+}
+
+function resolveStatusAfterPlayerCountChange(
+    state: GameState,
+    connectedPlayers: number,
+    previousConnectedPlayers: number
+): GameStatus {
+    if (state.status === "finished") {
+        return "finished";
+    }
+    if (connectedPlayers <= 1) {
+        return "playing";
+    }
+    if (previousConnectedPlayers < 2 && connectedPlayers >= 2) {
+        return "waiting";
+    }
+    if (state.status === "playing") {
+        return "playing";
+    }
+    return "waiting";
+}
+
+function _postPlayerCountUpdateState(
+    state: GameState,
+    previousConnectedPlayers?: number
+): GameState {
+    const connectedPlayers = countConnectedPlayers(state);
+    const prev = previousConnectedPlayers ?? connectedPlayers;
+    const status = resolveStatusAfterPlayerCountChange(
+        state,
+        connectedPlayers,
+        prev
+    );
     return {
         ...state,
-        connectedPlayers: connectedPlayers,
-        status: status
+        connectedPlayers,
+        status,
     };
 }
 
@@ -233,7 +265,11 @@ export function registerPlayer(
     const newPlayer = updatedPlayers[seat];
     if (newPlayer === null) throw new NewPlayerNullError();
     assertIsRequiredPlayerWithId(newPlayer);
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers, thisPlayer: newPlayer });
+    const previousConnectedPlayers = countConnectedPlayers(state);
+    const nextState = _postPlayerCountUpdateState(
+        { ...state, players: updatedPlayers, thisPlayer: newPlayer },
+        previousConnectedPlayers
+    );
 
     console.log("registerPlayer in Reducer: next state is: ", pp(nextState));
 
@@ -257,8 +293,12 @@ export function addPlayer(
         throw new PlayerNameMissingError();
     }
     const seat = findAvailableSeat(state);
+    const previousConnectedPlayers = countConnectedPlayers(state);
     const updatedPlayers = insertPlayerIntoArray(state.players, player, seat);
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
+    const nextState = _postPlayerCountUpdateState(
+        { ...state, players: updatedPlayers },
+        previousConnectedPlayers
+    );
     console.log("addPlayer in Reducer: next state is: ", pp(nextState));
     return nextState;
 }
@@ -276,10 +316,14 @@ export function addPlayerToArray(
     //     thisPlayer.uid = state.thisPlayer.uid;
     // }
 
-    const nextState = _postPlayerCountUpdateState({
-        ...state,
-        players: updatedPlayers
-    });
+    const previousConnectedPlayers = countConnectedPlayers(state);
+    const nextState = _postPlayerCountUpdateState(
+        {
+            ...state,
+            players: updatedPlayers,
+        },
+        previousConnectedPlayers
+    );
 
     return nextState;
 }
@@ -295,6 +339,7 @@ export function removePlayer(
     }
 
     // const updatedPlayers = state.players.slice();
+    const previousConnectedPlayers = countConnectedPlayers(state);
     const updatedPlayers = clonePlayersArray(state.players);
     updatedPlayers[playerId] = null;
     // TODO: Remove player from map!!
@@ -302,7 +347,10 @@ export function removePlayer(
     if (playerUid === undefined) throw new PlayerUidUndefinedError();
     state.socketPlayerMap?.delete(playerUid);
 
-    const nextState = _postPlayerCountUpdateState({ ...state, players: updatedPlayers });
+    const nextState = _postPlayerCountUpdateState(
+        { ...state, players: updatedPlayers },
+        previousConnectedPlayers
+    );
 
     return {
         ...nextState,
@@ -320,16 +368,22 @@ export function updateConnectedPlayersCount(state: GameState, count: number, cur
 }
 
 export function replaceGameState(newState: GameState, currentState?: GameState): GameState {
-    return newState;
+    if (newState.thisPlayer || !currentState?.thisPlayer) {
+        return newState;
+    }
+    return { ...newState, thisPlayer: currentState.thisPlayer };
 }
 
 export function gameStateUpdateClient(newState: GameStateEmit, currentState?: GameStateClient): GameStateClient {
     if (!currentState) throw new CurrentStateRequiredError();
-    let p  = newState.players[currentState.thisPlayer.seat ?? -1];
-    p = {...currentState.thisPlayer, ... (p || {})};
+    const seat = currentState.thisPlayer.seat ?? -1;
+    const playerFromEmit = newState.players[seat];
+    const thisPlayer = playerFromEmit
+        ? { ...currentState.thisPlayer, ...playerFromEmit }
+        : currentState.thisPlayer;
     return {
         ...newState,
-        thisPlayer: {...currentState.thisPlayer, ... (p || {})}
+        thisPlayer,
     };
 }
 

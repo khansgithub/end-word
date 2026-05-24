@@ -4,9 +4,9 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 process.env.DICTIONARY_URL ??= "http://localhost:8000";
 process.env.MOCK_LOOKUP_WORD ??= "true";
 process.env.MOCK_GET_RANDOM_WORD ??= "true";
-import { resetMswHandlers, startMswTestServer, stopMswTestServer } from "../../src/mocks/test-server";
-import { envGet } from "../../src/server/env";
-import { setResetLocalStorageAfterEach, shouldResetLocalStorageAfterEach } from "./storage-control";
+import { resetMswHandlers, startMswTestServer, stopMswTestServer } from "@/mocks/test-server";
+import { envGet } from "@/server/env";
+import { setResetLocalStorageAfterEach, shouldResetLocalStorageAfterEach } from "@tests/unit/storage-control";
 
 beforeAll(() => startMswTestServer());
 afterEach(() => {

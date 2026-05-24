@@ -1,7 +1,7 @@
 import express from "express";
 import type next from "next";
-import { registry } from "./metrics";
-import { getLogs, log } from "./logging";
+import { registry } from "@/server/metrics";
+import { getLogs, log } from "@/server/logging";
 
 /**
  * Handle metrics requests, used for monitoring the server + testing.

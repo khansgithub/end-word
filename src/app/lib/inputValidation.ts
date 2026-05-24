@@ -1,9 +1,9 @@
 import type { RefObject } from "react";
 import { StoreApi } from "zustand";
-import { UnexpectedActionTypeError } from "../../shared/errors";
-import { MatchLetter } from "../../shared/types";
-import { decomposeSyllable, decomposeSyllableNonRecursive } from "../hangul-decomposer";
-import { InputState } from "../store/userStore";
+import { UnexpectedActionTypeError } from "@/shared/errors";
+import { MatchLetter } from "@/shared/types";
+import { decomposeSyllable, decomposeSyllableNonRecursive } from "@/app/hangul-decomposer";
+import { InputState } from "@/app/store/userStore";
 
 /**
  * Validation action types that determine what should happen to the input

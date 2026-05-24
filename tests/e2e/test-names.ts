@@ -15,7 +15,7 @@ export const roomFlowTestNames = arrayToMapped(namesOfTests);
 export type RoomFlowTestName = (typeof namesOfTests)[number];
 
 export const roomFlowTestDescriptions: Record<RoomFlowTestName, string> = {
-    resetAfterReload: "Test that the room flow resets sockets after a reload",
+    resetAfterReload: "Test that clearing site data after joining a room returns the player to the home screen",
     dualBrowserJoin: "Test that separate browsers can join the room and render five player slots",
     turnChangeUpdatesHighlight: "Test that the inputDomHighlight updates when turn changes after word submission",
     playerHealthDecreases: "Test that the player health decreases when an invalid word is submitted",

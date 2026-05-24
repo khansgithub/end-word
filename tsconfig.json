@@ -17,15 +17,17 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@tests/*": ["./tests/*"],
+      "@scripts/*": ["./scripts/*"],
+      "@root/*": ["./*"]
     },
     "moduleResolution": "node"
   },

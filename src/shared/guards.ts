@@ -1,6 +1,6 @@
 import { AssertionError } from "assert";
-import { GameStateHasNoThisPlayerError } from "./errors";
-import { BoolMap, DictionaryEntry, DictionaryResponse, GameState, GameStateClient, GameStateFrozen, GameStateServer, Player, PlayerWithId, PlayerWithoutId } from "./types";
+import { GameStateHasNoThisPlayerError } from "@/shared/errors";
+import { BoolMap, DictionaryEntry, DictionaryResponse, GameState, GameStateClient, GameStateFrozen, GameStateServer, Player, PlayerWithId, PlayerWithoutId } from "@/shared/types";
 
 /* --------------------------------------------------
  * Internal Helper Functions

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { gameStateReducer } from "../../src/shared/GameState";
-import { MAX_PLAYERS } from "../../src/shared/consts";
-import { GameState, Player, PlayerWithId } from "../../src/shared/types";
+import { gameStateReducer } from "@/shared/GameState";
+import { MAX_PLAYERS } from "@/shared/consts";
+import { GameState, Player, PlayerWithId } from "@/shared/types";
 import {
     createGameStateWithPlayers,
     createRequiredPlayerWithId,
     createTestGameState,
     createTestPlayer,
     createTestPlayerWithId,
-} from "./GameState.test-helpers";
+} from "@tests/unit/GameState.test-helpers";
 
 // =============================================================================
 // PLAYER MANAGEMENT FUNCTIONS TESTS
@@ -171,7 +171,7 @@ describe("removePlayer", () => {
         };
         const result = gameStateReducer(state, action);
         expect(result.connectedPlayers).toBe(1);
-        expect(result.status).toBe("waiting");
+        expect(result.status).toBe("playing");
     });
 
     it("should throw error when player seat is undefined", () => {

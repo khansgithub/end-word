@@ -45,22 +45,64 @@ export async function startRoomApi(roomId: string) {
   return res.json();
 }
 
+type SubmitWordApiResult =
+  | { success: true; gameState: GameStateEmit; definition?: DictionaryEntry }
+  | { success: false; reason: string; gameState?: GameStateEmit };
+
+function parseSubmitWordResponse(
+  res: Response,
+  data: Record<string, unknown>
+): SubmitWordApiResult {
+  if (data.success === true && data.gameState) {
+    return {
+      success: true,
+      gameState: data.gameState as GameStateEmit,
+      definition: data.definition as DictionaryEntry | undefined,
+    };
+  }
+
+  const reason =
+    (typeof data.reason === "string" && data.reason) ||
+    (typeof data.error === "string" && data.error) ||
+    (res.status === 401
+      ? "Unauthorized"
+      : res.status === 404
+        ? "Room not found"
+        : "Submit failed");
+
+  return {
+    success: false,
+    reason,
+    ...(data.gameState ? { gameState: data.gameState as GameStateEmit } : {}),
+  };
+}
+
 export async function submitWordApi(
   roomId: string,
   word: string
-): Promise<
-  | { success: true; gameState: GameStateEmit; definition?: DictionaryEntry }
-  | { success: false; reason: string; gameState?: GameStateEmit }
-> {
+): Promise<SubmitWordApiResult> {
   const res = await fetch(`/api/rooms/${roomId}/submit`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ word }),
   });
-  return res.json();
+
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  return parseSubmitWordResponse(res, data);
 }
 
 export async function leaveRoomApi(roomId: string) {
-  const res = await fetch(`/api/rooms/${roomId}/leave`, { method: "POST" });
-  return res.json();
+  const res = await fetch(`/api/rooms/${roomId}/leave`, {
+    method: "POST",
+    keepalive: true,
+  });
+  return res.json() as Promise<{ dissolved: boolean; gameState: GameStateEmit | null }>;
+}
+
+export async function dissolveRoomApi(roomId: string) {
+  const res = await fetch(`/api/rooms/${roomId}/dissolve`, {
+    method: "POST",
+    keepalive: true,
+  });
+  return res.json() as Promise<{ dissolved: boolean }>;
 }
