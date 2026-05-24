@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
 import { DictionaryEntry, GameStateClient } from "@/shared/types";
@@ -39,6 +40,7 @@ export default function Game({
     isHost = false,
     onStartGame,
 }: GameProps) {
+    const router = useRouter();
     const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
     const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
     const parentStateRef = useRef(initialState);
@@ -140,6 +142,7 @@ export default function Game({
                     connectedPlayers={gameState.connectedPlayers}
                     isHost={isHost}
                     onStartGame={onStartGame}
+                    onBackToLobby={() => router.push("/lobby")}
                 />
                 <RoundNumberBadge turn={gameState.turn ?? 1} />
                 <MatchLetterDisplay matchLetter={gameState.matchLetter} />
