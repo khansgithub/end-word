@@ -1,0 +1,31 @@
+Auth redirect after name entry (branch: cursor/auth-redirect-4ff9)
+====================================================================
+
+Task
+----
+Unauthenticated users (no display name in Zustand) visiting /lobby or /room/:id should land on home with a return URL; after entering a name, send them back to that URL.
+
+Approach
+--------
+- returnTo.ts: buildLoginUrl(path), sanitizeReturnTo() — only /lobby and /room/* allowed (blocks open redirects).
+- lobby/page.tsx & GameContainer.tsx: router.replace(buildLoginUrl(...)) instead of "/".
+- Homescreen.tsx: reads ?returnTo= and ?changeName=1; on submit, router.push(returnTo ?? "/lobby").
+- page.tsx: Suspense around Homescreen (useSearchParams requirement).
+
+Key files
+---------
+- src/app/lib/returnTo.ts — helpers (lines 1–28)
+- src/app/components/Homescreen.tsx — returnTo UX, changeName clears stored name
+- src/app/lobby/page.tsx — ~line 38–41 redirect
+- src/app/components/GameContainer.tsx — ~line 43–46 redirect
+- tests/unit/returnTo.test.ts — sanitize + buildLoginUrl coverage
+
+Decisions
+---------
+- "Login" = display name only (Supabase anonymous auth is separate, unchanged).
+- changeName=1 clears persisted name for nav "Change name" (pairs with navigation branch).
+- No auto-redirect on / when user already has a name unless they submit (avoids trapping users on home).
+
+Outcome
+-------
+Direct links to /lobby or /room/:id without a name → /?returnTo=... → name entry → original destination.

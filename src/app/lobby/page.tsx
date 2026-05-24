@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { MAX_PLAYERS } from "@/shared/consts";
 import { useUserStore } from "@/app/store/userStore";
+import { buildLoginUrl } from "@/app/lib/returnTo";
 import {
   createRoomApi,
   fetchLobbyRooms,
@@ -36,7 +37,7 @@ export default function LobbyPage() {
 
   useEffect(() => {
     if (!playerName) {
-      router.replace("/");
+      router.replace(buildLoginUrl("/lobby"));
       return;
     }
     loadRooms();
