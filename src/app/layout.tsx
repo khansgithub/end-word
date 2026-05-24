@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { AppShell } from "@/app/components/AppShell";
 import { SupabaseProvider } from "@/app/components/SupabaseProvider";
 
 const geistSans = Geist({
@@ -34,7 +35,9 @@ export default function RootLayout({
             } style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
                 <ThemeToggle />
                 <main className="w-full min-h-dvh flex flex-col items-center justify-center">
-                    <SupabaseProvider>{children}</SupabaseProvider>
+                    <SupabaseProvider>
+                        <AppShell>{children}</AppShell>
+                    </SupabaseProvider>
                 </main>
             </body>
         </html>

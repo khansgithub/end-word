@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
 import { DictionaryEntry, GameStateClient } from "@/shared/types";
@@ -27,6 +28,7 @@ interface GameProps {
     language?: "en" | "ko";
     isHost?: boolean;
     onStartGame?: () => void;
+    isStartingGame?: boolean;
 }
 
 export default function Game({
@@ -38,7 +40,9 @@ export default function Game({
     language = "ko",
     isHost = false,
     onStartGame,
+    isStartingGame = false,
 }: GameProps) {
+    const router = useRouter();
     const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
     const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
     const parentStateRef = useRef(initialState);
@@ -140,6 +144,8 @@ export default function Game({
                     connectedPlayers={gameState.connectedPlayers}
                     isHost={isHost}
                     onStartGame={onStartGame}
+                    onBackToLobby={() => router.push("/lobby")}
+                    isStartingGame={isStartingGame}
                 />
                 <RoundNumberBadge turn={gameState.turn ?? 1} />
                 <MatchLetterDisplay matchLetter={gameState.matchLetter} />

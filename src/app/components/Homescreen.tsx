@@ -1,20 +1,35 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { returnToFromSearchParams } from "@/app/lib/returnTo";
 import { useUserStore } from "@/app/store/userStore";
 
 export function Homescreen() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = returnToFromSearchParams(searchParams);
+  const changeName = searchParams.get("changeName") === "1";
+  const playerName = useUserStore((s) => s.playerName);
   const setName = useUserStore((s) => s.setName);
 
-  function goToLobby() {
+  useEffect(() => {
+    if (changeName) {
+      setName("");
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }, [changeName, setName]);
+
+  function continueAfterName() {
     const name = inputRef.current?.value.trim();
     if (!name) return;
     setName(name);
-    router.push("/lobby");
+    router.push(returnTo ?? "/lobby");
   }
+
+  const heading = returnTo ? "Sign in to continue" : "End Word";
+  const buttonLabel = returnTo ? "Continue" : "Go to lobby";
 
   return (
     <div
@@ -23,10 +38,12 @@ export function Homescreen() {
     >
       <header className="w-full max-w-md mb-4 panel p-4">
         <h1 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-          End Word
+          {heading}
         </h1>
         <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          Korean 끝말잇기 & English word chains
+          {returnTo
+            ? "Enter your name to return to the page you were viewing."
+            : "Korean 끝말잇기 & English word chains"}
         </p>
       </header>
 
@@ -41,6 +58,7 @@ export function Homescreen() {
           id="name"
           type="text"
           placeholder="Enter your name"
+          defaultValue={changeName ? "" : playerName}
           className="input w-full mb-4"
           style={{
             background: "var(--input-bg-solid)",
@@ -49,10 +67,10 @@ export function Homescreen() {
             borderRadius: "0.55rem",
             padding: "0.75rem",
           }}
-          onKeyDown={(e) => e.key === "Enter" && goToLobby()}
+          onKeyDown={(e) => e.key === "Enter" && continueAfterName()}
         />
-        <button type="button" className="btn-fsm w-full" onClick={goToLobby}>
-          Go to lobby
+        <button type="button" className="btn-fsm w-full" onClick={continueAfterName}>
+          {buttonLabel}
         </button>
       </div>
     </div>

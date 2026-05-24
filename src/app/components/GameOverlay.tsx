@@ -9,6 +9,8 @@ interface GameOverlayProps {
     connectedPlayers: number;
     isHost?: boolean;
     onStartGame?: () => void;
+    onBackToLobby?: () => void;
+    isStartingGame?: boolean;
 }
 
 export default function GameOverlay({
@@ -17,6 +19,8 @@ export default function GameOverlay({
     connectedPlayers,
     isHost = false,
     onStartGame,
+    onBackToLobby,
+    isStartingGame = false,
 }: GameOverlayProps) {
     function winnerName() {
         return getWinnerPlayer(players)?.name ?? gameStrings.noWinner;
@@ -30,8 +34,14 @@ export default function GameOverlay({
                     {gameStrings.waitingForGameToStart}
                 </p>
                 {isHost && onStartGame && (
-                    <button type="button" className="btn-fsm mt-4" onClick={onStartGame}>
-                        {gameStrings.startGame}
+                    <button
+                        type="button"
+                        className="btn-fsm mt-4"
+                        onClick={onStartGame}
+                        disabled={isStartingGame}
+                        aria-busy={isStartingGame}
+                    >
+                        {isStartingGame ? gameStrings.startingGame : gameStrings.startGame}
                     </button>
                 )}
             </>
@@ -48,6 +58,11 @@ export default function GameOverlay({
                         <div className="stat-desc text-center text-lg">Well Done</div>
                     </div>
                 </div>
+                {onBackToLobby && (
+                    <button type="button" className="btn-fsm mt-4" onClick={onBackToLobby}>
+                        Back to lobby
+                    </button>
+                )}
             </>
         );
     }
