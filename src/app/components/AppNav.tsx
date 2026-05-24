@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/app/lib/returnTo";
 import { useUserStore } from "@/app/store/userStore";
 
 function navLinkClass(active: boolean): string {
@@ -21,6 +22,7 @@ export function AppNav() {
   if (onHome) return null;
 
   const homeHref = playerName && (onLobby || onRoom) ? "/?changeName=1" : "/";
+  const lobbyHref = playerName ? "/lobby" : buildLoginUrl("/lobby");
 
   return (
     <nav
@@ -39,7 +41,7 @@ export function AppNav() {
           /
         </span>
         <Link
-          href="/lobby"
+          href={lobbyHref}
           className={navLinkClass(onLobby)}
           style={{ color: "var(--text-primary)" }}
         >

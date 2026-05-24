@@ -27,6 +27,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [language, setLanguage] = useState<GameLanguage>("ko");
   const [roomClosedMessage, setRoomClosedMessage] = useState<string | null>(null);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   const hostLeaveContextRef = useRef({ isHost: false, roomId, connected: false });
   const hostLeaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,13 +123,19 @@ export default function GameContainer({ roomId }: { roomId: string }) {
   }, []);
 
   async function handleStartGame() {
-    const result = await startRoomApi(roomId);
-    if (result.success && result.gameState && gameState) {
-      setGameState({
-        ...gameState,
-        ...result.gameState,
-        thisPlayer: gameState.thisPlayer,
-      });
+    if (isStartingGame) return;
+    setIsStartingGame(true);
+    try {
+      const result = await startRoomApi(roomId);
+      if (result.success && result.gameState && gameState) {
+        setGameState({
+          ...gameState,
+          ...result.gameState,
+          thisPlayer: gameState.thisPlayer,
+        });
+      }
+    } finally {
+      setIsStartingGame(false);
     }
   }
 
@@ -149,6 +156,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
             onRoomClosed={handleRoomClosed}
             isHost={isHost}
             onStartGame={handleStartGame}
+            isStartingGame={isStartingGame}
           />
           {roomClosedMessage && (
             <div

@@ -28,7 +28,7 @@ Files:
 - src/app/page.tsx (Suspense)
 - tests/unit/returnTo.test.ts
 
-Integration: AppNav lobby link uses buildLoginUrl("/lobby") when !playerName.
+Integration: AppNav lobby link uses buildLoginUrl("/lobby") when !playerName (AppNav.tsx ~line 24).
 
 ---
 ## 3. Start game loading
@@ -36,13 +36,15 @@ Integration: AppNav lobby link uses buildLoginUrl("/lobby") when !playerName.
 Task: Host start button disabled + "Starting game…" during API call.
 
 Files:
-- src/app/components/GameContainer.tsx (isStartingGame)
+- src/app/components/GameContainer.tsx (isStartingGame state ~line 30, handleStartGame ~125–139)
 - src/app/components/Game.tsx, GameOverlay.tsx
 - src/app/lib/gameStrings.ts (startingGame)
 
 ---
-Merge notes
------------
-- cursor.agent.txt: combined sections from three branches (was add/add conflict).
-- GameOverlay: merged onBackToLobby + isStartingGame props.
-- GameContainer: merged buildLoginUrl redirect + isStartingGame handler.
+Merge conflict resolutions
+--------------------------
+- cursor.agent.txt: unified doc (navigation + auth + start-game sections).
+- GameOverlay.tsx: both onBackToLobby and isStartingGame props; button uses isStartingGame.
+- Game.tsx: passes both onBackToLobby and isStartingGame to overlay.
+- GameContainer.tsx: auto-merged buildLoginUrl + isStartingGame (no manual conflict).
+- AppNav.tsx: lobbyHref uses buildLoginUrl when unnamed (post-merge integration).

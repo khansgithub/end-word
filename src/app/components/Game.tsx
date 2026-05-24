@@ -28,6 +28,7 @@ interface GameProps {
     language?: "en" | "ko";
     isHost?: boolean;
     onStartGame?: () => void;
+    isStartingGame?: boolean;
 }
 
 export default function Game({
@@ -39,6 +40,7 @@ export default function Game({
     language = "ko",
     isHost = false,
     onStartGame,
+    isStartingGame = false,
 }: GameProps) {
     const router = useRouter();
     const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
@@ -143,6 +145,7 @@ export default function Game({
                     isHost={isHost}
                     onStartGame={onStartGame}
                     onBackToLobby={() => router.push("/lobby")}
+                    isStartingGame={isStartingGame}
                 />
                 <RoundNumberBadge turn={gameState.turn ?? 1} />
                 <MatchLetterDisplay matchLetter={gameState.matchLetter} />
