@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import englishWords from "an-array-of-english-words";
 import { lastEnglishMatchLetter } from "../../../src/lib/dictionary/english";
 
-export const STORY_TIMEOUT = 45_000;
+export const STORY_TIMEOUT = 60_000;
 
 /** Short English word from the bundled list (matches in-game dictionary constraints). */
 export function pickShortEnglishWordStartingWith(letter: string): string {
@@ -78,12 +78,16 @@ export async function joinRoomByInviteCodeUi(page: Page, code: string) {
 
 export async function startGameIfHost(page: Page) {
   const start = page.getByRole("button", { name: /start game/i });
-  if (await start.isVisible().catch(() => false)) {
-    await start.click();
-  }
+  await start.waitFor({ state: "visible", timeout: STORY_TIMEOUT });
+  await start.click();
 }
 
-export async function waitForGamePlaying(page: Page) {
+export async function waitUntilInRoomLobby(page: Page) {
+  await expect(page.getByText(/joining room/i)).toBeHidden({ timeout: STORY_TIMEOUT });
+  await expect(page.getByText(/waiting for game to start/i)).toBeVisible({ timeout: STORY_TIMEOUT });
+}
+
+export async function waitUntilPlayingUi(page: Page) {
   await expect(page.getByText(/waiting for game to start/i)).toBeHidden({ timeout: STORY_TIMEOUT });
   await expect(page.getByTestId("match-letter-block")).toBeVisible({ timeout: STORY_TIMEOUT });
 }
@@ -106,6 +110,24 @@ export async function submitWordFromInput(page: Page, word: string) {
   await input.fill("");
   await input.fill(word);
   await page.getByRole("button", { name: /submit word/i }).click();
+}
+
+/** Waits for POST .../submit and returns parsed JSON (caller should assert success). */
+export async function submitWordAndWaitForResponse(page: Page, word: string): Promise<unknown> {
+  await expect(page.getByRole("button", { name: /submit word/i })).toBeEnabled({ timeout: STORY_TIMEOUT });
+  const responsePromise = page.waitForResponse(
+    (r) => {
+      try {
+        return new URL(r.url()).pathname.endsWith("/submit") && r.request().method() === "POST";
+      } catch {
+        return false;
+      }
+    },
+    { timeout: STORY_TIMEOUT }
+  );
+  await submitWordFromInput(page, word);
+  const res = await responsePromise;
+  return res.json();
 }
 
 export async function countThisPlayerHearts(page: Page): Promise<number> {

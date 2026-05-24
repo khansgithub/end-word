@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import type { GameStateClient } from "@/shared/types";
@@ -23,11 +23,21 @@ interface GameProps {
   gameState: GameStateClient;
   onStateChange: (state: GameStateClient) => void;
   language?: "en" | "ko";
+  /** When set, reject remote snapshots that look like a stale "waiting" lobby after a round has started. */
+  ignoreStaleLobbySnapshots?: boolean;
 }
 
-export default function Game({ roomId, gameState: initialState, onStateChange, language = "ko" }: GameProps) {
+export default function Game({
+  roomId,
+  gameState: initialState,
+  onStateChange,
+  language = "ko",
+  ignoreStaleLobbySnapshots = false,
+}: GameProps) {
   const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
   const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
 
   const syncParent = useCallback(
     (next: GameStateClient) => {
@@ -38,12 +48,24 @@ export default function Game({ roomId, gameState: initialState, onStateChange, l
 
   const applyRemote = useCallback(
     (emit: Parameters<typeof gameStateUpdateClient>[0]) => {
+      const cur = gameStateRef.current;
+      const hasProgress =
+        cur.turn > 0 ||
+        cur.players.some((p) => p != null && String((p as { lastWord?: string }).lastWord ?? "").length > 0);
+      if (
+        cur.status === "playing" &&
+        emit.status === "waiting" &&
+        emit.connectedPlayers >= 2 &&
+        (ignoreStaleLobbySnapshots || hasProgress)
+      ) {
+        return;
+      }
       dispatch({
         type: "gameStateUpdateClient",
         payload: [emit],
       });
     },
-    []
+    [ignoreStaleLobbySnapshots]
   );
 
   useRoomRealtime(roomId, applyRemote);

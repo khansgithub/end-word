@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 import {
   addPlayer,
   buildInitialGameState,
@@ -53,10 +54,12 @@ export async function createRoom(
   const state = buildFreshRoomState(options.language, matchChar);
 
   let inviteCode = generateInviteCode();
+  const roomid = randomUUID();
   for (let attempt = 0; attempt < 5; attempt++) {
     const { data, error } = await admin
       .from("rooms")
       .insert({
+        roomid,
         roomname: options.roomName,
         playercount: 0,
         invite_code: inviteCode,
@@ -114,7 +117,16 @@ export async function joinRoom(
   };
 
   state = { ...addPlayer(state, player), language: row.language };
-  state.socketPlayerMap?.set(userId, player.seat!);
+  const joinedFromSeat = state.players.find(
+    (p): p is PlayerWithId => p != null && "uid" in p && p.uid === userId
+  );
+  if (!joinedFromSeat || joinedFromSeat.seat === undefined) {
+    throw new Error("joinRoom: failed to resolve seat after addPlayer");
+  }
+  const map = new Map(state.socketPlayerMap ?? []);
+  map.set(userId, joinedFromSeat.seat);
+  state = { ...state, socketPlayerMap: map };
+
   await persistRoomState(admin, roomId, state);
 
   const joined = getPlayerByClientId(state, userId)!;

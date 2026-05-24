@@ -81,7 +81,7 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
         expect(result.connectedPlayers).toBe(1);
     });
 
-    it("should set status to 'playing' when 2 or more players", () => {
+    it("should keep status 'waiting' when 2 or more players join (host must start explicitly)", () => {
         const state = createGameStateWithPlayers([
             createTestPlayer("Player0", "uid0", 0),
             null,
@@ -95,7 +95,7 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
-        expect(result.status).toBe("playing");
+        expect(result.status).toBe("waiting");
         expect(result.connectedPlayers).toBe(2);
     });
 
@@ -114,6 +114,6 @@ describe("_postPlayerCountUpdateState (via addPlayer)", () => {
         };
         const result = gameStateReducer(state, action);
         expect(result.connectedPlayers).toBe(4);
-        expect(result.status).toBe("playing");
+        expect(result.status).toBe("waiting");
     });
 });

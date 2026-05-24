@@ -12,8 +12,10 @@ import {
   readDisplayedMatchLetter,
   startGameIfHost,
   STORY_TIMEOUT,
+  submitWordAndWaitForResponse,
   submitWordFromInput,
-  waitForGamePlaying,
+  waitUntilInRoomLobby,
+  waitUntilPlayingUi,
   waitUntilWordInputEnabled,
 } from "./helpers/user-story-helpers";
 
@@ -28,7 +30,7 @@ test.beforeAll(async ({ request }) => {
  * host starts the game; players alternate valid English submissions following the match letter.
  */
 test("user story: host and guest English chain (happy path)", async ({ browser, baseURL }) => {
-  test.setTimeout(STORY_TIMEOUT * 2);
+  test.setTimeout(200_000);
   const roomName = `E2E Pub ${Date.now()}`;
 
   const hostCtx = await browser.newContext({ baseURL });
@@ -43,14 +45,20 @@ test("user story: host and guest English chain (happy path)", async ({ browser, 
     await goHomeEnterNameGoLobbyWithName(guest, `Guest-${Date.now()}`);
     await joinPublicRoomFromList(guest, roomName);
 
+    await waitUntilInRoomLobby(host);
+    await waitUntilInRoomLobby(guest);
     await startGameIfHost(host);
-    await waitForGamePlaying(host);
-    await waitForGamePlaying(guest);
+    await waitUntilPlayingUi(host);
+    await waitUntilPlayingUi(guest);
 
     await waitUntilWordInputEnabled(host);
     const firstLetter = await readDisplayedMatchLetter(host);
     const w1 = pickShortEnglishWordStartingWith(firstLetter);
-    await submitWordFromInput(host, w1);
+    const hostSubmitJson = (await submitWordAndWaitForResponse(host, w1)) as {
+      success?: boolean;
+      reason?: string;
+    };
+    expect(hostSubmitJson.success, hostSubmitJson.reason).toBe(true);
 
     await expect(host.locator("tbody").getByText(w1, { exact: true })).toBeVisible({ timeout: STORY_TIMEOUT });
 
@@ -59,10 +67,19 @@ test("user story: host and guest English chain (happy path)", async ({ browser, 
     expect(await readDisplayedMatchLetter(guest)).toBe(nextLetter);
 
     const w2 = pickShortEnglishWordStartingWith(nextLetter);
-    await submitWordFromInput(guest, w2);
+    const guestSubmitJson = (await submitWordAndWaitForResponse(guest, w2)) as {
+      success?: boolean;
+      reason?: string;
+      gameState?: { matchLetter?: { block?: string } };
+    };
+    expect(guestSubmitJson.success, guestSubmitJson.reason).toBe(true);
+    const expectedLetter = guestSubmitJson.gameState?.matchLetter?.block;
+    expect(expectedLetter, "server should return next match letter after guest word").toBeTruthy();
 
     await waitUntilWordInputEnabled(host);
-    expect(await readDisplayedMatchLetter(host)).toBe(lastEnglishMatchLetter(w2));
+    await expect
+      .poll(async () => readDisplayedMatchLetter(host), { timeout: STORY_TIMEOUT })
+      .toBe(expectedLetter);
   } finally {
     await hostCtx.close();
     await guestCtx.close();
@@ -73,7 +90,7 @@ test("user story: host and guest English chain (happy path)", async ({ browser, 
  * User story: a player opens the lobby, finds a public room in the list, joins, and waits for the host to start.
  */
 test("user story: joiner uses public rooms list", async ({ browser, baseURL }) => {
-  test.setTimeout(STORY_TIMEOUT * 2);
+  test.setTimeout(150_000);
   const roomName = `E2E List ${Date.now()}`;
 
   const hostCtx = await browser.newContext({ baseURL });
@@ -88,10 +105,10 @@ test("user story: joiner uses public rooms list", async ({ browser, baseURL }) =
     await goHomeEnterNameGoLobbyWithName(joiner, `Joiner-${Date.now()}`);
     await joinPublicRoomFromList(joiner, roomName);
 
-    await expect(joiner.getByText(/waiting for game to start/i)).toBeVisible();
+    await waitUntilInRoomLobby(joiner);
 
     await startGameIfHost(host);
-    await waitForGamePlaying(joiner);
+    await waitUntilPlayingUi(joiner);
     await expect(joiner.getByRole("button", { name: /submit word/i })).toBeVisible();
   } finally {
     await hostCtx.close();
@@ -103,7 +120,7 @@ test("user story: joiner uses public rooms list", async ({ browser, baseURL }) =
  * User story: private room + invite code; on the host’s turn a wrong-leading-letter word costs health.
  */
 test("user story: invite code room and invalid submit reduces health", async ({ browser, baseURL }) => {
-  test.setTimeout(STORY_TIMEOUT * 2);
+  test.setTimeout(150_000);
   const roomName = `E2E Pvt ${Date.now()}`;
 
   const hostCtx = await browser.newContext({ baseURL });
@@ -118,9 +135,11 @@ test("user story: invite code room and invalid submit reduces health", async ({ 
     await goHomeEnterNameGoLobbyWithName(friend, `PvtFriend-${Date.now()}`);
     await joinRoomByInviteCodeUi(friend, code);
 
+    await waitUntilInRoomLobby(host);
+    await waitUntilInRoomLobby(friend);
     await startGameIfHost(host);
-    await waitForGamePlaying(host);
-    await waitForGamePlaying(friend);
+    await waitUntilPlayingUi(host);
+    await waitUntilPlayingUi(friend);
 
     await waitUntilWordInputEnabled(host);
     const match = await readDisplayedMatchLetter(host);

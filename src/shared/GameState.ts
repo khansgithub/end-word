@@ -214,11 +214,22 @@ function _postPlayerCountUpdateState(state: GameState): GameState {
      * This function will update values which depend on the number of players connected to the game.
      */
     const connectedPlayers = state.players.filter((p) => p != null).length;
-    const status: GameStatus = connectedPlayers >= 2 ? "playing" : "waiting";
+    let status = state.status;
+
+    if (connectedPlayers === 0) {
+        status = "waiting";
+    } else if (connectedPlayers < 2) {
+        // One player in the lobby — never auto-switch to "playing" (only `startGame` does that).
+        if (status !== "playing" && status !== "finished") {
+            status = "waiting";
+        }
+    }
+    // With 2+ players, keep status as-is: "waiting" until the host starts, or "playing"/"finished" if already set.
+
     return {
         ...state,
-        connectedPlayers: connectedPlayers,
-        status: status
+        connectedPlayers,
+        status,
     };
 }
 
@@ -342,8 +353,6 @@ export function gameStateReducer<T>(state: T, action: GameStateActionsType): T {
         throw new UnknownActionTypeError(action.type);
     }
 
-    console.log("in reducer: action > ", action.type);
-    // console.log("in reducer: payload > ", action.payload);
     // throw new Error("");
 
     // idk how to fix the typing issue
@@ -448,11 +457,20 @@ export function socketToSeat(state: GameState, clientId: string): number | false
  * @returns The player with ID, or null if not found
  */
 export function getPlayerByClientId(state: GameState, clientId: string): PlayerWithId | null {
-    const seat = socketToSeat(state, clientId);
-    if (seat === false) return null;
-    const player = state.players[seat];
-    if (!player || !("uid" in player) || !player.uid) return null;
-    return player as PlayerWithId;
+    const seatFromMap = socketToSeat(state, clientId);
+    if (seatFromMap !== false) {
+        const player = state.players[seatFromMap];
+        if (player && "uid" in player && player.uid === clientId) {
+            return player as PlayerWithId;
+        }
+    }
+    for (let i = 0; i < state.players.length; i++) {
+        const p = state.players[i];
+        if (p && "uid" in p && p.uid === clientId) {
+            return p as PlayerWithId;
+        }
+    }
+    return null;
 }
 
 function findAvailableSeat(state: GameState): number {
