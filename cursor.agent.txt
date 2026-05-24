@@ -1,30 +1,48 @@
-Navigation (branch: cursor/navigation-4ff9)
-============================================
+Combined UX improvements (branch: cursor/combined-ux-improvements-4ff9)
+=======================================================================
 
-Task
-----
-Add shared navigation on pages where it helps orientation (lobby, room) and a way to leave finished games.
+Merged feature branches (base: cursor/supabase-vercel-refactor-c19a):
+1. cursor/navigation-4ff9
+2. cursor/auth-redirect-4ff9
+3. cursor/start-game-loading-4ff9
 
-Approach
---------
-- AppNav (client): breadcrumb-style links — End Word → Lobby → Room (on /room/*). Hidden on `/` so the name-entry screen stays focused.
-- AppShell wraps all pages inside SupabaseProvider in layout.tsx.
-- GameOverlay: "Back to lobby" on finished state; Game.tsx wires router.push("/lobby").
+---
+## 1. Navigation
 
-Key files
----------
-- src/app/components/AppNav.tsx — nav UI, pathname-aware active states, player name display, "Change name" → /?changeName=1
-- src/app/components/AppShell.tsx — mounts AppNav above children
-- src/app/layout.tsx — wraps children with <AppShell>
-- src/app/components/GameOverlay.tsx — onBackToLobby prop + button in finishedJsx (~lines 41–58)
-- src/app/components/Game.tsx — passes onBackToLobby to GameOverlay
+Task: Shared nav on lobby/room; back to lobby after game ends.
 
-Decisions
----------
-- No nav on home: avoids clutter during first visit.
-- Lobby link always /lobby; unauthenticated users are handled on the auth-redirect branch.
-- changeName=1 query reserved for auth branch to pre-fill/clear name on return home.
+Files:
+- src/app/components/AppNav.tsx, AppShell.tsx
+- src/app/layout.tsx
+- src/app/components/GameOverlay.tsx (onBackToLobby)
+- src/app/components/Game.tsx (router.push("/lobby"))
 
-Outcome
--------
-Lobby and room pages have consistent top navigation; finished games can return to lobby without browser back.
+---
+## 2. Auth redirect (returnTo)
+
+Task: Unnamed users → /?returnTo=… → name → original page.
+
+Files:
+- src/app/lib/returnTo.ts
+- src/app/components/Homescreen.tsx, GameContainer.tsx, lobby/page.tsx
+- src/app/page.tsx (Suspense)
+- tests/unit/returnTo.test.ts
+
+Integration: AppNav lobby link uses buildLoginUrl("/lobby") when !playerName.
+
+---
+## 3. Start game loading
+
+Task: Host start button disabled + "Starting game…" during API call.
+
+Files:
+- src/app/components/GameContainer.tsx (isStartingGame)
+- src/app/components/Game.tsx, GameOverlay.tsx
+- src/app/lib/gameStrings.ts (startingGame)
+
+---
+Merge notes
+-----------
+- cursor.agent.txt: combined sections from three branches (was add/add conflict).
+- GameOverlay: merged onBackToLobby + isStartingGame props.
+- GameContainer: merged buildLoginUrl redirect + isStartingGame handler.

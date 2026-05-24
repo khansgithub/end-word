@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { Suspense, memo, useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from "@/shared/GameState";
 import InputBox from "@/app/components/InputBox";
 import { Homescreen } from "@/app/components/Homescreen";
@@ -16,7 +16,9 @@ export default function () {
 
     return (
         // <Game></Game>
-        <Homescreen></Homescreen>
+        <Suspense fallback={null}>
+            <Homescreen />
+        </Suspense>
         // <InputBox matchLetter={buildInitialGameState().matchLetter} disabled={false}></InputBox>
         // <div className="w-3/12 h-full flex flex-col justify-center items-center">
         //     {/* <button onClick={onClick} className="border-2 border-white p-3 m-3 "> click: {data} </button> */}

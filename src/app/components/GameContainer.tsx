@@ -7,6 +7,7 @@ import { assertIsGameStateClient } from "@/shared/guards";
 import type { GameStateClient } from "@/shared/types";
 import { useUserStore } from "@/app/store/userStore";
 import { gameStrings } from "@/app/lib/gameStrings";
+import { buildLoginUrl } from "@/app/lib/returnTo";
 import { joinRoomApi, leaveRoomApi, startRoomApi } from "@/app/lib/roomApi";
 import type { GameLanguage } from "@/lib/dictionary";
 import Game from "@/app/components/Game";
@@ -41,7 +42,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
   useEffect(() => {
     if (!playerName) {
-      router.replace("/");
+      router.replace(buildLoginUrl(`/room/${roomId}`));
       return;
     }
 
