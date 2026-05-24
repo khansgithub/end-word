@@ -18,6 +18,7 @@
     "test:playwright:grep:ui": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test --ui --grep",
     "test:playwright:grep": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test --grep",
     "test:playwright:ui": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test --ui",
+    "test:playwright:next": "playwright test tests/e2e/user-stories.spec.ts",
     "test:playwright": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test && tsx tests/e2e/custom-runner.ts",
     "test:unit": "vitest --run",
     "test:watch": "vitest"

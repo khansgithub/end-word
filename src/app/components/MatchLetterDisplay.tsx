@@ -10,10 +10,14 @@ export default function MatchLetterDisplay({ matchLetter }: MatchLetterDisplayPr
         <div className="panel w-auto md:w-full max-w-2xl">
             <div className="flex flex-col items-center p-6">
                 <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{gameStrings.matchLetter}</h2>
-                <div className="text-8xl font-bold mb-4" style={{
-                    color: 'var(--match-letter-color)',
-                    textShadow: '1px 1px 3px var(--text-shadow-cyan)',
-                }}>
+                <div
+                    data-testid="match-letter-block"
+                    className="text-8xl font-bold mb-4"
+                    style={{
+                        color: "var(--match-letter-color)",
+                        textShadow: "1px 1px 3px var(--text-shadow-cyan)",
+                    }}
+                >
                     {matchLetter.block}
                 </div>
             </div>

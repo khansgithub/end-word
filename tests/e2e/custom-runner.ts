@@ -1,17 +1,12 @@
 import { spawn } from "child_process";
 import { roomFlowTestNames as t, type RoomFlowTestName } from "./test-names";
 import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
-import { envSet, envGet } from "../../src/server/env";
 import {
     buildPlaywrightJsonReport,
     parseReportPath,
     type TestResult,
     writeReport,
 } from "./report";
-import playwrightConfig from "@/../playwright.config";
-// Playwright internal APIs - not officially documented, may change between versions
-import { runAllTestsWithConfig } from "playwright/lib/runner/testRunner";
-import { loadConfigFromFile } from "playwright/lib/common/configLoader";
 
 /**
  * Custom Playwright Test Runner
@@ -32,7 +27,7 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
     const envVarsString = Object.entries(envVars)
         .map(([key, value]) => `${key}=${value}`)
         .join(" ");
-    const env = `cross-env CUSTOM_PLAYWRIGHT_RUNNER=true ${envVarsString}`;
+    const env = `cross-env CUSTOM_PLAYWRIGHT_RUNNER=true RUN_ROOM_FLOW=1 ${envVarsString}`;
     const args = [
         env,
         "playwright test tests/e2e/room-flow.spec.ts",
@@ -54,43 +49,60 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
     });
 }
 
-/** In-process runner: uses Playwright internal APIs. Does not support --ui. */
+/** Runs legacy `room-flow.spec.ts` in a subprocess (expects `npm run dev:legacy` on port 4000). */
 async function runTestInProcess(
     testName: RoomFlowTestName,
     { envVars, cb }: RunTestConfig
 ): Promise<{ status: string; duration: number; error?: { message: string; stack?: string } }> {
     if (cb) cb();
 
-    envSet("CUSTOM_PLAYWRIGHT_RUNNER", "true");
+    const mergedEnv: NodeJS.ProcessEnv = {
+        ...process.env,
+        CUSTOM_PLAYWRIGHT_RUNNER: "true",
+        RUN_ROOM_FLOW: "1",
+    };
     for (const [key, value] of Object.entries(envVars)) {
-        if (value !== undefined) envSet(key as keyof typeof process.env, String(value));
+        if (value !== undefined) mergedEnv[key] = String(value);
     }
 
     console.log("Running test: ", testName);
     console.log("Environment variables: ", envVars);
 
-    const config = await loadConfigFromFile(undefined, {
-        ...playwrightConfig,
-        quiet: true,
-        outputDir: `test-results/playwright/custom-runner/${testName}/`,
-        reporter: [["json", {outputFile: `test-results/playwright/custom-runner/${testName}/out.json`}]],
-    });
-    config.cliArgs = ["tests/e2e/room-flow.spec.ts"];
-    config.cliGrep = testName;
-
     const start = performance.now();
-    try {
-        const status = await runAllTestsWithConfig(config);
-        const duration = performance.now() - start;
-        return { status, duration };
-    } catch (err) {
-        const duration = performance.now() - start;
-        const error =
-            err instanceof Error
-                ? { message: err.message, stack: err.stack }
-                : { message: String(err) };
-        return { status: "failed", duration, error };
-    }
+
+    return await new Promise((resolve) => {
+        const child = spawn(
+            "npx",
+            ["playwright", "test", "tests/e2e/room-flow.spec.ts", "-g", testName, "--quiet"],
+            {
+                stdio: "inherit",
+                cwd: process.cwd(),
+                env: mergedEnv,
+                shell: process.platform === "win32",
+            }
+        );
+
+        child.on("error", (err) => {
+            resolve({
+                status: "failed",
+                duration: performance.now() - start,
+                error: { message: err.message, stack: err.stack },
+            });
+        });
+
+        child.on("exit", (code) => {
+            const duration = performance.now() - start;
+            if (code === 0) {
+                resolve({ status: "passed", duration });
+            } else {
+                resolve({
+                    status: "failed",
+                    duration,
+                    error: { message: `playwright exited with code ${code}` },
+                });
+            }
+        });
+    });
 }
 
 async function runTest(
