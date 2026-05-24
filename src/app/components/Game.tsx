@@ -27,6 +27,7 @@ interface GameProps {
     language?: "en" | "ko";
     isHost?: boolean;
     onStartGame?: () => void;
+    isStartingGame?: boolean;
 }
 
 export default function Game({
@@ -38,6 +39,7 @@ export default function Game({
     language = "ko",
     isHost = false,
     onStartGame,
+    isStartingGame = false,
 }: GameProps) {
     const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
     const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
@@ -140,6 +142,7 @@ export default function Game({
                     connectedPlayers={gameState.connectedPlayers}
                     isHost={isHost}
                     onStartGame={onStartGame}
+                    isStartingGame={isStartingGame}
                 />
                 <RoundNumberBadge turn={gameState.turn ?? 1} />
                 <MatchLetterDisplay matchLetter={gameState.matchLetter} />

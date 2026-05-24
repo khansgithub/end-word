@@ -4,6 +4,7 @@ export const gameStrings = {
     gameState: "Game State: ",
     waitingForGameToStart: "Waiting for game to start...",
     startGame: "Start game",
+    startingGame: "Starting game…",
     round: "Round ",
     matchLetter: "Match Letter",
     players: "Players",

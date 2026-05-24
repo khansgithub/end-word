@@ -1,0 +1,30 @@
+Start game loading state (branch: cursor/start-game-loading-4ff9)
+==================================================================
+
+Task
+----
+When the host clicks "Start game", show in-progress feedback and disable the button until the start API completes.
+
+Approach
+--------
+- GameContainer: isStartingGame state; guard double-clicks; try/finally around startRoomApi().
+- Game.tsx: passes isStartingGame to GameOverlay.
+- GameOverlay: disabled + aria-busy on button; label switches to gameStrings.startingGame.
+- gameStrings.ts: startingGame: "Starting game…"
+
+Key files
+---------
+- src/app/components/GameContainer.tsx — isStartingGame state, handleStartGame (~lines 29, 124–138)
+- src/app/components/Game.tsx — prop plumbing to overlay
+- src/app/components/GameOverlay.tsx — button disabled/label (~lines 32–42)
+- src/app/lib/gameStrings.ts — startingGame string
+
+Decisions
+---------
+- State lives in GameContainer (owns the API call), not in overlay, to avoid duplicate requests.
+- finally resets loading even on failure so the host can retry.
+- Realtime may hide overlay when status → playing before finally runs; harmless.
+
+Outcome
+----
+Host sees "Starting game…" and cannot double-submit while POST /api/rooms/:id/start is in flight.
