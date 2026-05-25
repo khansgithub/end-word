@@ -9,5 +9,5 @@
             "severity": "off"
         }
     ],
-    "cursorpyright.analysis.stubPath": "dictionary/stubs"
+    "cursorpyright.analysis.stubPath": "dictionary/stubs",
 }

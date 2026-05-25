@@ -18,7 +18,7 @@ const error = console.error;
 export function submitWordCallback(
     gameState: GameStateClient,
     dispatch: GameStateDispatch,
-    setInputError: (error: boolean) => void,
+    setInputError: (error: boolean, message?: string) => void,
     response: SubmitWordResponse,
     word: string) {
     log(L, "submitWord response", response);
@@ -64,9 +64,11 @@ export function wrongWord(
     gameState: GameStateClient,
     dispatch: GameStateDispatch,
     responseGameState: null | GameStateEmit,
-    setInputError: (error: boolean) => void,
+    setInputError: (error: boolean, message?: string) => void,
     reason: string | undefined,
 ) {
+    setInputError(true, reason);
+
     if (responseGameState) {
         dispatch({
             type: "gameStateUpdateClient",

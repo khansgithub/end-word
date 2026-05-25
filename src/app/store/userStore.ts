@@ -28,11 +28,15 @@ export interface InputState {
   highlightValue: string;
   isComposing: boolean;
   isError: boolean;
+  errorMessage: string | null;
+  errorShakeTick: number;
   lastKey: string;
   setInputValue: (value: string) => void;
   setHighlightValue: (value: string) => void;
   setIsComposing: (value: boolean) => void;
   setIsError: (value: boolean) => void;
+  setErrorMessage: (value: string | null) => void;
+  bumpErrorShake: () => void;
   setLastKey: (value: string) => void;
   reset: () => void;
 }

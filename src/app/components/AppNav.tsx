@@ -26,9 +26,11 @@ export function AppNav() {
 
   return (
     <nav
-      className="w-full max-w-4xl mx-auto px-4 pt-4 flex flex-wrap items-center justify-between gap-2"
+      className="fixed top-0 left-0 right-0 z-40 border-b"
+      style={{ backgroundColor: "var(--bg-primary)", borderColor: "var(--border-default)" }}
       aria-label="Main"
     >
+      <div className="w-full max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-1">
         <Link
           href="/"
@@ -77,6 +79,7 @@ export function AppNav() {
             Change name
           </Link>
         )}
+      </div>
       </div>
     </nav>
   );

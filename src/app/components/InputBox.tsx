@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useEffect, useRef } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 import { MatchLetter } from "@/shared/types";
 import { InputState } from "@/app/store/userStore";
@@ -19,6 +19,8 @@ const useInputStore = create<InputState>((set) => ({
     highlightValue: "",
     isComposing: false,
     isError: false,
+    errorMessage: null as string | null,
+    errorShakeTick: 0,
     lastKey: "",
     setInputValue: (value: string) =>
         set((state) => (state.inputValue === value ? state : { inputValue: value })),
@@ -28,6 +30,9 @@ const useInputStore = create<InputState>((set) => ({
         set((state) => (state.isComposing === value ? state : { isComposing: value })),
     setIsError: (value: boolean) =>
         set((state) => (state.isError === value ? state : { isError: value })),
+    setErrorMessage: (value: string | null) =>
+        set((state) => (state.errorMessage === value ? state : { errorMessage: value })),
+    bumpErrorShake: () => set((state) => ({ errorShakeTick: state.errorShakeTick + 1 })),
     setLastKey: (value: string) =>
         set((state) => (state.lastKey === value ? state : { lastKey: value })),
     reset: () => set({
@@ -35,9 +40,17 @@ const useInputStore = create<InputState>((set) => ({
         highlightValue: "",
         isComposing: false,
         isError: false,
+        errorMessage: null,
+        errorShakeTick: 0,
         lastKey: ""
     }),
 }));
+
+let focusInputCallback: (() => void) | null = null;
+
+export const focusInputBox = () => {
+    focusInputCallback?.();
+};
 
 /**
 /**
@@ -87,13 +100,25 @@ function InputBox({
 }: InputBoxProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const prevInputRef = useRef<string>("");
+    const prevDisabledRef = useRef(disabled);
 
     // Zustand selectors - only re-render when specific values change
     const inputValue = useInputStore((state) => state.inputValue);
     const highlightValue = useInputStore((state) => state.highlightValue);
     const isError = useInputStore((state) => state.isError);
+    const errorMessage = useInputStore((state) => state.errorMessage);
+    const errorShakeTick = useInputStore((state) => state.errorShakeTick);
     const isComposing = useInputStore((state) => state.isComposing);
     const lastKey = useInputStore((state) => state.lastKey);
+
+    const [isShaking, setIsShaking] = useState(false);
+
+    useEffect(() => {
+        if (errorShakeTick === 0) return;
+        setIsShaking(true);
+        const timer = window.setTimeout(() => setIsShaking(false), 450);
+        return () => window.clearTimeout(timer);
+    }, [errorShakeTick]);
 
     const matchBlock = matchLetter.block;
     const firstStep = matchLetter.steps[0] ?? "";
@@ -109,10 +134,31 @@ function InputBox({
         store.setHighlightValue(firstStep);
     }, [matchBlock, firstStep]);
 
-    // Focus input on mount
+    const maxLength = language === "en" ? 20 : 7;
+
     useEffect(() => {
-        inputRef.current?.focus();
+        focusInputCallback = () => {
+            const input = inputRef.current;
+            if (input && !input.disabled) {
+                input.focus();
+            }
+        };
+        if (!disabled) {
+            inputRef.current?.focus();
+        }
+        return () => {
+            focusInputCallback = null;
+        };
     }, []);
+
+    useEffect(() => {
+        if (prevDisabledRef.current && !disabled) {
+            requestAnimationFrame(() => {
+                inputRef.current?.focus();
+            });
+        }
+        prevDisabledRef.current = disabled;
+    }, [disabled]);
 
     // Helper functions for input manipulation
     const clearInput = useCallback(
@@ -180,6 +226,7 @@ function InputBox({
         // Clear error state when user starts typing
         if (isError) {
             store.setIsError(false);
+            store.setErrorMessage(null);
         }
 
         console.clear();
@@ -243,7 +290,7 @@ function InputBox({
             >
                 <p>{lastKey}</p>
             </div>
-            <div className="form-control md:w-full">
+            <div className={`form-control md:w-full ${isShaking ? "animate-shake" : ""}`}>
                 <div className="grid grid-cols-1 grid-rows-1 relative md:w-full">
                     {/* Highlight layer - shows the match letter */}
                     <input
@@ -265,7 +312,7 @@ function InputBox({
                         ref={inputRef}
                         type="text"
                         disabled={disabled}
-                        maxLength={7}
+                        maxLength={maxLength}
                         minLength={2}
                         value={inputValue}
                         onChange={handleChange}
@@ -338,7 +385,7 @@ function InputBox({
                 {isError && !disabled && (
                     <label className="label py-1">
                         <span className="label-text-alt" style={{ color: 'var(--text-error)', fontSize: '0.7rem' }}>
-                            {gameStrings.inputInvalidText}
+                            {errorMessage ?? gameStrings.inputInvalidText}
                         </span>
                     </label>
                 )}
@@ -354,14 +401,20 @@ export const useInputBoxStore = () => useInputStore;
 export const getInputValue = () => useInputStore.getState().inputValue;
 
 // Export a function to set error state (for submission validation)
-export const setInputError = (error: boolean) => useInputStore.getState().setIsError(error);
+export const setInputError = (error: boolean, message?: string) => {
+    const store = useInputStore.getState();
+    store.setIsError(error);
+    if (error) {
+        store.setErrorMessage(message ?? null);
+        store.bumpErrorShake();
+    } else {
+        store.setErrorMessage(null);
+    }
+};
 
 // Export a function to reset the input
 export const resetInput = () => {
     useInputStore.getState().reset();
-    // FIXME: hacky
-    const inputDom = document.querySelector('input[type="text"]:not([disabled])');
-    if (inputDom) (inputDom as HTMLInputElement).focus();
 };
 
 export default memo(InputBox);

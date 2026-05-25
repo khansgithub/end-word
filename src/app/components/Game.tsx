@@ -1,22 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ThisPlayerUndefinedError } from "@/shared/errors";
-import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
-import { DictionaryEntry, GameStateClient } from "@/shared/types";
-import { isPlayerTurn } from "@/shared/utils";
-import { useRoomChannel } from "@/app/hooks/useRoomChannel";
-import { submitWordApi } from "@/app/lib/roomApi";
-import { submitWordCallback } from "@/app/lib/wordSubmit";
 import Definitions from "@/app/components/Definitions";
 import GameOverlay from "@/app/components/GameOverlay";
 import HealthDisplay from "@/app/components/HealthDisplay";
-import { getInputValue, resetInput, setInputError } from "@/app/components/InputBox";
+import { focusInputBox, getInputValue, resetInput, setInputError } from "@/app/components/InputBox";
 import InputSection from "@/app/components/InputSection";
 import MatchLetterDisplay from "@/app/components/MatchLetterDisplay";
 import PlayersSection from "@/app/components/PlayersSection";
 import { RoundNumberBadge } from "@/app/components/RoundNumberBadge";
+import { useRoomChannel } from "@/app/hooks/useRoomChannel";
+import { submitWordApi } from "@/app/lib/roomApi";
+import { submitWordCallback } from "@/app/lib/wordSubmit";
+import { ThisPlayerUndefinedError } from "@/shared/errors";
+import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
+import { DictionaryEntry, GameStateClient } from "@/shared/types";
+import { isPlayerTurn } from "@/shared/utils";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 
 interface GameProps {
@@ -129,6 +129,8 @@ export default function Game({
                 setLastDefinition(response.definition);
             }
             resetInput();
+        } else {
+            focusInputBox();
         }
     }, [gameState, roomId]);
 

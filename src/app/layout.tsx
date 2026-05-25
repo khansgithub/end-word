@@ -34,7 +34,7 @@ export default function RootLayout({
                 `${geistSans.variable} ${geistMono.variable} antialiased w-dvw min-h-screen p-0 m-0`
             } style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
                 <ThemeToggle />
-                <main className="w-full min-h-dvh flex flex-col items-center justify-center">
+                <main className="w-full min-h-dvh flex flex-col items-center">
                     <SupabaseProvider>
                         <AppShell>{children}</AppShell>
                     </SupabaseProvider>
