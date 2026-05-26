@@ -32,8 +32,8 @@ export default function GameOverlay({
         if (isStartingGame) {
             return (
                 <>
-                    <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
-                    <p className="text-lg" style={{ color: "var(--text-primary)" }}>
+                    <div className="app-spinner mb-4" aria-hidden />
+                    <p className="text-lg" style={{ color: "var(--b-fg)" }}>
                         {gameStrings.startingGameOverlay}
                     </p>
                 </>
@@ -42,8 +42,8 @@ export default function GameOverlay({
 
         return (
             <>
-                <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-lg" style={{ color: "var(--text-primary)" }}>
+                <div className="app-spinner mb-4" aria-hidden />
+                <p className="text-lg" style={{ color: "var(--b-fg)" }}>
                     {gameStrings.waitingForGameToStart}
                 </p>
                 {isHost && onStartGame && (
@@ -106,7 +106,7 @@ export default function GameOverlay({
     return (
         <div
             className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"
-            style={{ backgroundColor: "var(--bg-overlay)" }}
+            style={{ backgroundColor: "var(--b-overlay)" }}
         >
             <div className="panel">
                 <div className="flex flex-col items-center p-6">{mapping[status]()}</div>

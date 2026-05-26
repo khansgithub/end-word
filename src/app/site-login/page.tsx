@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { returnToFromSearchParams } from "@/lib/client/ui/return-to";
+import { RELEASE_VERSION } from "@/lib/app-version";
 
 function SiteLoginForm() {
   const router = useRouter();
@@ -37,44 +38,70 @@ function SiteLoginForm() {
 
   return (
     <div
-      className="flex flex-col w-full min-h-screen justify-center items-center p-3"
-      style={{ background: "var(--bg-primary)" }}
+      className="app-ui flex min-h-dvh w-full flex-col items-center justify-center px-5 py-12"
+      style={{
+        background: "var(--b-bg)",
+        color: "var(--b-fg)",
+        fontFamily: "var(--font-b-sans)",
+      }}
     >
-      <div className="panel w-full max-w-md p-6">
-        <h1 className="text-xl font-semibold mb-2" style={{ color: "var(--text-primary)" }}>
-          Site access
-        </h1>
-        <p className="text-sm mb-4" style={{ color: "var(--text-secondary)" }}>
-          This deployment is temporarily password-protected.
-        </p>
-        <form onSubmit={onSubmit}>
-          <label className="label" htmlFor="site-password">
-            <span className="label-text" style={{ color: "var(--text-primary)" }}>
+      <div className="flex w-full max-w-md flex-col gap-8">
+        <header className="space-y-4 text-center">
+          <div className="flex justify-center">
+            <span
+              className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium tracking-wide"
+              style={{
+                background: "var(--b-accent-muted)",
+                color: "var(--b-accent)",
+              }}
+            >
+              {RELEASE_VERSION}
+            </span>
+          </div>
+          <h1
+            className="text-[2rem] font-normal leading-tight tracking-tight sm:text-4xl"
+            style={{ fontFamily: "var(--font-b-display)" }}
+          >
+            Site access
+          </h1>
+          <p className="mx-auto max-w-sm text-sm leading-relaxed" style={{ color: "var(--b-muted)" }}>
+            This deployment is temporarily password-protected.
+          </p>
+        </header>
+
+        <form
+          className="rounded-2xl border p-6 sm:p-7"
+          style={{
+            background: "var(--b-surface)",
+            borderColor: "var(--b-surface-border)",
+            boxShadow: "var(--b-shadow-elevated)",
+          }}
+          onSubmit={onSubmit}
+        >
+          <label className="form-control w-full gap-2" htmlFor="site-password">
+            <span className="text-xs font-medium" style={{ color: "var(--b-muted)" }}>
               Password
             </span>
+            <input
+              id="site-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="app-input input input-bordered h-12 w-full rounded-xl border text-base"
+              required
+            />
           </label>
-          <input
-            id="site-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="input w-full mb-3"
-            style={{
-              background: "var(--input-bg-solid)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--border-default)",
-              borderRadius: "0.55rem",
-              padding: "0.75rem",
-            }}
-            required
-          />
           {error ? (
-            <p className="text-sm mb-3" style={{ color: "var(--status-error, #f87171)" }}>
+            <p className="mt-3 text-sm" style={{ color: "var(--b-danger)" }}>
               {error}
             </p>
           ) : null}
-          <button type="submit" className="btn-fsm w-full" disabled={loading}>
+          <button
+            type="submit"
+            className="app-btn btn mt-5 h-12 min-h-12 w-full rounded-xl border-0 text-sm font-medium"
+            disabled={loading}
+          >
             {loading ? "Checking…" : "Enter"}
           </button>
         </form>

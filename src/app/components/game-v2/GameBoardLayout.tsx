@@ -24,7 +24,7 @@ export default function GameBoardLayout({
 	return (
 		<div
 			className="g2 flex flex-col w-full min-h-dvh"
-			style={{ backgroundColor: "var(--bg-primary)" }}
+			style={{ backgroundColor: "var(--b-bg)", fontFamily: "var(--font-b-sans)" }}
 		>
 			<div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-4 md:gap-4 md:p-5 min-h-0">
 				{topBar}

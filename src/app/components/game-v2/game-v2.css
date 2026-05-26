@@ -1,25 +1,24 @@
-/* Game v2 — scoped layout tokens (uses global light/dark from colours.css) */
+/* Game v2 — scoped layout tokens (uses app theme from colours.css) */
 
 .g2 {
   --g2-radius: 0.75rem;
   --g2-radius-lg: 1rem;
-  --g2-border: var(--border-default);
-  --g2-surface: var(--bg-secondary-solid);
-  --g2-surface-raised: color-mix(in srgb, var(--bg-tertiary) 88%, var(--text-primary) 4%);
-  --g2-muted: var(--text-secondary);
-  --g2-accent: var(--color-primary);
-  --g2-accent-muted: color-mix(in srgb, var(--color-primary) 18%, transparent);
-  --g2-success: var(--color-success);
-  --g2-danger: var(--color-error);
-  --g2-shadow: 0 1px 2px color-mix(in srgb, var(--color-neutral-pure-dark) 24%, transparent),
-    0 8px 24px color-mix(in srgb, var(--color-neutral-pure-dark) 12%, transparent);
+  --g2-border: var(--b-line);
+  --g2-surface: var(--b-surface);
+  --g2-surface-raised: var(--b-surface-raised);
+  --g2-muted: var(--b-muted);
+  --g2-accent: var(--b-accent);
+  --g2-accent-muted: var(--b-accent-muted);
+  --g2-success: var(--b-success);
+  --g2-danger: var(--b-danger);
+  --g2-shadow: var(--b-shadow-card);
   --g2-ring: 0 0 0 1px var(--g2-border);
   --g2-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .g2-panel {
   background: var(--g2-surface);
-  border: 1px solid var(--g2-border);
+  border: 1px solid var(--b-surface-border);
   border-radius: var(--g2-radius-lg);
   box-shadow: var(--g2-shadow);
 }
@@ -34,7 +33,7 @@
 
 .g2-focus-ring:focus-visible {
   outline: none;
-  box-shadow: var(--g2-ring), 0 0 0 3px var(--g2-accent-muted);
+  box-shadow: var(--g2-ring), var(--b-ring-focus);
 }
 
 @keyframes g2-pulse-turn {
@@ -43,7 +42,7 @@
     box-shadow: var(--g2-ring);
   }
   50% {
-    box-shadow: var(--g2-ring), 0 0 0 3px var(--g2-accent-muted);
+    box-shadow: var(--g2-ring), 0 0 0 2px var(--g2-accent-muted);
   }
 }
 
@@ -75,7 +74,7 @@
   }
   40% {
     transform: scale(0.97);
-    filter: brightness(1.15);
+    filter: brightness(1.08);
   }
 }
 
@@ -83,7 +82,6 @@
   animation: g2-damage 0.45s ease-out;
 }
 
-/* Equal-height status tiles (match letter + you) */
 .g2-status-grid {
   min-height: 8.5rem;
 }
@@ -98,7 +96,6 @@
   min-height: 100%;
 }
 
-/* Legacy InputBox embed — full width, calmer scale inside v2 play panel */
 .g2-input-legacy-host {
   width: 100%;
   border-radius: var(--g2-radius);
@@ -107,9 +104,8 @@
   padding: 0.5rem;
 }
 
-.g2-input-legacy-host > .flex {
+.g2-input-legacy-host > .relative {
   width: 100%;
-  justify-content: stretch;
 }
 
 .g2-input-legacy-host .form-control {
@@ -135,12 +131,10 @@
   }
 }
 
-/* Hide duplicate error row inside InputBox — shown via InputErrorLabel */
 .g2-input-legacy-host .label {
   display: none;
 }
 
-/* Live typing on the active player's roster card (reuses last-word line — no layout shift) */
 .g2-player-card--typing .g2-player-subline {
   border-left: 2px solid var(--g2-accent);
   padding-left: 0.35rem;

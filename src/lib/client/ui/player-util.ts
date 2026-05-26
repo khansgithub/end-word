@@ -52,9 +52,9 @@ export const stylesMap = {
     avatarBoxShadow: {
         values: ['isCurrentPlayer', 'turn'],
         map: {
-            1: '0 0 12px var(--player-shadow-glow), 0 0 22px var(--player-shadow-glow-subtle)', // isCurrentPlayer
+            1: '0 0 0 2px var(--b-accent-muted)', // isCurrentPlayer
             0: {
-                1: '0 0 10px var(--player-shadow-glow)', // turn
+                1: '0 0 0 1px var(--b-accent-muted)', // turn
                 0: 'none',
             },
         }
@@ -70,7 +70,7 @@ export const stylesMap = {
     nameColor: {
         values: ['isCurrentPlayer'],
         map: {
-            1: 'var(--interactive-focus)', // isCurrentPlayer
+            1: 'var(--b-accent)', // isCurrentPlayer
             0: 'var(--text-primary)',
         },
     },

@@ -28,8 +28,8 @@ import {
 	removePlayer,
 	toGameStateEmit
 } from "@/shared/GameState";
-import { isActivePlayer } from "@/shared/utils";
-import { DEFAULT_HEALTH } from "@/shared/consts";
+import { isActivePlayer, normalizeEnglishWord } from "@/shared/utils";
+import { DEFAULT_HEALTH, ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { GameLanguage, GameState, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
 import { shouldEndGameOnPlayerDeath } from "@/shared/utils";
@@ -212,6 +212,16 @@ export async function submitWord(
 
 	if (isWordAlreadyUsed(state, word)) {
 		return invalidWord(admin, roomId, state, userId, "Word already used");
+	}
+
+	if (language === "en" && normalizeEnglishWord(word).length < ENGLISH_MIN_WORD_LENGTH) {
+		return invalidWord(
+			admin,
+			roomId,
+			state,
+			userId,
+			`Word must be at least ${ENGLISH_MIN_WORD_LENGTH} letters`,
+		);
 	}
 
 	const valid = await validateWord(word, language);

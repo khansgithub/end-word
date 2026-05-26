@@ -7,7 +7,6 @@ export function ThemeToggle() {
     const [theme, setTheme] = useState<"light" | "dark">("dark");
 
     useEffect(() => {
-        // Get initial theme from data attribute or default to dark
         const currentTheme = document.documentElement.getAttribute("data-theme") as "light" | "dark" | null;
         if (currentTheme) {
             setTheme(currentTheme);
@@ -18,19 +17,12 @@ export function ThemeToggle() {
         const newTheme = theme === "dark" ? "light" : "dark";
         setTheme(newTheme);
         document.documentElement.setAttribute("data-theme", newTheme);
-        // Store preference in localStorage
         localStorage.setItem("theme", newTheme);
-    };
-
-    const svgProps = {
-        className: "size-6",
-        stroke: "var(--color-neutral-dark)",
     };
 
     const iconComponent = theme === "dark" ? IconSun : IconMoon;
 
     useEffect(() => {
-        // Load theme preference from localStorage on mount
         const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
         if (savedTheme) {
             setTheme(savedTheme);
@@ -41,18 +33,17 @@ export function ThemeToggle() {
     return (
         <button
             onClick={toggleTheme}
-            className="fixed top-4 right-4 z-50 p-3 rounded-full border transition-all duration-200"
+            className="fixed top-4 right-4 z-50 flex size-11 items-center justify-center rounded-xl border transition-colors duration-150"
             style={{
-                background: "var(--color-neutral-light)",
-                borderColor: "var(--bg-secondary-solid)",
-                color: "var(--color-neutral-dark)",
-                boxShadow: "var(--shadow-button)",
+                background: "var(--b-surface)",
+                borderColor: "var(--b-surface-border)",
+                color: "var(--b-fg)",
+                boxShadow: "var(--b-shadow-card)",
             }}
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         >
-            {iconComponent({ ...svgProps })}
+            {iconComponent({ className: "size-5", stroke: "currentColor" })}
         </button>
     );
 }
-

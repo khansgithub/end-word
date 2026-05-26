@@ -1,5 +1,6 @@
 import { dictionary } from "@/app/server/dictionary/english";
 import { randomKoreanWord, validateKoreanWord } from "@/app/server/dictionary/korean";
+import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { DictionaryEntry, GameLanguage } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
 
@@ -9,6 +10,9 @@ export async function validateWord(
 ): Promise<[true, DictionaryEntry] | false> {
 	if (language === "en") {
 		const normalized = normalizeEnglishWord(word);
+		if (normalized.length < ENGLISH_MIN_WORD_LENGTH) {
+			return false;
+		}
 		const entry = await dictionary.lookup(normalized);
 		entry?.data.reverse();
 		console.log("validateWord", word, language, entry);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { MatchLetter } from "@/shared/types";
 import InputBox from "@/app/components/InputBox";
 import InputErrorLabel from "@/app/components/game-v2/InputErrorLabel";
@@ -38,6 +39,7 @@ export default function InputSection({
 	}, [disabled, isSubmitting, onSubmit]);
 
 	const maxLength = language === "en" ? 20 : 7;
+	const minLength = language === "en" ? ENGLISH_MIN_WORD_LENGTH : 2;
 
 	const shellClass = embedded
 		? "g2 flex flex-col gap-3 border-t pt-4"
@@ -51,7 +53,7 @@ export default function InputSection({
 			<div className="flex items-center justify-between gap-2">
 				<span className="g2-label">Your word</span>
 				<span className="text-xs tabular-nums" style={{ color: "var(--g2-muted)" }}>
-					{language === "en" ? "EN" : "KO"} · max {maxLength}
+					{language === "en" ? "EN" : "KO"} · min {minLength} · max {maxLength}
 				</span>
 			</div>
 
@@ -66,7 +68,7 @@ export default function InputSection({
 			</div>
 			<InputErrorLabel />
 
-			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3">
 				<SubmitButton
 					onClick={handleSubmit}
 					disabled={isLocked}

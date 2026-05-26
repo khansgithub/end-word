@@ -1,7 +1,9 @@
 "use client";
 
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { create } from "zustand";
+import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import { MatchLetter } from "@/shared/types";
 import { InputState } from "@/app/store/userStore";
 import {
@@ -99,8 +101,13 @@ function InputBox({
     language = "ko",
 }: InputBoxProps) {
     const inputRef = useRef<HTMLInputElement>(null);
+    const caretMirrorRef = useRef<HTMLDivElement>(null);
+    const caretMeasureRef = useRef<HTMLSpanElement>(null);
     const prevInputRef = useRef<string>("");
     const prevDisabledRef = useRef(disabled);
+
+    const [isFocused, setIsFocused] = useState(false);
+    const [caretX, setCaretX] = useState(0);
 
     // Zustand selectors - only re-render when specific values change
     const inputValue = useInputStore((state) => state.inputValue);
@@ -135,6 +142,7 @@ function InputBox({
     }, [matchBlock, firstStep]);
 
     const maxLength = language === "en" ? 20 : 7;
+    const minLength = language === "en" ? ENGLISH_MIN_WORD_LENGTH : 2;
 
     useEffect(() => {
         focusInputCallback = () => {
@@ -188,15 +196,61 @@ function InputBox({
         );
     }, [matchLetter]);
 
+    const updateCaretPosition = useCallback(() => {
+        const input = inputRef.current;
+        const mirror = caretMirrorRef.current;
+        const measure = caretMeasureRef.current;
+        if (!input || !mirror || !measure) return;
+
+        const computed = window.getComputedStyle(input);
+        mirror.style.font = computed.font;
+        mirror.style.letterSpacing = computed.letterSpacing;
+        mirror.style.padding = computed.padding;
+        mirror.style.boxSizing = computed.boxSizing;
+
+        const caretIndex = input.selectionStart ?? input.value.length;
+        const textBeforeCaret = input.value.substring(0, caretIndex);
+        measure.textContent = textBeforeCaret || "\u200b";
+
+        const padLeft = Number.parseFloat(computed.paddingLeft) || 0;
+        setCaretX(measure.offsetWidth + padLeft - input.scrollLeft);
+    }, []);
+
+    useEffect(() => {
+        updateCaretPosition();
+    }, [inputValue, updateCaretPosition]);
+
+    useEffect(() => {
+        const input = inputRef.current;
+        if (!input) return;
+
+        const onCaretMove = () => updateCaretPosition();
+        input.addEventListener("select", onCaretMove);
+        input.addEventListener("keyup", onCaretMove);
+        input.addEventListener("click", onCaretMove);
+        window.addEventListener("resize", onCaretMove);
+
+        return () => {
+            input.removeEventListener("select", onCaretMove);
+            input.removeEventListener("keyup", onCaretMove);
+            input.removeEventListener("click", onCaretMove);
+            window.removeEventListener("resize", onCaretMove);
+        };
+    }, [updateCaretPosition]);
+
     // Event handlers
     const handleCompositionStart = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
         console.log("IME composition started");
         useInputStore.getState().setIsComposing(true);
     }, []);
 
-    const handleCompositionUpdate = useCallback((e: React.CompositionEvent) => {
-        // still composing — ignore
-    }, []);
+    const handleCompositionUpdate = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
+        const fragment = e.data ?? "";
+        if (fragment) {
+            useInputStore.getState().setLastKey(fragment.slice(-1));
+        }
+        requestAnimationFrame(updateCaretPosition);
+    }, [updateCaretPosition]);
 
     const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
         console.log("IME composition ended");
@@ -239,7 +293,8 @@ function InputBox({
         store.setLastKey(letter.slice(-1));
 
         validateInput(input, prev, letter, isComposing);
-    }, [isComposing, isError, validateInput, language]);
+        requestAnimationFrame(updateCaretPosition);
+    }, [isComposing, isError, validateInput, language, updateCaretPosition]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (disabled) return;
@@ -275,23 +330,48 @@ function InputBox({
     // Shared base classes for both input elements
     const sharedInputClasses = "col-start-1 row-start-1 md:w-full md:h-20 md:text-5xl rounded-[0.55rem] font-mono outline-none transition-all duration-200 ease-in-out py-[0.7rem] px-[0.75rem]";
 
+    const lastKeyBoxStyle = {
+        borderColor: "var(--border-default)",
+        background: "var(--gradient-input)",
+        color: "var(--text-primary)",
+    } as const;
+
+    // KO only: show hover feedback while entering the first character
+    const showLastKeyHover =
+        language === "ko" &&
+        isFocused &&
+        (inputValue.length === 0 ||
+            (inputValue.length === 1 && isComposing));
+
     return (
-        <div className="flex flex-row items-center justify-center gap-2">
-            {/* {Last Key Display} */}
-            <div
-                contentEditable={false}
-                onChange={() => { }}
-                className="flex justify-center items-center md:w-16 md:h-16 md:rounded-lg border md:text-4xl font-bold"
-                style={{
-                    borderColor: 'var(--border-default)',
-                    background: 'var(--gradient-input)',
-                    color: 'var(--text-primary)',
-                }}
-            >
-                <p>{lastKey}</p>
-            </div>
+        <div className="relative w-full">
             <div className={`form-control md:w-full ${isShaking ? "animate-shake" : ""}`}>
-                <div className="grid grid-cols-1 grid-rows-1 relative md:w-full">
+                <div className="grid grid-cols-1 grid-rows-1 relative md:w-full overflow-visible">
+                    {/* Invisible mirror for caret X measurement (same typography as inputs) */}
+                    <div
+                        ref={caretMirrorRef}
+                        className={`${sharedInputClasses} col-start-1 row-start-1 invisible pointer-events-none whitespace-pre border-0`}
+                        aria-hidden
+                    >
+                        <span ref={caretMeasureRef} />
+                    </div>
+
+                    {showLastKeyHover && (
+                        <motion.div
+                            className="hidden md:flex absolute z-30 pointer-events-none justify-center items-center w-16 h-16 rounded-lg border text-4xl font-bold -translate-x-1/2"
+                            style={{
+                                ...lastKeyBoxStyle,
+                                bottom: "calc(100% + 12px)",
+                            }}
+                            initial={false}
+                            animate={{ left: caretX }}
+                            transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
+                            aria-hidden={!lastKey}
+                        >
+                            <p>{lastKey}</p>
+                        </motion.div>
+                    )}
+
                     {/* Highlight layer - shows the match letter */}
                     <input
                         type="text"
@@ -301,7 +381,7 @@ function InputBox({
                         className={`${sharedInputClasses} inset-0 pointer-events-none select-none border-transparent border`}
                         style={{
                             background: 'var(--gradient-input)',
-                            color: disabled ? 'var(--input-text-disabled)' : 'var(--color-primary)',
+                            color: disabled ? 'var(--input-text-disabled)' : 'var(--b-accent)',
                             boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                             opacity: disabled ? 0.4 : 1,
                         }}
@@ -313,7 +393,7 @@ function InputBox({
                         type="text"
                         disabled={disabled}
                         maxLength={maxLength}
-                        minLength={2}
+                        minLength={minLength}
                         value={inputValue}
                         onChange={handleChange}
                         onCompositionStart={handleCompositionStart}
@@ -329,24 +409,28 @@ function InputBox({
                                     ? 'var(--input-border-error)'
                                     : 'var(--input-border-default)',
                             color: disabled ? 'var(--input-text-disabled)' : 'var(--text-primary)',
-                            caretColor: disabled ? 'transparent' : 'var(--interactive-focus)',
+                            caretColor: disabled ? 'transparent' : 'var(--b-accent)',
                             boxShadow: 'inset 0 0 0 1px var(--input-box-shadow)',
                         }}
                         onFocus={(e) => {
                             if (disabled) return;
+                            setIsFocused(true);
+                            requestAnimationFrame(updateCaretPosition);
                             if (!isError) {
-                                e.currentTarget.style.borderColor = 'var(--border-focus)';
-                                e.currentTarget.style.boxShadow = '0 0 0 1px var(--input-focus-border), 0 0 18px var(--interactive-focus-light)';
+                                e.currentTarget.style.borderColor = "var(--b-accent)";
+                                e.currentTarget.style.boxShadow = "var(--b-ring-focus)";
                             } else {
-                                e.currentTarget.style.boxShadow = '0 0 0 1px var(--input-error-focus-border), 0 0 18px var(--input-error-focus-glow)';
+                                e.currentTarget.style.borderColor = "var(--input-border-error)";
+                                e.currentTarget.style.boxShadow = "var(--b-ring-focus)";
                             }
                         }}
                         onBlur={(e) => {
                             if (disabled) return;
+                            setIsFocused(false);
                             e.currentTarget.style.borderColor = isError
-                                ? 'var(--input-border-error)'
-                                : 'var(--input-border-default)';
-                            e.currentTarget.style.boxShadow = 'inset 0 0 0 1px var(--input-box-shadow)';
+                                ? "var(--input-border-error)"
+                                : "var(--input-border-default)";
+                            e.currentTarget.style.boxShadow = "none";
                         }}
                     />
                     {/* Disabled overlay with lock icon */}

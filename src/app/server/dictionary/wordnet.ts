@@ -1,8 +1,13 @@
 import words from "an-array-of-english-words";
+import { lemmaVariants } from "@/app/server/dictionary/english-lemma";
+import supplementData from "@/app/server/dictionary/english-supplement.json";
+import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { EntryDataEng, Dictionary, DictionaryEntry } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
 import type WordNet from "node-wordnet";
 import type { WordNetResult } from "node-wordnet";
+
+const supplement = supplementData as Record<string, EntryDataEng[]>;
 
 function getWordNetDataDir(): string {
 	// Turbopack turns require.resolve("…/package.json") into a virtual path; use the
@@ -62,26 +67,48 @@ export class WordNetDictionary implements Dictionary {
 		});
 	}
 
+	private lookupSupplement(word: string): DictionaryEntry | null {
+		const data = supplement[word];
+		if (!data?.length) return null;
+		return { key: word, data };
+	}
+
+	private async lookupLemmaSynsets(word: string): Promise<WordNetResult[]> {
+		for (const lemma of lemmaVariants(word)) {
+			if (lemma === word) continue;
+			const results = await this.lookupSynsets(lemma);
+			if (results.length) return results;
+		}
+		return [];
+	}
+
 	async lookup(word: string): Promise<DictionaryEntry | null> {
 		const normalized = normalizeEnglishWord(word);
 		if (!normalized) {
 			return null;
 		}
 
-		const results = await this.lookupSynsets(normalized);
+		let results = await this.lookupSynsets(normalized);
 		if (!results.length) {
-			return null;
+			results = await this.lookupLemmaSynsets(normalized);
 		}
 
-		return {
-			key: normalized,
-			data: results.map(mapSynsetToEntryData),
-		};
+		if (results.length) {
+			return {
+				key: normalized,
+				data: results.map(mapSynsetToEntryData),
+			};
+		}
+
+		return this.lookupSupplement(normalized);
 	}
 
 	async isValidWord(word: string): Promise<boolean> {
-		const results = await this.lookupSynsets(word);
-		return results.length > 0;
+		const normalized = normalizeEnglishWord(word);
+		if (supplement[normalized]) return true;
+		if ((await this.lookupSynsets(normalized)).length) return true;
+		if ((await this.lookupLemmaSynsets(normalized)).length) return true;
+		return false;
 	}
 
 	async lastMatchLetter(word: string): Promise<string> {
@@ -91,7 +118,8 @@ export class WordNetDictionary implements Dictionary {
 	}
 
 	async randomWord(): Promise<string> {
-		const index = Math.floor(Math.random() * words.length);
-		return words[index]!.toLowerCase();
+		const eligible = words.filter((w) => w.length >= ENGLISH_MIN_WORD_LENGTH);
+		const index = Math.floor(Math.random() * eligible.length);
+		return eligible[index]!.toLowerCase();
 	}
 }

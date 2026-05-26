@@ -278,13 +278,19 @@ export default function LobbyPage() {
 
 	return (
 
-		<div className="w-full max-w-lg p-4 flex flex-col gap-4">
+		<div
+			className="app-ui w-full max-w-lg p-4 flex flex-col gap-4"
+			style={{ fontFamily: "var(--font-b-sans)" }}
+		>
 
 			{isLobbyBusy && <BusyOverlay message={busyMessage} />}
 
 
 
-			<h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+			<h1
+				className="text-2xl font-normal tracking-tight"
+				style={{ fontFamily: "var(--font-b-display)", color: "var(--b-fg)" }}
+			>
 
 				Lobby
 
@@ -294,7 +300,7 @@ export default function LobbyPage() {
 
 			{error && (
 
-				<p className="text-sm" style={{ color: "var(--text-error)" }}>
+				<p className="text-sm" style={{ color: "var(--b-danger)" }}>
 
 					{error}
 
@@ -316,7 +322,7 @@ export default function LobbyPage() {
 
 				>
 
-					<h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+					<h2 className="font-semibold" style={{ color: "var(--b-fg)" }}>
 
 						Create room
 
@@ -326,15 +332,13 @@ export default function LobbyPage() {
 
 						name="roomName"
 
-						className="input w-full"
+						className="app-input input input-bordered h-11 w-full rounded-xl border"
 
 						value={roomName}
 
 						onChange={(e) => setRoomName(e.target.value)}
 
 						placeholder="Enter room name"
-
-						style={{ padding: "0.5rem", borderRadius: "0.4rem" }}
 
 						required
 
@@ -350,7 +354,7 @@ export default function LobbyPage() {
 
 							type="button"
 
-							className={`btn-fsm flex-1 ${language === "ko" ? "" : "opacity-60"}`}
+							className={`btn-fsm btn-fsm--ghost flex-1 ${language === "ko" ? "btn-fsm--active" : ""}`}
 
 							onClick={() => setLanguage("ko")}
 
@@ -364,7 +368,7 @@ export default function LobbyPage() {
 
 							type="button"
 
-							className={`btn-fsm flex-1 ${language === "en" ? "" : "opacity-60"}`}
+							className={`btn-fsm btn-fsm--ghost flex-1 ${language === "en" ? "btn-fsm--active" : ""}`}
 
 							onClick={() => setLanguage("en")}
 
@@ -376,7 +380,7 @@ export default function LobbyPage() {
 
 					</div>
 
-					<label className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+					<label className="flex items-center gap-2 text-sm" style={{ color: "var(--b-muted)" }}>
 
 						<input
 
@@ -404,7 +408,7 @@ export default function LobbyPage() {
 
 				<section className="panel p-4 flex flex-col gap-3">
 
-					<h2 className="font-semibold" style={{ color: "var(--text-primary)" }}>
+					<h2 className="font-semibold" style={{ color: "var(--b-fg)" }}>
 
 						Join with code
 
@@ -412,7 +416,7 @@ export default function LobbyPage() {
 
 					<input
 
-						className="input w-full uppercase"
+						className="app-input input input-bordered h-11 w-full rounded-xl border uppercase"
 
 						value={inviteCode}
 
@@ -421,8 +425,6 @@ export default function LobbyPage() {
 						placeholder="Invite code"
 
 						maxLength={6}
-
-						style={{ padding: "0.5rem", borderRadius: "0.4rem" }}
 
 					/>
 
@@ -438,7 +440,7 @@ export default function LobbyPage() {
 
 				<section className="panel p-4">
 
-					<h2 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+					<h2 className="font-semibold mb-3" style={{ color: "var(--b-fg)" }}>
 
 						Public rooms
 
@@ -446,11 +448,11 @@ export default function LobbyPage() {
 
 					{loading ? (
 
-						<p style={{ color: "var(--text-secondary)" }}>Loading…</p>
+						<p style={{ color: "var(--b-muted)" }}>Loading…</p>
 
 					) : rooms.length === 0 ? (
 
-						<p style={{ color: "var(--text-secondary)" }}>No public rooms open</p>
+						<p style={{ color: "var(--b-muted)" }}>No public rooms open</p>
 
 					) : (
 
@@ -464,19 +466,19 @@ export default function LobbyPage() {
 
 									className="flex justify-between items-center p-2 rounded border"
 
-									style={{ borderColor: "var(--border-default)" }}
+									style={{ borderColor: "var(--b-line)" }}
 
 								>
 
 									<div>
 
-										<div className="font-medium" style={{ color: "var(--text-primary)" }}>
+										<div className="font-medium" style={{ color: "var(--b-fg)" }}>
 
 											{r.roomname ?? "Unnamed"}
 
 										</div>
 
-										<div className="text-xs" style={{ color: "var(--text-secondary)" }}>
+										<div className="text-xs" style={{ color: "var(--b-muted)" }}>
 
 											{r.language.toUpperCase()} · {r.connected_players}/{MAX_PLAYERS} ·{" "}
 

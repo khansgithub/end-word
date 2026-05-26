@@ -29,7 +29,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="flex w-full min-h-[40vh] items-center justify-center">
-        <div className="w-10 h-10 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+        <div className="app-spinner size-10" aria-hidden />
       </div>
     );
   }
