@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: Params) {
 		const word = String(body.word ?? "");
 		const admin = getAdmin();
 		const result: SubmitResult = await submitWord(admin, roomId, user.id, word);
-		console.log("[POST /api/rooms/:id/submit] result:", result);
+		console.log("[POST /api/rooms/:id/submit] result:", JSON.stringify(result, null, 2));
 		return NextResponse.json(result, { status: 200 });
 	} catch (e) {
 		console.error("[POST /api/rooms/:id/submit]", e);

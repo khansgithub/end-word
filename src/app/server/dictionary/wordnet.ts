@@ -1,9 +1,9 @@
-import words from "an-array-of-english-words";
 import { lemmaVariants } from "@/app/server/dictionary/english-lemma";
 import supplementData from "@/app/server/dictionary/english-supplement.json";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
-import type { EntryDataEng, Dictionary, DictionaryEntry } from "@/shared/types";
+import type { Dictionary, DictionaryEntry, EntryDataEng } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
+import words from "an-array-of-english-words";
 import type WordNet from "node-wordnet";
 import type { WordNetResult } from "node-wordnet";
 
@@ -123,3 +123,10 @@ export class WordNetDictionary implements Dictionary {
 		return eligible[index]!.toLowerCase();
 	}
 }
+async function test(word: string) {
+	const dictionary = new WordNetDictionary();
+	const entry = await dictionary.lookup(word);
+	console.log(JSON.stringify(entry, null, 2));
+}
+
+// test("nimble");

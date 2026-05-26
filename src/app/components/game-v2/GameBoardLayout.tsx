@@ -12,8 +12,8 @@ export interface GameBoardLayoutProps {
 }
 
 /**
- * Vertical flow: compact top bar → play focus (fills) → word history (capped) → players strip (optional).
- * Avoids a tall right rail that overflows while the play column stays empty.
+ * Vertical flow: top bar → play focus → definitions → players (md+).
+ * Below md, players strip sits above definitions so roster stays near the input.
  */
 export default function GameBoardLayout({
 	topBar,
@@ -31,12 +31,13 @@ export default function GameBoardLayout({
 
 				<div className="flex flex-col gap-3 min-h-0">
 					<div className="shrink-0">{playFocus}</div>
-					<div className="flex min-h-0 flex-col shrink-0">{wordHistory}</div>
+					{playersBar != null && (
+						<div className="order-2 shrink-0 pb-safe md:order-3">{playersBar}</div>
+					)}
+					<div className="order-3 flex min-h-0 shrink-0 flex-col md:order-2">
+						{wordHistory}
+					</div>
 				</div>
-
-				{playersBar != null && (
-					<div className="shrink-0 pb-safe">{playersBar}</div>
-				)}
 			</div>
 		</div>
 	);

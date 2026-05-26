@@ -182,11 +182,24 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 			return <BusyOverlay message={gameStrings.joiningRoomPage} />;
 		case FAILED:
 			return (
-				<div className="panel p-6 max-w-md app-ui" style={{ fontFamily: "var(--font-b-sans)" }}>
-					<p style={{ color: "var(--b-danger)" }}>Could not join this room.</p>
-					<button type="button" className="btn-fsm mt-4" onClick={() => router.push("/lobby")}>
-						Back to lobby
-					</button>
+				<div
+					className="app-ui flex min-h-dvh w-full flex-col items-center justify-center p-4"
+					style={{ backgroundColor: "var(--b-bg)", fontFamily: "var(--font-b-sans)" }}
+				>
+					<div className="panel w-full max-w-md">
+						<div className="flex flex-col items-center gap-4 p-4 text-center sm:p-6">
+							<p className="text-sm sm:text-base" style={{ color: "var(--b-danger)" }}>
+								Could not join this room.
+							</p>
+							<button
+								type="button"
+								className="btn-fsm w-full sm:w-auto"
+								onClick={() => router.push("/lobby")}
+							>
+								Back to lobby
+							</button>
+						</div>
+					</div>
 				</div>
 			);
 		default:

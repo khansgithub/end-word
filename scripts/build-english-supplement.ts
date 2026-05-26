@@ -1,6 +1,6 @@
 /**
  * Build english-supplement.json from wordnet-audit missing words.
- * Uses only local data: curated manual entries, wink-lexicon, and WordNet lemmas.
+ * Uses only local data: curated manual entries, and WordNet lemmas.
  * Skips words already covered by runtime lemma lookup in WordNetDictionary.
  *
  * Prerequisite: npx tsx scripts/audit-wordnet-common-words.ts
@@ -8,7 +8,6 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import winkLexicon from "wink-lexicon";
 import { ENGLISH_SUPPLEMENT_PERSON_NAMES } from "../src/app/server/dictionary/english-supplement-excludes";
 import { ENGLISH_SUPPLEMENT_MANUAL } from "../src/app/server/dictionary/english-supplement-manual";
 import { glossToDefinition, lemmaVariants } from "../src/app/server/dictionary/english-lemma";
@@ -74,12 +73,8 @@ async function hasLemmaInWordNet(word: string, wn: WordNet): Promise<boolean> {
 async function resolveDefinition(
 	word: string,
 	wn: WordNet,
-	lex: WinkLexiconData,
 ): Promise<string> {
 	if (ENGLISH_SUPPLEMENT_MANUAL[word]) return ENGLISH_SUPPLEMENT_MANUAL[word];
-
-	const wink = winkDefinition(word, lex);
-	if (wink) return wink;
 
 	for (const lemma of lemmaVariants(word)) {
 		if (lemma === word) continue;
@@ -97,7 +92,6 @@ async function main() {
 	};
 	const WordNetCtor = require("node-wordnet") as typeof WordNet;
 	const wn = new WordNetCtor({ dataDir: getWordNetDataDir() });
-	const lex = winkLexicon as WinkLexiconData;
 	const supplement: Supplement = {};
 	const words = audit.missingWords.map(normalizeEnglishWord);
 
@@ -117,7 +111,7 @@ async function main() {
 			continue;
 		}
 
-		const definition = await resolveDefinition(word, wn, lex);
+		const definition = await resolveDefinition(word, wn);
 		supplement[word] = [{ word, definition }];
 	}
 

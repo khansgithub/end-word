@@ -14,7 +14,18 @@ export async function validateWord(
 			return false;
 		}
 		const entry = await dictionary.lookup(normalized);
-		entry?.data.reverse();
+		if (entry) {
+			let last = entry.data.at(-1);
+			if (!last) {
+				throw new Error("Last definition not found");
+			}
+			entry.data = entry.data.filter((e: any) => e.word === word);
+			if (entry.data.length == 0) {
+				entry.data.push(last)
+			} else {
+				entry.data.reverse();
+			}
+		}
 		console.log("validateWord", word, language, entry);
 		return entry ? [true, entry] : false;
 	}

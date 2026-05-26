@@ -95,9 +95,7 @@ export async function submitWordApi(
 	}
 	console.log("[submitWordApi] data", JSON.stringify(data, null, 2));
 	const parsed = parseSubmitWordResponse(res, data);
-	if (parsed.success && word.match(/^[a-zA-Z]+$/)) {
-		parsed.definition.data = parsed.definition.data.filter((entry: any) => entry.word === word);
-	}
+
 	return parsed;
 }
 

@@ -29,8 +29,6 @@
 		"@supabase/supabase-js": "^2.106.1",
 		"an-array-of-english-words": "^2.0.0",
 		"dotenv": "^17.2.3",
-		"en-dictionary": "^2.0.3",
-		"en-wordnet": "^2.0.11",
 		"express": "^5.2.1",
 		"framer-motion": "^12.23.26",
 		"hangulx": "^0.6.5",
@@ -69,6 +67,9 @@
 		"tailwindcss": "^4",
 		"typescript": "^5",
 		"vitest": "^4.0.16"
+	},
+	"overrides": {
+		"es6-shim": "file:./stubs/es6-shim"
 	},
 	"msw": {
 		"workerDirectory": [
