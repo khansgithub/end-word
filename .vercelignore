@@ -1,0 +1,8 @@
+/dictionary/data/
+dictionary/.venv/
+node_modules/
+.next/
+test-results/
+coverage/
+.git/
+*.log

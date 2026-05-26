@@ -11,21 +11,36 @@ import { isDictionaryEntry, isDictionaryResponse } from "@/shared/guards";
 import { DictionaryResponse } from "@/shared/types";
 import { log } from "@/app/server/logging";
 
-export async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
-    const dictionaryUrl = envGet("DICTIONARY_URL");
-    if (!dictionaryUrl) {
-        throw new DictionaryUrlNotSetError();
+/** Base URL ending at `/api/dictionary` on Vercel, or `http://localhost:8000` locally. */
+function getDictionaryBaseUrl(): string {
+    const configured = envGet("DICTIONARY_URL")?.replace(/\/$/, "");
+    if (configured) {
+        if (configured.endsWith("/api/dictionary")) return configured;
+        if (configured.endsWith("/api")) return `${configured}/dictionary`;
+        return configured;
     }
-    const res = await fetch(`${dictionaryUrl}/lookup/${word}`);
+    const vercelHost = envGet("VERCEL_URL");
+    if (vercelHost) {
+        return `https://${vercelHost}/api/dictionary`;
+    }
+    throw new DictionaryUrlNotSetError();
+}
+
+export async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
+    const dictionaryUrl = getDictionaryBaseUrl();
+    const url = `${dictionaryUrl}/lookup/${encodeURIComponent(word)}`;
+    const res = await fetch(url);
     if (res.ok) {
         const data = await res.json();
         if (!isDictionaryResponse(data)) {
             throw new InvalidDictionaryResponseError();
         }
         return data;
-    } else {
-        throw new DictionaryLookupFailedError(word);
     }
+    throw new DictionaryLookupFailedError(word, {
+        status: res.status,
+        url,
+    });
 }
 
 export async function lookUpWordMock(word: string): Promise<DictionaryResponse> {
@@ -54,20 +69,17 @@ export async function getRandomWordFromDictionaryMock(): Promise<string> {
 }
 
 export async function getRandomWordFromDictionaryApi(): Promise<string> {
-    const dictionaryUrl = envGet("DICTIONARY_URL");
-    if (!dictionaryUrl) {
-        throw new DictionaryUrlNotSetError();
-    }
-    const res = await fetch(`${dictionaryUrl}/random`);
+    const dictionaryUrl = getDictionaryBaseUrl();
+    const url = `${dictionaryUrl}/random`;
+    const res = await fetch(url);
     if (res.ok) {
         const data = await res.json();
         if (!isDictionaryEntry(data)) {
             throw new InvalidDictionaryResponseError();
         }
         return data.key;
-    } else {
-        throw new DictionaryRandomWordFailedError();
     }
+    throw new DictionaryRandomWordFailedError();
 }
 
 const exportMap = {

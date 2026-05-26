@@ -6,6 +6,16 @@ const projectRoot = path.resolve(__dirname);
 const nextConfig: NextConfig = {
   /* config options here */
   // distDir: ".next",
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/api/dictionary/:path*",
+          destination: "/api",
+        },
+      ],
+    };
+  },
   serverExternalPackages: ["node-wordnet", "wndb-with-exceptions"],
   outputFileTracingIncludes: {
     "/*": ["./node_modules/wndb-with-exceptions/dict/**/*"],

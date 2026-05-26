@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/app/server/supabase/admin";
+import { createAdminClient } from "@/app/server/supabase/index";
 import { isMockSupabase } from "@/app/server/supabase/config";
 import { getRealtimeHub } from "@/app/server/supabase/mock/realtimeHub";
 import { fetchRoom } from "@/app/server/game/roomDb";

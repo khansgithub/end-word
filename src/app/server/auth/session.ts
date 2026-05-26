@@ -1,8 +1,10 @@
-import { createClient } from "@/app/server/supabase/server";
-import { createAdminClient } from "@/app/server/supabase/admin";
+import {
+  createAdminClient,
+  createServerClient,
+} from "@/app/server/supabase/index";
 
 export async function getSessionUser() {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const {
     data: { user },
     error,
@@ -12,7 +14,7 @@ export async function getSessionUser() {
 }
 
 export async function ensureAnonymousUser() {
-  const supabase = await createClient();
+  const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
