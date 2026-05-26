@@ -46,7 +46,7 @@ export default function RootLayout({
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             </head>
             <body className={
-                `${appSans.variable} ${appMono.variable} ${designBDisplay.variable} ${designBSans.variable} antialiased w-dvw min-h-screen p-0 m-0`
+                `${appSans.variable} ${appMono.variable} ${designBDisplay.variable} ${designBSans.variable} antialiased w-full min-h-screen p-0 m-0`
             } style={{ backgroundColor: "var(--b-bg)", color: "var(--b-fg)" }}>
                 <ThemeToggle />
                 <main className="w-full min-h-dvh flex flex-col items-center">
