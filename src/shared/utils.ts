@@ -1,5 +1,4 @@
 import { buildSyllableSteps } from "@/app/hangul-decomposer";
-import { envGet } from "@/server/env";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { InvalidSyllableError } from "@/shared/errors";
 import { ClientPlayers, GameState, MatchLetter, Player, PlayerWithId, PlayerWithoutId, PlayersArray, RunExclusive, ServerPlayers } from "@/shared/types";
@@ -91,6 +90,11 @@ export function turnToPlayerIndex(turn: number, connectedPlayers: number): numbe
     return turn % connectedPlayers;
 }
 
+/** Active in the match (connected, not departed). */
+export function isActivePlayer(player: Player | null): player is Player {
+    return player != null && !player.left;
+}
+
 /**
  * Get the player whose turn it is.
  */
@@ -103,7 +107,7 @@ export function getCurrentTurnPlayer(state: GameState) {
 export function getAlivePlayerCount(state: GameState): number {
     return state.players.reduce(
         (count, player) =>
-            (player && player.health > 0 ? count + 1 : count),
+            (isActivePlayer(player) && player.health > 0 ? count + 1 : count),
         0);
 }
 
@@ -116,7 +120,7 @@ export function shouldEndGameOnPlayerDeath(
 }
 
 export function getWinnerPlayer(players: PlayersArray): Player | null {
-    return players.find((p) => p != null && p.health > 0) ?? null;
+    return players.find((p) => isActivePlayer(p) && p.health > 0) ?? null;
 }
 
 /**
@@ -198,4 +202,9 @@ export function arrayToMapped<T extends readonly string[]>(arr: T) {
     return Object.fromEntries(
         arr.map((name) => [name, name])
     ) as { [K in T[number]]: K };
+}
+
+
+export function normalizeEnglishWord(word: string): string {
+	return word.trim().toLowerCase();
 }

@@ -1,7 +1,7 @@
-import { invalidWord } from "@/server/socketHandlers";
+import { invalidWord } from "@/legacy/socket/socketHandlers";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
-import * as ServerGameState from "@/server/state";
+import * as ServerGameState from "@/legacy/socket/state";
 import { buildInitialGameState } from "@/shared/GameState";
 import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayers, ServerPlayerSocket } from "@/shared/types";
 import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";

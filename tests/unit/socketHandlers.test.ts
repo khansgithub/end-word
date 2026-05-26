@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import {
     broadcastGameState,
     fml,
-} from "@/server/socketHandlers";
+} from "@/legacy/socket/socketHandlers";
 import { buildInitialGameState } from "@/shared/GameState";
 import { socketEvents } from "@/shared/socketEvents";
 import { GameState, ServerPlayerSocket } from "@/shared/types";
 import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";
-import * as ServerGameState from "@/server/state";
-import * as metrics from "@/server/metrics";
+import * as ServerGameState from "@/legacy/socket/state";
+import * as metrics from "@/legacy/socket/metrics";
 
 // =============================================================================
 // MOCK FACTORIES

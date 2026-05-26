@@ -150,6 +150,7 @@ describe("progressNextTurn", () => {
         expect(result.matchLetter.block).toBe("가");
         expect(result.players[0]?.lastWord).toBe("apple");
         expect(result.turn).toBe(1);
+        expect(result.usedWords).toEqual(["apple"]);
     });
 
     it("should chain all three operations correctly", () => {

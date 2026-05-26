@@ -1,12 +1,14 @@
 "use client";
 
 import { useSupabase } from "@/app/components/SupabaseProvider";
-import { dissolveRoomApi } from "@/app/lib/roomApi";
-import { isCompletedGameRow, rowToGameState } from "@/lib/game/roomDb";
-import type { RoomRow } from "@/lib/game/roomTypes";
+import { dissolveRoomApi } from "@/lib/client/api/room";
+import { isCompletedGameRow, rowToGameState } from "@/shared/roomRow";
+import type { RoomRow } from "@/shared/roomTypes";
 import { toGameStateEmit } from "@/shared/GameState";
 import type { GameStateEmit } from "@/shared/types";
-import { useEffect, useRef } from "react";
+import { TYPING_DRAFT_EVENT, type TypingDraftPayload } from "@/shared/typingDraft";
+import { useCallback, useEffect, useRef } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type RoomPresenceMeta = {
   user_id: string;
@@ -30,12 +32,16 @@ export function useRoomChannel(
     isHost: boolean;
     onUpdate: (emit: GameStateEmit) => void;
     onRoomClosed?: () => void;
+    onTypingDraft?: (payload: TypingDraftPayload) => void;
   }
 ) {
   const supabase = useSupabase();
-  const { userId, isHost, onUpdate, onRoomClosed } = options;
+  const { userId, isHost, onUpdate, onRoomClosed, onTypingDraft } = options;
   const onUpdateRef = useRef(onUpdate);
   const onRoomClosedRef = useRef(onRoomClosed);
+  const onTypingDraftRef = useRef(onTypingDraft);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const subscribedRef = useRef(false);
   const dissolvedRef = useRef(false);
   const hostWasOnlineRef = useRef(false);
 
@@ -48,16 +54,26 @@ export function useRoomChannel(
   }, [onRoomClosed]);
 
   useEffect(() => {
+    onTypingDraftRef.current = onTypingDraft;
+  }, [onTypingDraft]);
+
+  useEffect(() => {
     dissolvedRef.current = false;
     hostWasOnlineRef.current = false;
+    subscribedRef.current = false;
 
     const channel = supabase.channel(`room:${roomId}`, {
       config: { presence: { key: userId } },
     });
 
+    channelRef.current = channel;
+
     channel
       .on("broadcast", { event: "gameStateUpdate" }, ({ payload }) => {
         onUpdateRef.current(payload);
+      })
+      .on("broadcast", { event: TYPING_DRAFT_EVENT }, ({ payload }) => {
+        onTypingDraftRef.current?.(payload as TypingDraftPayload);
       })
       .on(
         "postgres_changes",
@@ -104,13 +120,28 @@ export function useRoomChannel(
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
+          subscribedRef.current = true;
           await channel.track({ user_id: userId, is_host: isHost });
         }
       });
 
     return () => {
+      subscribedRef.current = false;
+      channelRef.current = null;
       void channel.untrack();
       supabase.removeChannel(channel);
     };
   }, [roomId, supabase, userId, isHost]);
+
+  const sendTypingDraft = useCallback((text: string, seat: number) => {
+    const channel = channelRef.current;
+    if (!channel || !subscribedRef.current) return;
+    void channel.send({
+      type: "broadcast",
+      event: TYPING_DRAFT_EVENT,
+      payload: { userId, seat, text } satisfies TypingDraftPayload,
+    });
+  }, [userId]);
+
+  return { sendTypingDraft };
 }

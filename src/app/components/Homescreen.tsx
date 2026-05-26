@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { returnToFromSearchParams } from "@/app/lib/returnTo";
+import { returnToFromSearchParams } from "@/lib/client/ui/return-to";
 import { useUserStore } from "@/app/store/userStore";
 
 export function Homescreen() {

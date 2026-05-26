@@ -2,13 +2,12 @@
 
 // app/api/foo/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { lookUpWord } from "@/server/api";
+import { lookUpWord } from "@/app/server/dictionary/korean-api";
 
 type WordParam = { word: string };
 type Params = { params: Promise<WordParam> };
 
 export async function GET(req: NextRequest, { params }: Params) {
-  console.log((await params).word);
   const word = (await params).word;
   const res = await lookUpWord(word);
   return NextResponse.json(res);

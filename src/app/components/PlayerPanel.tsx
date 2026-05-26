@@ -1,7 +1,7 @@
 import { GameState } from "@/app/foo/foo2-1";
 import { Player as PlayerType } from "@/shared/types";
 import { PlayerHealth } from "@/app/components/PlayerHealth";
-import { gameStrings } from "@/app/lib/gameStrings";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 type PanelTypes = "player" | "empty";
 

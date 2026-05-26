@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getSessionUser, getAdmin } from "@/lib/auth/session";
-import { createRoom, listPublicRooms } from "@/lib/game/roomService";
-import type { GameLanguage } from "@/lib/dictionary";
+import { getSessionUser, getAdmin } from "@/app/server/auth/session";
+import { createRoom, listPublicRooms } from "@/app/server/game/roomService";
+import type { GameLanguage } from "@/shared/types";
 
 export async function GET() {
 	try {

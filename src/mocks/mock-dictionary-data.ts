@@ -6,7 +6,7 @@ import path from "path";
 import { MockDataNotLoadedError, MockDataParseError } from "@/shared/errors";
 import { DictionaryResponse } from "@/shared/types";
 import fs from "fs";
-import {log} from "@/server/logging";
+import {log} from "@/app/server/logging";
 
 export const o: DictionaryResponse = { key: "", data: [{ word: "", definition: "" }] };
 export const x: DictionaryResponse = {};

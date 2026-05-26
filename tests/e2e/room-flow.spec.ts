@@ -1,7 +1,7 @@
 import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { decomposeSyllable } from "@/app/hangul-decomposer";
-import { envGet } from "@/server/env";
+import { envGet } from "@/app/server/env";
 import { E2ETestAssertionError, TestEnvError } from "@/shared/errors";
 import { MAX_PLAYERS } from "@/shared/consts";
 import { roomFlowTestNames } from "@tests/e2e/test-names";

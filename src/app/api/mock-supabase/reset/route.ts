@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { isMockSupabase } from "@/lib/supabase/config";
-import { resetMockRoomStore } from "@/lib/supabase/mock/store";
+import { isMockSupabase } from "@/app/server/supabase/config";
+import { resetMockRoomStore } from "@/app/server/supabase/mock/store";
 
 export const dynamic = "force-dynamic";
 

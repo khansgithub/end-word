@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAdmin, getSessionUser } from "@/lib/auth/session";
-import { submitWord } from "@/lib/game/roomService";
+import { getAdmin, getSessionUser } from "@/app/server/auth/session";
+import { submitWord } from "@/app/server/game/roomService";
+import type { SubmitResult } from "@/shared/types";
 
 type Params = { params: Promise<{ roomId: string }> };
 
@@ -18,7 +19,7 @@ export async function POST(request: Request, { params }: Params) {
 		const body = await request.json();
 		const word = String(body.word ?? "");
 		const admin = getAdmin();
-		const result = await submitWord(admin, roomId, user.id, word);
+		const result: SubmitResult = await submitWord(admin, roomId, user.id, word);
 		console.log("[POST /api/rooms/:id/submit] result:", result);
 		return NextResponse.json(result, { status: 200 });
 	} catch (e) {

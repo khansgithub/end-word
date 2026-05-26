@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { isMockSupabase } from "@/lib/supabase/config";
-import { getRealtimeHub } from "@/lib/supabase/mock/realtimeHub";
-import type { RoomPresenceMeta } from "@/lib/supabase/mock/realtimeHub";
+import { isMockSupabase } from "@/app/server/supabase/config";
+import { getRealtimeHub } from "@/app/server/supabase/mock/realtimeHub";
+import type { RoomPresenceMeta } from "@/app/server/supabase/mock/realtimeHub";
 
 export const dynamic = "force-dynamic";
 

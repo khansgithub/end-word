@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSessionUser, getAdmin } from "@/lib/auth/session";
-import { joinRoom, joinRoomByInviteCode } from "@/lib/game/roomService";
+import { getSessionUser, getAdmin } from "@/app/server/auth/session";
+import { joinRoom, joinRoomByInviteCode } from "@/app/server/game/roomService";
 
 export async function POST(request: Request) {
 	const user = await getSessionUser();

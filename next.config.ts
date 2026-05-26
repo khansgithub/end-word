@@ -6,6 +6,10 @@ const projectRoot = path.resolve(__dirname);
 const nextConfig: NextConfig = {
   /* config options here */
   // distDir: ".next",
+  serverExternalPackages: ["node-wordnet", "wndb-with-exceptions"],
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/wndb-with-exceptions/dict/**/*"],
+  },
   turbopack: {
     resolveAlias: {
       "@": path.join(projectRoot, "src"),

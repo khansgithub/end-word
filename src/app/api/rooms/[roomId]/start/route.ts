@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSessionUser, getAdmin } from "@/lib/auth/session";
-import { startGame } from "@/lib/game/roomService";
+import { getSessionUser, getAdmin } from "@/app/server/auth/session";
+import { startGame } from "@/app/server/game/roomService";
 
 type Params = { params: Promise<{ roomId: string }> };
 

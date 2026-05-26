@@ -1,7 +1,7 @@
 import { JSX } from "react";
 import { GameStatus, PlayersArray } from "@/shared/types";
 import { getWinnerPlayer } from "@/shared/utils";
-import { gameStrings } from "@/app/lib/gameStrings";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 interface GameOverlayProps {
     status: GameStatus;
@@ -11,6 +11,7 @@ interface GameOverlayProps {
     onStartGame?: () => void;
     onBackToLobby?: () => void;
     isStartingGame?: boolean;
+    isLeavingLobby?: boolean;
 }
 
 export default function GameOverlay({
@@ -21,12 +22,24 @@ export default function GameOverlay({
     onStartGame,
     onBackToLobby,
     isStartingGame = false,
+    isLeavingLobby = false,
 }: GameOverlayProps) {
     function winnerName() {
         return getWinnerPlayer(players)?.name ?? gameStrings.noWinner;
     }
 
     function waitingJsx() {
+        if (isStartingGame) {
+            return (
+                <>
+                    <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
+                    <p className="text-lg" style={{ color: "var(--text-primary)" }}>
+                        {gameStrings.startingGameOverlay}
+                    </p>
+                </>
+            );
+        }
+
         return (
             <>
                 <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4" />
@@ -41,7 +54,7 @@ export default function GameOverlay({
                         disabled={isStartingGame}
                         aria-busy={isStartingGame}
                     >
-                        {isStartingGame ? gameStrings.startingGame : gameStrings.startGame}
+                        {gameStrings.startGame}
                     </button>
                 )}
             </>
@@ -59,8 +72,17 @@ export default function GameOverlay({
                     </div>
                 </div>
                 {onBackToLobby && (
-                    <button type="button" className="btn-fsm mt-4" onClick={onBackToLobby}>
-                        Back to lobby
+                    <button
+                        type="button"
+                        className="btn-fsm mt-4 inline-flex items-center justify-center gap-2 min-w-[10rem]"
+                        onClick={onBackToLobby}
+                        disabled={isLeavingLobby}
+                        aria-busy={isLeavingLobby}
+                    >
+                        {isLeavingLobby && (
+                            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                        )}
+                        {isLeavingLobby ? gameStrings.leavingRoom : "Back to lobby"}
                     </button>
                 )}
             </>

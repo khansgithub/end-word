@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { envSet } from "@/server/env";
-import { createAdminClient } from "@/lib/supabase";
-import { resetMockRoomStore } from "@/lib/supabase/mock/store";
-import { createRoom, joinRoom, startGame } from "@/lib/game/roomService";
-import { fetchRoom } from "@/lib/game/roomDb";
-import { getRealtimeHub } from "@/lib/supabase/mock/realtimeHub";
+import { envSet } from "@/app/server/env";
+import { createAdminClient } from "@/app/server/supabase";
+import { resetMockRoomStore } from "@/app/server/supabase/mock/store";
+import { createRoom, joinRoom, startGame } from "@/app/server/game/roomService";
+import { fetchRoom } from "@/app/server/game/roomDb";
+import { getRealtimeHub } from "@/app/server/supabase/mock/realtimeHub";
 
 describe("mock supabase", () => {
   afterEach(() => {

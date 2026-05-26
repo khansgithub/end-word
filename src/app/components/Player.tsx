@@ -1,6 +1,6 @@
 import { BoolMap, PropertyBoolMap } from "@/shared/types";
 import type { Player as PlayerType } from "@/shared/types";
-import { buildStyles } from "@/app/lib/playerUtil";
+import { buildStyles } from "@/lib/client/ui/player-util";
 import { PlayerHealth } from "@/app/components/PlayerHealth";
 import { PlayerPanel } from "@/app/components/PlayerPanel";
 

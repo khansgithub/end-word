@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { roomFlowTestNames, roomFlowTestNames as t, type RoomFlowTestName } from "@tests/e2e/test-names";
 import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
-import { envSet, envGet } from "@/server/env";
+import { envSet, envGet } from "@/app/server/env";
 import {
     buildPlaywrightJsonReport,
     parseReportPath,

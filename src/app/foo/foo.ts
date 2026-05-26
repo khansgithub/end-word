@@ -1,6 +1,6 @@
 import { StoreApi } from "zustand";
 import { MatchLetter } from "@/shared/types";
-import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers } from "@/app/lib/inputValidation";
+import { blockInput as _blockInput, clearInput as _clearInput, continueInput as _continueInput, actionHandlers } from "@/lib/client/game/input-validation";
 import { decomposeSyllable } from "@/app/hangul-decomposer";
 import { InputState } from "@/app/store/userStore";
 

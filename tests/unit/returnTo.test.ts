@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLoginUrl, sanitizeReturnTo } from "@/app/lib/returnTo";
+import { buildLoginUrl, sanitizeReturnTo } from "@/lib/client/ui/return-to";
 
 describe("returnTo", () => {
   it("builds login url with encoded return path", () => {

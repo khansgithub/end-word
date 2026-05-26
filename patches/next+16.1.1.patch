@@ -1,0 +1,38 @@
+diff --git a/node_modules/next/dist/esm/server/client-component-renderer-logger.js b/node_modules/next/dist/esm/server/client-component-renderer-logger.js
+index d0252b6..67855d0 100644
+--- a/node_modules/next/dist/esm/server/client-component-renderer-logger.js
++++ b/node_modules/next/dist/esm/server/client-component-renderer-logger.js
+@@ -24,9 +24,11 @@ export function wrapClientComponentLoader(ComponentMod) {
+             const result = ComponentMod.__next_app__.loadChunk(...args);
+             // Avoid wrapping `loadChunk`'s result in an extra promise in case something like React depends on its identity.
+             // We only need to know when it's settled.
+-            result.finally(()=>{
+-                clientComponentLoadTimes += performance.now() - startTime;
+-            });
++            if (result && typeof result.finally === "function") {
++                result.finally(()=>{
++                    clientComponentLoadTimes += performance.now() - startTime;
++                });
++            }
+             return result;
+         }
+     };
+diff --git a/node_modules/next/dist/server/client-component-renderer-logger.js b/node_modules/next/dist/server/client-component-renderer-logger.js
+index 9cf08ad..b2dbfb2 100644
+--- a/node_modules/next/dist/server/client-component-renderer-logger.js
++++ b/node_modules/next/dist/server/client-component-renderer-logger.js
+@@ -46,9 +46,11 @@ function wrapClientComponentLoader(ComponentMod) {
+             const result = ComponentMod.__next_app__.loadChunk(...args);
+             // Avoid wrapping `loadChunk`'s result in an extra promise in case something like React depends on its identity.
+             // We only need to know when it's settled.
+-            result.finally(()=>{
+-                clientComponentLoadTimes += performance.now() - startTime;
+-            });
++            if (result && typeof result.finally === "function") {
++                result.finally(()=>{
++                    clientComponentLoadTimes += performance.now() - startTime;
++                });
++            }
+             return result;
+         }
+     };

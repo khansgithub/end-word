@@ -9,8 +9,8 @@ import {
     clearInput as _clearInput,
     continueInput as _continueInput,
     actionHandlers as validateWrapper
-} from "@/app/lib/inputValidation";
-import { gameStrings } from "@/app/lib/gameStrings";
+} from "@/lib/client/game/input-validation";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 import { IconLock } from "@/app/components/icons";
 
 // Zustand store for input state to minimize re-renders

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { envGet, envSet } from "@/server/env";
+import { envGet, envSet } from "@/app/server/env";
 
 describe("env", () => {
     const originalNodeEnv = envGet("NODE_ENV");

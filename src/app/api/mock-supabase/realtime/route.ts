@@ -1,6 +1,6 @@
-import { isMockSupabase } from "@/lib/supabase/config";
-import { getRealtimeHub } from "@/lib/supabase/mock/realtimeHub";
-import { readMockUserIdFromRequest } from "@/lib/supabase/mock/createClient";
+import { isMockSupabase } from "@/app/server/supabase/config";
+import { getRealtimeHub } from "@/app/server/supabase/mock/realtimeHub";
+import { readMockUserIdFromRequest } from "@/app/server/supabase/mock/createClient";
 
 export const dynamic = "force-dynamic";
 

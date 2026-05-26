@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdmin } from "@/lib/auth/session";
-import { fetchRoom, rowToGameState } from "@/lib/game/roomDb";
+import { getAdmin } from "@/app/server/auth/session";
+import { fetchRoom, rowToGameState } from "@/app/server/game/roomDb";
 import { toGameStateEmit } from "@/shared/GameState";
 
 type Params = { params: Promise<{ roomId: string }> };

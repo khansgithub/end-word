@@ -1,11 +1,11 @@
-import { handleSubmitWord } from "@/server/socketHandlers";
+import { handleSubmitWord } from "@/legacy/socket/socketHandlers";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import * as GameState from "@/shared/GameState";
-import * as ServerGameState from "@/server/state";
+import * as ServerGameState from "@/legacy/socket/state";
 import { buildInitialGameState } from "@/shared/GameState";
 import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayerSocket } from "@/shared/types";
-import * as utils from "@/server/utils";
+import * as utils from "@/legacy/socket/utils";
 import { pp } from "@/shared/utils";
 import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";
 
@@ -205,6 +205,27 @@ describe("handleSubmitWord - validation logic", () => {
     });
 
     describe("word validity validation", () => {
+        it("should reject a word that was already submitted", async () => {
+            const word = "가나다";
+            const state = {
+                ...createTestGameStateWithMatchLetter("가"),
+                usedWords: [word],
+            };
+            mockGetGameState.mockReturnValue(state);
+
+            await handleSubmitWord(
+                mockSocket as unknown as ServerPlayerSocket,
+                word,
+                mockAck
+            );
+
+            expect(mockInputIsValid).not.toHaveBeenCalled();
+            expect(mockAck).toHaveBeenCalledWith({
+                success: false,
+                reason: "Word already used",
+            });
+        });
+
         it("should reject word that is invalid (inputIsValid returns false)", async () => {
             const startingLetter = "가";
             const invalidWord = "가나다";

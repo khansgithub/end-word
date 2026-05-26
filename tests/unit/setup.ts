@@ -5,7 +5,7 @@ process.env.DICTIONARY_URL ??= "http://localhost:8000";
 process.env.MOCK_LOOKUP_WORD ??= "true";
 process.env.MOCK_GET_RANDOM_WORD ??= "true";
 import { resetMswHandlers, startMswTestServer, stopMswTestServer } from "@/mocks/test-server";
-import { envGet } from "@/server/env";
+import { envGet } from "@/app/server/env";
 import { setResetLocalStorageAfterEach, shouldResetLocalStorageAfterEach } from "@tests/unit/storage-control";
 
 beforeAll(() => startMswTestServer());

@@ -26,7 +26,8 @@ import {
 } from "@/shared/errors";
 import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "@/shared/guards";
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "@/shared/types";
-import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount } from "@/shared/utils";
+import { addUsedWord } from "@/shared/usedWords";
+import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount, isActivePlayer } from "@/shared/utils";
 
 export type GameStateActionsType = {
     [K in keyof typeof GameStateActions]:
@@ -68,6 +69,8 @@ const GameStateActions = {
     addPlayer,
     addPlayerToArray,
     removePlayer,
+    markPlayerLeft,
+    compactActivePlayers,
 
     // ========================================
     // General State Updates
@@ -120,7 +123,7 @@ export function progressNextTurn(
     let maxLoops = 0;
     nextTurnPlayer = getCurrentTurnPlayer(nextState);
 
-    while ((!nextTurnPlayer || nextTurnPlayer.health <= 0) && maxLoops < MAX_PLAYERS + 1) {
+    while ((!nextTurnPlayer || !isActivePlayer(nextTurnPlayer) || nextTurnPlayer.health <= 0) && maxLoops < MAX_PLAYERS + 1) {
         nextState = nextTurn(nextState);
         nextTurnPlayer = getCurrentTurnPlayer(nextState);
         maxLoops++;
@@ -130,7 +133,7 @@ export function progressNextTurn(
         throw new CannotProgressTurnError();
     }
 
-    return nextState;
+    return addUsedWord(nextState, playerLastWord);
 }
 
 export function endGame(_state?: GameState, currentState?: GameState): GameState {
@@ -213,7 +216,7 @@ export function decreasePlayerHealth(
 // Player Registration & Array Management
 // ========================================
 function countConnectedPlayers(state: GameState): number {
-    return state.players.filter((p) => p != null).length;
+    return state.players.filter((p) => isActivePlayer(p)).length;
 }
 
 function resolveStatusAfterPlayerCountChange(
@@ -357,6 +360,68 @@ export function removePlayer(
     };
 }
 
+export function markPlayerLeft(
+    state: GameState,
+    player: Player,
+    currentState?: GameState
+): GameState {
+    const playerSeat = player.seat;
+    if (playerSeat === undefined) {
+        throw new PlayerUidUndefinedError();
+    }
+
+    const previousConnectedPlayers = countConnectedPlayers(state);
+    const updatedPlayers = clonePlayersArray(state.players);
+    const seated = updatedPlayers[playerSeat];
+    if (!seated) {
+        throw new PlayerNotFoundError(`No player at seat ${playerSeat}`);
+    }
+
+    updatedPlayers[playerSeat] = { ...seated, left: true };
+    const playerUid = player.uid;
+    if (playerUid === undefined) throw new PlayerUidUndefinedError();
+    state.socketPlayerMap?.delete(playerUid);
+
+    let nextState = _postPlayerCountUpdateState(
+        { ...state, players: updatedPlayers },
+        previousConnectedPlayers
+    );
+
+    let loops = 0;
+    let current = getCurrentTurnPlayer(nextState);
+    while ((!current || !isActivePlayer(current)) && loops < MAX_PLAYERS + 1) {
+        nextState = nextTurn(nextState);
+        current = getCurrentTurnPlayer(nextState);
+        loops++;
+    }
+
+    return nextState;
+}
+
+/** Move active players to low seats and refresh seat indices / socket map. */
+export function compactActivePlayers(state: GameState, currentState?: GameState): GameState {
+    const active: PlayerWithId[] = [];
+    for (const p of state.players) {
+        if (isActivePlayer(p) && p.uid) {
+            active.push(p as PlayerWithId);
+        }
+    }
+
+    const players = makePlayersArray<ServerPlayers>();
+    const socketPlayerMap = new Map<string, number>();
+    active.forEach((p, i) => {
+        const seated = { ...p, seat: i, left: undefined };
+        players[i] = seated;
+        socketPlayerMap.set(p.uid!, i);
+    });
+
+    const previousConnectedPlayers = countConnectedPlayers(state);
+    return _postPlayerCountUpdateState(
+        { ...state, players, socketPlayerMap },
+        previousConnectedPlayers
+    );
+}
+
 // ========================================
 // General State Updates
 // ========================================
@@ -423,6 +488,7 @@ export function buildInitialGameState(
         players: players,
         turn: 0,
         connectedPlayers: 0,
+        usedWords: [],
         socketPlayerMap: socketPlayerMap,
     };
 }
