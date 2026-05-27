@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
-Compare an-array-of-english-words against NIKL Korean dictionary English equivalents.
+Build Korean English-equivalent index, run WordNet+Korean compare (TS), emit dashboard.
 
 Dry run (default --limit 10):
   python -m scripts.en_ko_coverage.main --use-local-data --max-xml-files 1
 
-Full run (after clone):
-  python -m scripts.en_ko_coverage.main --limit 0
-
-Logs: use scripts/run-en-ko-coverage.sh for tee to scripts/output/en-ko-coverage.log
+Logs: scripts/run-en-ko-coverage.sh (tee)
 """
 
 from __future__ import annotations
@@ -17,14 +14,13 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 from .build_index import build_index, build_index_from_files, load_index, save_index
-from .compare import compare_words, write_jsonl
 from .dashboard import build_dashboard_html, write_dashboard
-from .english_words import load_english_words
 from .nikl_repo import ensure_nikl_repo
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -35,6 +31,7 @@ JSONL_FILENAME = "en-ko-coverage.jsonl"
 DASHBOARD_FILENAME = "en-ko-coverage-dashboard.html"
 SUMMARY_FILENAME = "en-ko-coverage-summary.json"
 LOG_FILENAME = "en-ko-coverage.log"
+COMPARE_SCRIPT = REPO_ROOT / "scripts" / "en-ko-coverage-compare.ts"
 
 
 def _configure_logging(verbose: bool, log_file: Path | None) -> None:
@@ -60,7 +57,9 @@ def _default_workers() -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Report English words missing from NIKL Korean dict English equivalents.",
+        description=(
+            "Index NIKL Korean dict, compare via WordNet (wordnet.ts) then Korean index."
+        ),
     )
     parser.add_argument(
         "--limit",
@@ -102,6 +101,16 @@ def parse_args() -> argparse.Namespace:
         help="Reuse existing korean-english-index.json.",
     )
     parser.add_argument(
+        "--skip-compare",
+        action="store_true",
+        help="Skip TS compare (dashboard only from existing JSONL).",
+    )
+    parser.add_argument(
+        "--index-only",
+        action="store_true",
+        help="Only build Korean index; do not compare or render dashboard.",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_OUTPUT,
@@ -115,6 +124,63 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _build_korean_index(args: argparse.Namespace, output_dir: Path) -> dict[str, list[str]]:
+    index_path = output_dir / INDEX_FILENAME
+    if args.skip_index and index_path.is_file():
+        logging.getLogger("en_ko_coverage").info(
+            "Loading cached index from %s", index_path
+        )
+        return load_index(index_path)
+
+    if args.use_local_data:
+        index_root = REPO_ROOT / "dictionary" / "data"
+        xml_files = [
+            ("krdict", str(p.resolve())) for p in sorted(index_root.glob("*.xml"))
+        ]
+        if args.max_xml_files is not None:
+            xml_files = xml_files[: args.max_xml_files]
+        logging.getLogger("en_ko_coverage").info(
+            "Building index from local dictionary/data (%s files)", len(xml_files)
+        )
+        korean_index = build_index_from_files(xml_files, workers=args.workers)
+    else:
+        nikl_root = ensure_nikl_repo(args.nikl_path, skip_clone=args.skip_clone)
+        korean_index = build_index(
+            nikl_root,
+            workers=args.workers,
+            max_files=args.max_xml_files,
+        )
+
+    save_index(korean_index, index_path)
+    return korean_index
+
+
+def _run_compare(args: argparse.Namespace, output_dir: Path) -> None:
+    log = logging.getLogger("en_ko_coverage")
+    env = os.environ.copy()
+    env["OUTPUT_DIR"] = str(output_dir.resolve())
+    env["KOREAN_INDEX_PATH"] = str((output_dir / INDEX_FILENAME).resolve())
+    env["LIMIT"] = str(args.limit)
+
+    cmd = ["npx", "tsx", str(COMPARE_SCRIPT), "--limit", str(args.limit)]
+    log.info("Running WordNet + Korean compare: %s", " ".join(cmd))
+    subprocess.run(cmd, cwd=REPO_ROOT, env=env, check=True)
+
+
+def _render_dashboard(output_dir: Path) -> None:
+    log = logging.getLogger("en_ko_coverage")
+    jsonl_path = output_dir / JSONL_FILENAME
+    summary_path = output_dir / SUMMARY_FILENAME
+    if not jsonl_path.is_file():
+        raise FileNotFoundError(f"Missing compare output: {jsonl_path}")
+
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    dashboard_path = output_dir / DASHBOARD_FILENAME
+    html = build_dashboard_html(jsonl_path=jsonl_path, summary=summary)
+    write_dashboard(html, dashboard_path)
+    log.info("Dashboard: %s", dashboard_path)
+
+
 def main() -> int:
     args = parse_args()
     output_dir: Path = args.output_dir
@@ -124,53 +190,27 @@ def main() -> int:
 
     started = time.perf_counter()
     try:
-        index_path = output_dir / INDEX_FILENAME
-        if args.skip_index and index_path.is_file():
-            log.info("Loading cached index from %s", index_path)
-            korean_index = load_index(index_path)
-        elif args.use_local_data:
-            index_root = REPO_ROOT / "dictionary" / "data"
-            xml_files = [
-                ("krdict", str(p.resolve()))
-                for p in sorted(index_root.glob("*.xml"))
-            ]
-            if args.max_xml_files is not None:
-                xml_files = xml_files[: args.max_xml_files]
-            log.info("Building index from local dictionary/data (%s files)", len(xml_files))
-            korean_index = build_index_from_files(xml_files, workers=args.workers)
-            save_index(korean_index, index_path)
-        else:
-            nikl_root = ensure_nikl_repo(args.nikl_path, skip_clone=args.skip_clone)
-            korean_index = build_index(
-                nikl_root,
-                workers=args.workers,
-                max_files=args.max_xml_files,
-            )
-            save_index(korean_index, index_path)
+        korean_index = _build_korean_index(args, output_dir)
+        log.info("Korean index: %s English tokens", len(korean_index))
 
-        word_limit = None if args.limit == 0 else args.limit
-        log.info("Loading English words (limit=%s)", word_limit)
-        english_words = load_english_words(word_limit)
-        log.info("Loaded %s English words", len(english_words))
+        if args.index_only:
+            log.info("--index-only: done")
+            return 0
 
-        records, stats = compare_words(english_words, korean_index)
-        stats["index_tokens"] = len(korean_index)
-        stats["duration_sec"] = round(time.perf_counter() - started, 2)
+        if not args.skip_compare:
+            _run_compare(args, output_dir)
 
-        jsonl_path = output_dir / JSONL_FILENAME
-        write_jsonl(records, jsonl_path)
+        _render_dashboard(output_dir)
 
         summary_path = output_dir / SUMMARY_FILENAME
-        summary_path.write_text(json.dumps(stats, indent=2), encoding="utf-8")
-        log.info("Summary: %s", stats)
+        if summary_path.is_file():
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["total_duration_sec"] = round(time.perf_counter() - started, 2)
+            summary_path.write_text(
+                json.dumps(summary, indent=2), encoding="utf-8"
+            )
+            log.info("Summary: %s", summary)
 
-        dashboard_path = output_dir / DASHBOARD_FILENAME
-        html = build_dashboard_html(jsonl_path=jsonl_path, summary=stats)
-        write_dashboard(html, dashboard_path)
-        log.info("Dashboard: %s", dashboard_path)
-
-        missing_sample = [r.word for r in records if not r.found][:30]
-        log.info("Sample missing: %s", ", ".join(missing_sample) or "(none)")
         return 0
 
     except Exception:

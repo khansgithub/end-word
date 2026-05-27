@@ -165,6 +165,13 @@ export type EntryDataEng = {
     definition: string
 };
 
+export interface Dictionary {
+    lookup(word: string): Promise<DictionaryEntry | null>;
+    isValidWord(word: string): Promise<boolean>;
+    lastMatchLetter(word: string): Promise<string>;
+    randomWord(): Promise<string>;
+}
+
 export type DictionaryEntry = {
     key: string
     data: Array<EntryDataEng>

@@ -12,14 +12,21 @@ def build_dashboard_html(
     *,
     jsonl_path: Path,
     summary: dict,
-    title: str = "English ↔ Korean (NIKL) coverage",
+    title: str = "English coverage: WordNet → Korean (NIKL)",
 ) -> str:
     records = list(iter_jsonl(jsonl_path))
     payload = {
         "title": title,
         "summary": summary,
         "records": [
-            {"word": r.word, "found": r.found, "datasets": r.datasets}
+            {
+                "word": r.word,
+                "group": r.group,
+                "wordnet_found": r.wordnet_found,
+                "korean_found": r.korean_found,
+                "datasets": r.datasets,
+                "definition_count": r.definition_count,
+            }
             for r in records
         ],
     }
@@ -39,6 +46,7 @@ def build_dashboard_html(
       --muted: #8b9cb3;
       --found: #3dd68c;
       --missing: #f07178;
+      --warn: #ebc06d;
       --accent: #6cb6ff;
     }}
     * {{ box-sizing: border-box; }}
@@ -56,10 +64,10 @@ def build_dashboard_html(
     }}
     h1 {{ margin: 0 0 0.25rem; font-size: 1.35rem; }}
     .sub {{ color: var(--muted); font-size: 0.9rem; }}
-    main {{ padding: 1.25rem 1.5rem; max-width: 1100px; margin: 0 auto; }}
+    main {{ padding: 1.25rem 1.5rem; max-width: 1200px; margin: 0 auto; }}
     .cards {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 0.75rem;
       margin-bottom: 1.25rem;
     }}
@@ -69,8 +77,8 @@ def build_dashboard_html(
       padding: 0.85rem 1rem;
       border: 1px solid #2d3a4f;
     }}
-    .card .label {{ color: var(--muted); font-size: 0.8rem; }}
-    .card .value {{ font-size: 1.5rem; font-weight: 600; }}
+    .card .label {{ color: var(--muted); font-size: 0.75rem; }}
+    .card .value {{ font-size: 1.35rem; font-weight: 600; }}
     .toolbar {{
       display: flex;
       flex-wrap: wrap;
@@ -109,11 +117,12 @@ def build_dashboard_html(
       display: inline-block;
       padding: 0.15rem 0.45rem;
       border-radius: 4px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
     }}
-    .badge.found {{ background: rgba(61, 214, 140, 0.2); color: var(--found); }}
-    .badge.missing {{ background: rgba(240, 113, 120, 0.2); color: var(--missing); }}
+    .badge.wordnet_and_korean {{ background: rgba(61, 214, 140, 0.2); color: var(--found); }}
+    .badge.wordnet_only {{ background: rgba(235, 192, 109, 0.2); color: var(--warn); }}
+    .badge.wordnet_missing {{ background: rgba(240, 113, 120, 0.2); color: var(--missing); }}
     .dataset-tag {{
       display: inline-block;
       margin-right: 0.35rem;
@@ -130,16 +139,17 @@ def build_dashboard_html(
 <body>
   <header>
     <h1 id="title"></h1>
-    <p class="sub">NIKL match rule: English &lt;Equivalent language=&quot;영어&quot;&gt; lemma tokens</p>
+    <p class="sub">Step 1: WordNet (wordnet.ts) · Step 2: NIKL English equivalents (영어) only when WordNet has a definition</p>
   </header>
   <main>
     <div class="cards" id="cards"></div>
     <div class="toolbar">
       <input type="search" id="search" placeholder="Filter by word…" />
-      <select id="filter">
-        <option value="all">All</option>
-        <option value="found">Found in Korean dict</option>
-        <option value="missing">Missing</option>
+      <select id="group-filter">
+        <option value="all">All groups</option>
+        <option value="wordnet_missing">No WordNet definition</option>
+        <option value="wordnet_only">WordNet only (no Korean)</option>
+        <option value="wordnet_and_korean">WordNet + Korean</option>
       </select>
       <select id="dataset-filter">
         <option value="">Any dataset</option>
@@ -151,7 +161,12 @@ def build_dashboard_html(
     <div id="table-wrap">
       <table>
         <thead>
-          <tr><th>Word</th><th>Status</th><th>Datasets</th></tr>
+          <tr>
+            <th>Word</th>
+            <th>Group</th>
+            <th>WordNet defs</th>
+            <th>Datasets</th>
+          </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -165,13 +180,16 @@ def build_dashboard_html(
 
     const cards = document.getElementById("cards");
     const s = DATA.summary;
-    const pct = s.checked ? ((s.found / s.checked) * 100).toFixed(1) : "0";
-    [
+    const bg = s.by_group || {{}};
+    const cardData = [
       ["Checked", s.checked],
-      ["Found", s.found],
-      ["Missing", s.missing],
-      ["Coverage %", pct],
-    ].forEach(([label, value]) => {{
+      ["WordNet found", s.wordnet_found ?? "—"],
+      ["WordNet missing", s.wordnet_missing ?? bg.wordnet_missing ?? "—"],
+      ["WordNet + Korean", bg.wordnet_and_korean ?? "—"],
+      ["WordNet only", bg.wordnet_only ?? "—"],
+      ["Korean missing (among WordNet)", s.korean_missing_among_wordnet ?? bg.wordnet_only ?? "—"],
+    ];
+    cardData.forEach(([label, value]) => {{
       const el = document.createElement("div");
       el.className = "card";
       el.innerHTML = `<div class="label">${{label}}</div><div class="value">${{value}}</div>`;
@@ -179,38 +197,42 @@ def build_dashboard_html(
     }});
 
     const search = document.getElementById("search");
-    const filter = document.getElementById("filter");
+    const groupFilter = document.getElementById("group-filter");
     const datasetFilter = document.getElementById("dataset-filter");
     const tbody = document.getElementById("rows");
 
+    const groupLabel = {{
+      wordnet_missing: "No WordNet",
+      wordnet_only: "WordNet only",
+      wordnet_and_korean: "WordNet + Korean",
+    }};
+
     function render() {{
       const q = search.value.trim().toLowerCase();
-      const mode = filter.value;
+      const group = groupFilter.value;
       const ds = datasetFilter.value;
       tbody.innerHTML = "";
       let shown = 0;
       for (const r of DATA.records) {{
-        if (mode === "found" && !r.found) continue;
-        if (mode === "missing" && r.found) continue;
+        if (group !== "all" && r.group !== group) continue;
         if (ds && (!r.datasets || !r.datasets.includes(ds))) continue;
         if (q && !r.word.includes(q)) continue;
         const tr = document.createElement("tr");
-        const status = r.found
-          ? '<span class="badge found">found</span>'
-          : '<span class="badge missing">missing</span>';
+        const badge = `<span class="badge ${{r.group}}">${{groupLabel[r.group] || r.group}}</span>`;
         const tags = (r.datasets || [])
           .map((d) => `<span class="dataset-tag">${{d}}</span>`)
           .join("") || "—";
-        tr.innerHTML = `<td>${{r.word}}</td><td>${{status}}</td><td>${{tags}}</td>`;
+        const defCount = r.wordnet_found ? (r.definition_count || "—") : "—";
+        tr.innerHTML = `<td>${{r.word}}</td><td>${{badge}}</td><td>${{defCount}}</td><td>${{tags}}</td>`;
         tbody.appendChild(tr);
         shown++;
       }}
       document.getElementById("footer").textContent =
-        `Showing ${{shown}} of ${{DATA.records.length}} rows in this report.`;
+        `Showing ${{shown}} of ${{DATA.records.length}} rows.`;
     }}
 
     search.addEventListener("input", render);
-    filter.addEventListener("change", render);
+    groupFilter.addEventListener("change", render);
     datasetFilter.addEventListener("change", render);
     render();
   </script>

@@ -146,6 +146,13 @@ export function buildMatchLetter(
     } satisfies MatchLetter;
 }
 
+/**
+ * Normalize English input for dictionary lookup (lowercase, letters only).
+ */
+export function normalizeEnglishWord(word: string): string {
+    return word.trim().toLowerCase().replace(/[^a-z]/g, "");
+}
+
 // ============================================================================
 // Environment Utilities
 // ============================================================================

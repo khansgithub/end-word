@@ -1,4 +1,4 @@
-"""Compare English word list against Korean English-equivalent index."""
+"""Coverage record types and JSONL I/O (WordNet + Korean groups)."""
 
 from __future__ import annotations
 
@@ -6,39 +6,28 @@ import json
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Literal
 
 logger = logging.getLogger(__name__)
+
+CoverageGroup = Literal[
+    "wordnet_missing",
+    "wordnet_only",
+    "wordnet_and_korean",
+]
 
 
 @dataclass
 class WordCoverage:
     word: str
-    found: bool
+    group: CoverageGroup
+    wordnet_found: bool
+    korean_found: bool
     datasets: list[str]
+    definition_count: int = 0
 
     def to_jsonl(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False)
-
-
-def compare_words(
-    english_words: list[str],
-    korean_index: dict[str, list[str]],
-) -> tuple[list[WordCoverage], dict[str, int]]:
-    records: list[WordCoverage] = []
-    stats = {"checked": 0, "found": 0, "missing": 0}
-
-    for word in english_words:
-        datasets = korean_index.get(word, [])
-        found = bool(datasets)
-        records.append(WordCoverage(word=word, found=found, datasets=datasets))
-        stats["checked"] += 1
-        if found:
-            stats["found"] += 1
-        else:
-            stats["missing"] += 1
-
-    return records, stats
 
 
 def write_jsonl(records: list[WordCoverage], path: Path) -> None:
@@ -56,8 +45,27 @@ def iter_jsonl(path: Path) -> Iterator[WordCoverage]:
             if not line.strip():
                 continue
             data = json.loads(line)
+            # Legacy rows (pre-WordNet gate)
+            if "group" not in data:
+                found = data.get("found", False)
+                datasets = data.get("datasets", [])
+                group: CoverageGroup = (
+                    "wordnet_and_korean" if found else "wordnet_only"
+                )
+                yield WordCoverage(
+                    word=data["word"],
+                    group=group,
+                    wordnet_found=True,
+                    korean_found=found,
+                    datasets=datasets,
+                    definition_count=0,
+                )
+                continue
             yield WordCoverage(
                 word=data["word"],
-                found=data["found"],
+                group=data["group"],
+                wordnet_found=data["wordnet_found"],
+                korean_found=data["korean_found"],
                 datasets=data.get("datasets", []),
+                definition_count=data.get("definition_count", 0),
             )

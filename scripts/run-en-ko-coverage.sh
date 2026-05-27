@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run English↔Korean NIKL coverage with live log file (tee).
+# Run English coverage: NIKL index → WordNet (wordnet.ts) → Korean match → dashboard.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,7 +12,6 @@ LOG_FILE="$OUTPUT_DIR/en-ko-coverage.log"
 EXTRA_ARGS=("$@")
 
 if [[ ${#EXTRA_ARGS[@]} -eq 0 ]]; then
-  # Default dry-run: local XML subset + 10 English words
   EXTRA_ARGS=(--use-local-data --max-xml-files 1 --limit 10)
 fi
 
