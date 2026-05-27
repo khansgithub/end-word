@@ -44,3 +44,12 @@ next-env.d.ts
 src/mocks/mock-dictionary-data.json
 test-results
 .env.prod
+
+# English↔Korean coverage artifacts (regenerate via npm run dict:coverage)
+/vendor/korean-dict-nikl/
+/scripts/output/korean-english-index.json
+/scripts/output/en-ko-coverage.jsonl
+/scripts/output/en-ko-coverage.log
+/scripts/output/en-ko-coverage-dashboard.html
+/scripts/output/en-ko-coverage-summary.json
+**/__pycache__/

@@ -19,9 +19,12 @@
     "test:playwright:ui": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test --ui",
     "test:playwright": "cross-env SUPPRESS=true MOCK_GET_RANDOM_WORD=true MOCK_LOOKUP_WORD=true MOCK_WORD_VALIDATION_FAIL=false playwright test && tsx tests/e2e/custom-runner.ts",
     "test:unit": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dict:coverage": "bash scripts/run-en-ko-coverage.sh",
+    "dict:coverage:full": "bash scripts/run-en-ko-coverage.sh --skip-clone --limit 0"
   },
   "dependencies": {
+    "an-array-of-english-words": "^2.0.0",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "framer-motion": "^12.23.26",
