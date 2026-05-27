@@ -30,9 +30,10 @@ logger.setLevel(logging.INFO)
 
 
 DATA_DIR = Path(__file__).parent / "data"
-TRIE_FILE = "data/dict.marisa"
-META_FILE = "data/metadata.jsonl"
-CUSTOM_DICT_FILE = "data/custom_dict.json"
+TRIE_FILE = Path(DATA_DIR / "dict.marisa")
+META_FILE = Path(DATA_DIR / "metadata.jsonl")
+ENTRIES_FILE = Path(DATA_DIR / "entries.jsonl")
+CUSTOM_DICT_FILE = Path(DATA_DIR / "custom_dict.json")
 
 # XPath expressions for dictionary XML
 PartOfSpeechXPath = "./feat[@att='partOfSpeech']"
@@ -121,6 +122,23 @@ def parse_entries() -> list[Entry]:
                         key=word,
                         data=[EntryDataEng(word=word, definition=definition)]
                     ))
+    
+	# Output the list of entries to a file for inspection/debugging.
+    # We'll output them in JSONL format, one entry per line.
+    with open(ENTRIES_FILE, "w", encoding="utf8") as debug_out:
+        for entry in entries:
+            # Convert Entry and its data members to dicts for serialization
+            entry_dict = {
+                "key": entry.key,
+                "data": [
+                    {
+                        "word": d.word,
+                        "definition": d.definition
+                    } for d in entry.data
+                ]
+            }
+            json.dump(entry_dict, debug_out, ensure_ascii=False)
+            debug_out.write("\n")
 
     return entries
 
@@ -222,30 +240,33 @@ def filter_by_pos(lexical_entry: Element, pos: list[str]) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def rebuild_entries(trie: marisa_trie.Trie, enteries: list[Entry]) -> list[Entry]:
+def rebuild_entries(trie: marisa_trie.Trie, entries: list[Entry]) -> list[Entry]:
     """
     Rebuild the metadata, in the order that the marisa-trie ordered them.
     The `sort` used by marisa-trie internally is not the same as the python `sort`.
-
-    :param trie:
-    :type trie: marisa-trie
-    :param enteries: metadata
-    :type enteries: list
-    :return: new metadata list in the same order as the keys in the trie
-    :rtype: list[Entry]
+    Duplicate keys are merged into a single Entry (MARISA stores each key once).
     """
-
-    # TODO: Implment some in-place sorting algorithm here
-    # import ipdb; ipdb.set_trace()
-    sorted_entries: list[Entry | None] = [None] * len(enteries)
-    for e in enteries:
-        key = e.key
-        new_index = trie.get(key)
-        try:
+    sorted_entries: list[Entry | None] = [None] * len(trie)
+    for e in entries:
+        new_index = trie.get(e.key)
+        if new_index is None:
+            logger.warning(f"Key not in trie, skipping: {e.key!r}")
+            continue
+        existing = sorted_entries[new_index]
+        if existing is None:
             sorted_entries[new_index] = e
-        except IndexError as e:
-            logger.debug(f"Unexpected Index {new_index=}- out of bounds {len(enteries)=}")
-            raise e
+        else:
+            sorted_entries[new_index] = Entry(
+                key=e.key,
+                data=existing.data + e.data,
+            )
+
+    missing = [i for i, entry in enumerate(sorted_entries) if entry is None]
+    if missing:
+        raise ValueError(
+            f"Metadata missing for {len(missing)} trie index(es), "
+            f"first few: {missing[:5]}"
+        )
 
     return cast(list[Entry], sorted_entries)
 
