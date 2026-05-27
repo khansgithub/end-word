@@ -50,6 +50,7 @@ test-results
 /scripts/output/korean-english-index.json
 /scripts/output/en-ko-coverage.jsonl
 /scripts/output/en-ko-coverage.log
+/scripts/output/en-ko-coverage-full.log
 /scripts/output/en-ko-coverage-dashboard.html
 /scripts/output/en-ko-coverage-summary.json
 **/__pycache__/

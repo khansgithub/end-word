@@ -21,7 +21,7 @@
     "test:unit": "vitest --run",
     "test:watch": "vitest",
     "dict:coverage": "bash scripts/run-en-ko-coverage.sh",
-    "dict:coverage:full": "bash scripts/run-en-ko-coverage.sh --skip-clone --limit 0"
+    "dict:coverage:full": "bash scripts/run-en-ko-coverage-full.sh"
   },
   "dependencies": {
     "an-array-of-english-words": "^2.0.0",

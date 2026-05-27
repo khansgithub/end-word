@@ -45,19 +45,23 @@ def _process_xml_file(args: tuple[str, str]) -> dict[str, list[str]]:
         return {}
 
     logger.info("Parsing %s (%s)", path.name, dataset)
-    context = ET.iterparse(path, events=("end",))
-    for event, elem in context:
-        if elem.tag != "Equivalent":
-            continue
-        lang = _feat_val(elem, "language")
-        if lang != "영어":
+    try:
+        context = ET.iterparse(path, events=("end",))
+        for _event, elem in context:
+            if elem.tag != "Equivalent":
+                continue
+            lang = _feat_val(elem, "language")
+            if lang != "영어":
+                elem.clear()
+                continue
+            lemma = _feat_val(elem, "lemma")
+            if lemma:
+                for token in _tokens_from_lemma(lemma):
+                    local[token].add(dataset)
             elem.clear()
-            continue
-        lemma = _feat_val(elem, "lemma")
-        if lemma:
-            for token in _tokens_from_lemma(lemma):
-                local[token].add(dataset)
-        elem.clear()
+    except ET.ParseError as exc:
+        logger.error("Skipping malformed XML %s (%s): %s", path.name, dataset, exc)
+        return {}
 
     return {word: sorted(datasets) for word, datasets in local.items()}
 
