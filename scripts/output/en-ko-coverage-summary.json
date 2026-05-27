@@ -1,0 +1,15 @@
+{
+  "checked": 273493,
+  "wordnet_found": 115839,
+  "wordnet_missing": 157654,
+  "korean_found": 14581,
+  "korean_missing_among_wordnet": 101258,
+  "by_group": {
+    "wordnet_missing": 157654,
+    "wordnet_only": 101258,
+    "wordnet_and_korean": 14581
+  },
+  "index_tokens": 49992,
+  "duration_sec": 3090,
+  "total_duration_sec": 1.38
+}

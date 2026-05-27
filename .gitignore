@@ -45,12 +45,7 @@ src/mocks/mock-dictionary-data.json
 test-results
 .env.prod
 
-# English↔Korean coverage artifacts (regenerate via npm run dict:coverage)
+# English↔Korean coverage: clone + logs (reports are committed under scripts/output/)
 /vendor/korean-dict-nikl/
-/scripts/output/korean-english-index.json
-/scripts/output/en-ko-coverage.jsonl
-/scripts/output/en-ko-coverage.log
-/scripts/output/en-ko-coverage-full.log
-/scripts/output/en-ko-coverage-dashboard.html
-/scripts/output/en-ko-coverage-summary.json
+/scripts/output/*.log
 **/__pycache__/
