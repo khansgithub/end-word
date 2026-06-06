@@ -137,12 +137,14 @@ export async function joinRoom(
 	}
 
 	state.socketPlayerMap?.set(userId, joined.seat);
+	const joinedEmit = toGameStateEmit(state);
 	await persistRoomState(admin, roomId, state);
+	await broadcastRoomGameState(admin, roomId, joinedEmit);
 
 	return {
 		success: true,
 		roomId,
-		gameState: toGameStateEmit(state),
+		gameState: joinedEmit,
 		player: joined,
 	};
 }
@@ -179,8 +181,10 @@ export async function startGame(
 	}
 
 	state = { ...state, status: "playing" };
+	const startedEmit = toGameStateEmit(state);
 	await persistRoomState(admin, roomId, state);
-	return { success: true, gameState: toGameStateEmit(state) };
+	await broadcastRoomGameState(admin, roomId, startedEmit);
+	return { success: true, gameState: startedEmit };
 }
 
 export async function submitWord(
@@ -195,7 +199,7 @@ export async function submitWord(
 	}
 
 	const language = row.language;
-	let state: GameState = { ...rowToGameState(row), language: row.language };
+	const state: GameState = { ...rowToGameState(row), language: row.language };
 
 	if (state.status !== "playing") {
 		return { success: false, reason: "Game is not in progress" };
@@ -243,7 +247,7 @@ export async function submitWord(
 			? await matchLetterFromWord(word, language)
 			: word.slice(-1);
 
-	let nextState = progressNextTurn(state, block, word);
+	const nextState = progressNextTurn(state, block, word);
 	await persistRoomState(admin, roomId, nextState);
 
 	return {
