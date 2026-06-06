@@ -65,7 +65,7 @@ export async function lookUpWordMock(word: string): Promise<DictionaryResponse> 
 }
 
 export async function getRandomWordFromDictionaryMock(): Promise<string> {
-    return "음";
+    return envGet("MOCK_RANDOM_WORD") || "음";
 }
 
 export async function getRandomWordFromDictionaryApi(): Promise<string> {

@@ -30,10 +30,11 @@ logger.setLevel(logging.INFO)
 
 
 DATA_DIR = Path(__file__).parent / "data"
+SRC_DIR = DATA_DIR / "raw"
 TRIE_FILE = Path(DATA_DIR / "dict.marisa")
 META_FILE = Path(DATA_DIR / "metadata.jsonl")
-ENTRIES_FILE = Path(DATA_DIR / "entries.jsonl")
-CUSTOM_DICT_FILE = Path(DATA_DIR / "custom_dict.json")
+ENTRIES_FILE = Path(SRC_DIR / "entries.jsonl")
+CUSTOM_DICT_FILE = Path(SRC_DIR / "custom_dict.json")
 
 # XPath expressions for dictionary XML
 PartOfSpeechXPath = "./feat[@att='partOfSpeech']"
@@ -94,12 +95,12 @@ def parse_entries() -> list[Entry]:
         logger.debug(DATA_DIR.as_posix(), "does not exist")
         return []
 
-    files = glob.glob("*.xml", root_dir=DATA_DIR.as_posix())
+    files = glob.glob("*.xml", root_dir=SRC_DIR.as_posix())
     entries: list[Entry] = []
 
     for file in files:
         logger.info(f"Parsing file: {file}")
-        tree = ET.parse(DATA_DIR / file)
+        tree = ET.parse(SRC_DIR / file)
         root = tree.getroot()
         for lexical_entry in root.findall(".//LexicalEntry"):
             unit = get_val(lexical_entry.find("./feat[@att='lexicalUnit']"))

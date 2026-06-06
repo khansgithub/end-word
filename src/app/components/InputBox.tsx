@@ -130,8 +130,9 @@ function InputBox({
     const matchBlock = matchLetter.block;
     const firstStep = matchLetter.steps[0] ?? "";
 
-    // Reset highlight only when the match letter block changes (new turn).
-    // Depend on primitives — parent re-renders often pass a new matchLetter object reference.
+    // Reset highlight when the match letter block changes (new turn) or input is cleared
+    // (e.g. after a successful submit). Depend on primitives — parent re-renders often pass
+    // a new matchLetter object reference.
     useEffect(() => {
         if (!firstStep) return;
 
@@ -139,7 +140,7 @@ function InputBox({
         if (store.inputValue !== "" || store.highlightValue === firstStep) return;
 
         store.setHighlightValue(firstStep);
-    }, [matchBlock, firstStep]);
+    }, [matchBlock, firstStep, inputValue]);
 
     const maxLength = language === "en" ? 20 : 7;
     const minLength = language === "en" ? ENGLISH_MIN_WORD_LENGTH : 2;

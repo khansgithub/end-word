@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "e2e/**/*.ts",
+    "../playwright-internal.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

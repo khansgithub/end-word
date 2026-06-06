@@ -4,6 +4,7 @@ import {
 	validateWord,
 	wordStartsWithMatchLetter,
 } from "@/app/server/dictionary";
+import { resolveKoreanExplanation } from "@/app/server/dictionary/english-korean";
 import { broadcastRoomGameState } from "@/app/server/game/roomBroadcast";
 import {
 	archiveRoom,
@@ -229,6 +230,14 @@ export async function submitWord(
 		return invalidWord(admin, roomId, state, userId, `Word is not valid`);
 	}
 	const definition = valid[1];
+	if (language === "en") {
+		const korean = await resolveKoreanExplanation(admin, word);
+		definition.data = definition.data.map((entry) => ({
+			...entry,
+			koreanDefinition: korean.definition,
+			koreanDefinitionUrl: korean.linkUrl,
+		}));
+	}
 	const block =
 		language === "en"
 			? await matchLetterFromWord(word, language)

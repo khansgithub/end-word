@@ -1,5 +1,6 @@
 import { lemmaVariants } from "@/app/server/dictionary/english-lemma";
 import supplementData from "@/app/server/dictionary/english-supplement.json";
+import { envGet } from "@/app/server/env";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { Dictionary, DictionaryEntry, EntryDataEng } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
@@ -118,6 +119,10 @@ export class WordNetDictionary implements Dictionary {
 	}
 
 	async randomWord(): Promise<string> {
+		if (envGet("MOCK_GET_RANDOM_WORD") === "true") {
+			console.log(`[WordNetDictionary] Using mocked random word: ${envGet("MOCK_RANDOM_WORD")}`);
+			return (envGet("MOCK_RANDOM_WORD") || "foo").toLowerCase();
+		}
 		const eligible = words.filter((w) => w.length >= ENGLISH_MIN_WORD_LENGTH);
 		const index = Math.floor(Math.random() * eligible.length);
 		return eligible[index]!.toLowerCase();

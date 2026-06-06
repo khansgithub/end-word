@@ -49,7 +49,7 @@ export default function GameV2({
 }: GameV2Props) {
 	const router = useRouter();
 	const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
-	const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
+	const [definitionHistory, setDefinitionHistory] = useState<DictionaryEntry[]>([]);
 	const [isLeavingLobby, setIsLeavingLobby] = useState(false);
 	const parentStateRef = useRef(initialState);
 
@@ -162,7 +162,11 @@ export default function GameV2({
 		submitWordCallback(gameState, dispatch, setInputError, response, word);
 		if (response.success) {
 			if (response.definition) {
-				setLastDefinition(response.definition);
+				setDefinitionHistory((current) => {
+					const deduped = new Map(current.map((entry) => [entry.key, entry]));
+					deduped.set(response.definition.key, response.definition);
+					return Array.from(deduped.values());
+				});
 			}
 			resetInput();
 		} else {
@@ -222,7 +226,7 @@ export default function GameV2({
 						}
 					/>
 				}
-				wordHistory={<DefinitionsPanel definition={lastDefinition} />}
+				wordHistory={<DefinitionsPanel definitions={definitionHistory} language={language} />}
 				playersBar={
 					shouldShowPlayersBar(gameState) ? (
 						<PlayersRoster gameState={gameState} turnTypingText={turnTypingText} />

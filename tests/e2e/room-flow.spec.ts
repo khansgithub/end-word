@@ -5,6 +5,7 @@ import { envGet } from "@/app/server/env";
 import { E2ETestAssertionError, TestEnvError } from "@/shared/errors";
 import { MAX_PLAYERS } from "@/shared/consts";
 import { roomFlowTestNames } from "@tests/e2e/test-names";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
 
@@ -142,9 +143,9 @@ async function setupPages<N extends number>(
         submitButton: page.getByRole("button", { name: /submit word/i }),
         loadingBlur: page.locator("div.backdrop-blur-sm"),
         matchLetterDisplay: page
-            .getByRole("heading", { name: /match letter/i })
-            .locator("..")
-            .locator(".text-8xl"),
+            .getByRole("heading", { name: gameStrings.matchLetter })
+            .locator('xpath=following-sibling::span')
+            .first(),
         player1PanelHeartDisplay: playerPanelHearts(page, "Player1"),
         player2PanelHeartDisplay: playerPanelHearts(page, "Player2"),
         thisPlayerHeartDisplay: page.locator("div.panel.rounded-lg").filter({
@@ -188,10 +189,16 @@ async function enterNameAndOpenLobby(page: Page, name: string, log: (message: st
 async function hostCreateRoom(
     page: Page,
     log: (message: string) => void,
-    roomName = `E2E Room ${Date.now()}`
+    roomName = `E2E Room ${Date.now()}`,
+    language: "en" | "ko" = "ko"
 ): Promise<{ roomId: string; roomName: string }> {
-    log(`host: create & join room "${roomName}"`);
+    log(`host: create & join room "${roomName}" with language ${language}`);
     await page.getByPlaceholder(/room name/i).fill(roomName);
+    if (language === "en") {
+        await page.getByRole("button", { name: /english/i }).click();
+    } else {
+        await page.getByRole("button", { name: /korean/i }).click();
+    }
     await page.getByRole("button", { name: /create & join/i }).click();
     try {
         await page.waitForURL("**/room/**", { timeout: E2E_TIMEOUT, waitUntil: "commit" });
@@ -246,16 +253,16 @@ async function navigateToGameStart(
     pages: Page[],
     dom: DomEntry[],
     log: (message: string) => void,
-    options: { startGame?: boolean } = {}
+    options: { startGame?: boolean, language?: "en" | "ko", solo?: boolean } = {}
 ) {
-    const { startGame = true } = options;
+    const { startGame = true, language = "ko", solo = false } = options;
     const [hostPage, ...guestPages] = pages;
 
     for (let i = 0; i < pages.length; i++) {
         await enterNameAndOpenLobby(pages[i], `Player${i + 1}`, log);
     }
 
-    const { roomId } = await hostCreateRoom(hostPage, log);
+    const { roomId } = await hostCreateRoom(hostPage, log, undefined, language);
 
     for (const guestPage of guestPages) {
         await joinRoomPage(guestPage, roomId, log);
@@ -267,17 +274,21 @@ async function navigateToGameStart(
     //     await waitForRoomPageReady(hostPage);
     // }
 
-    await waitForHostCanStart(hostPage);
+    if (!solo) {
+        await waitForHostCanStart(hostPage);
+    }
 
     if (!startGame) {
         return;
     }
 
-    log("host: start game");
-    await hostPage.getByRole("button", { name: /^start game$/i }).click();
-    await hostPage.evaluate(async (id) => {
-        await fetch(`/api/rooms/${id}/start`, { method: "POST" });
-    }, roomId);
+    if (!solo) {
+		log("host: start game");
+        await hostPage.getByRole("button", { name: /^start game$/i }).click();
+		await hostPage.evaluate(async (id) => {
+			await fetch(`/api/rooms/${id}/start`, { method: "POST" });
+		}, roomId);
+    }
 
     // log("reload clients after game start");
     // for (const page of pages) {
@@ -394,8 +405,8 @@ test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }, testInfo) =
         log("assert #players visible");
         await expect(playersA).toBeVisible({ timeout: 5_000 });
 
-        log(`assert #players has ${MAX_PLAYERS} children`);
-        await expect(playersA.locator("> *")).toHaveCount(MAX_PLAYERS, { timeout: E2E_TIMEOUT });
+        log(`assert #players has ${pages.length} children`);
+        await expect(playersA.locator("> *")).toHaveCount(pages.length, { timeout: E2E_TIMEOUT });
     } catch (error) {
         log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
         if (error instanceof Error && error.stack) {
@@ -755,6 +766,42 @@ test(roomFlowTestNames.endGameWith3Players, async ({ browser, request }, testInf
         await expectWinner(domB.page, "Player3");
         await expectWinner(domC.page, "Player3");
     } catch (err) {
+        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
+        throw err;
+    } finally {
+        await testCleanUp(contexts, clientLogs, request, log);
+    }
+});
+
+test(roomFlowTestNames.customTest, async ({ browser, request }, testInfo) => {
+    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+    assertEnvVarEquals(
+        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_RANDOM_WORD: "boss"},
+        testInfo.title
+    );
+
+    const TIMEOUT = E2E_TIMEOUT;
+    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 1);
+    const [domA] = dom;
+
+    try {
+        await navigateToGameStart(pages, dom, log, { language: "en", solo: true });
+
+        const highlightValue = await domA.highlightInput.inputValue({ timeout: TIMEOUT });
+        expect(highlightValue?.trim()).toBe("s");
+
+        // Example word starting with S for English.
+        const validWord = "stupendous";
+        log(`type a valid word "${validWord}"`);
+        await domA.wordInput.fill(validWord, { timeout: TIMEOUT });
+        log("submit the word");
+        await domA.submitButton.click();
+        // Wait for the submission to go through by waiting for wordInput to be enabled again
+        await expect(domA.wordInput).toBeEnabled({ timeout: TIMEOUT });
+        // Check highlightInput value is still "s"
+        const afterSubmitHighlightValue = await domA.highlightInput.inputValue({ timeout: TIMEOUT });
+        expect(afterSubmitHighlightValue?.trim()).toBe("s");
+	} catch (err) {
         log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
         throw err;
     } finally {

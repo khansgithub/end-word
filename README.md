@@ -56,8 +56,36 @@ supabase db query --linked -f supabase/migrations/<file>.sql
 ## Tests
 
 ```bash
+# Unit tests (runs Vitest once and exits)
 npm run test:unit
+
+# End-to-end tests (default: Playwright + custom E2E runner)
 npm run test:playwright
+
+# Build E2E test dashboard (generates HTML dashboard for test results)
+npm run test:dashboard
+
+# Run all tests (unit + E2E)
+npm run test:all
+
+# Open Playwright UI for E2E tests (interactive test runner)
+npm run test:playwright:ui
+
+# Run Playwright E2E tests matching a pattern (use --grep for test name)
+npm run test:playwright:grep
+
+# Run Playwright E2E tests with UI and filtering (--grep + --ui)
+npm run test:playwright:grep:ui
+
+# Run custom Playwright E2E script (custom-runner.ts)
+npm run test:playwright:custom <name of test>
+
+# Run custom Playwright E2E script with UI (--ui)
+npm run test:playwright:custom:ui <name of test>
+
+# Watch unit tests (Vitest in watch mode)
+npm run test:watch
+
 ```
 
 ## Legacy

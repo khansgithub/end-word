@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { DictionaryEntry } from "@/shared/types";
 import "./game-v2.css";
 
 export interface DefinitionsPanelProps {
-	/** Latest definition from a successful submit. */
-	definition: DictionaryEntry | null;
+	/** All successful submissions in this game. */
+	definitions: DictionaryEntry[];
+	language?: "en" | "ko";
 }
 
 /**
@@ -14,17 +14,8 @@ export interface DefinitionsPanelProps {
  * WIRE: `definition={lastDefinition}` from Game state (set on successful submit).
  * WIRE: accumulation logic — copy from `@/app/components/Definitions`.
  */
-export default function DefinitionsPanel({ definition }: DefinitionsPanelProps) {
-	const definitions = useRef(new Map<string, DictionaryEntry>());
-	const [, setDefCount] = useState(0);
-
-	useEffect(() => {
-		if (!definition) return;
-		definitions.current.set(definition.key, definition);
-		setDefCount((c) => c + 1);
-	}, [definition]);
-
-	const entries = Array.from(definitions.current).reverse();
+export default function DefinitionsPanel({ definitions, language = "ko" }: DefinitionsPanelProps) {
+	const entries = [...definitions].reverse();
 
 	return (
 		<section
@@ -46,9 +37,9 @@ export default function DefinitionsPanel({ definition }: DefinitionsPanelProps) 
 						No words yet
 					</li>
 				) : (
-					entries.map(([word, entry], index) => (
+					entries.map((entry, index) => (
 						<li
-							key={word}
+							key={entry.key}
 							className="rounded-(--g2-radius) px-3 py-2.5 transition-colors"
 							style={{
 								background:
@@ -58,12 +49,35 @@ export default function DefinitionsPanel({ definition }: DefinitionsPanelProps) 
 							}}
 						>
 							<p className="text-sm font-semibold font-mono" style={{ color: "var(--text-primary)" }}>
-								{word}
+								{entry.key}
 							</p>
 							<p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--g2-muted)" }}>
 								{/* {entry.data[0]?.definition ?? ""} */}
 								{entry.data.at(0)?.definition ?? ""}
 							</p>
+							{language === "en" && (
+								<div className="text-xs mt-1 leading-relaxed" style={{ color: "var(--g2-muted)" }}>
+									<p className="font-semibold" style={{ color: "var(--text-primary)" }}>
+										한국어 설명
+									</p>
+									{entry.data.at(0)?.koreanDefinition ? (
+										<p className="mt-0.5">{entry.data.at(0)?.koreanDefinition}</p>
+									) : (
+										<a
+											href={
+												entry.data.at(0)?.koreanDefinitionUrl
+												?? `https://en.dict.naver.com/#/search?query=${encodeURIComponent(entry.key)}&range=all`
+											}
+											target="_blank"
+											rel="noreferrer"
+											className="underline mt-0.5 inline-block"
+											style={{ color: "var(--text-primary)" }}
+										>
+											네이버 사전
+										</a>
+									)}
+								</div>
+							)}
 						</li>
 					))
 				)}

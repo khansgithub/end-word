@@ -1,0 +1,5 @@
+[project]
+name = "app"
+version = "0.1.0"
+dependencies = [ "fastapi>=0.100.0", "marisa-trie>=1.0.0", "orjson>=3.9.0", "pydantic>=2.0.0" ]
+requires-python = "~=3.13.0"

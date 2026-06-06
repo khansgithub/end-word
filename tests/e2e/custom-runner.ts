@@ -135,6 +135,14 @@ const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
         },
         enableUi: true,
     },
+	[t.customTest]: {
+		envVars: {
+			MOCK_GET_RANDOM_WORD: "true",
+			MOCK_LOOKUP_WORD: "true",
+			MOCK_RANDOM_WORD: "boss",
+		},
+		enableUi: true,
+	},
 };
 
 function setupMockDictionaryData() {
@@ -206,7 +214,7 @@ async function main(testName?: RoomFlowTestName) {
     process.exit(failed.length > 0 ? 1 : 0);
 }
 
-// ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.endGameWith3Players)
+// ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.customTest)
 
 const testNamesFromArgs = process.argv.slice(2).filter(arg => !arg.startsWith("--"));
 const testName = testNamesFromArgs.length > 0 ? testNamesFromArgs[0] : undefined;

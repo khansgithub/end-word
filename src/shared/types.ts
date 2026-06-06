@@ -170,6 +170,8 @@ export type GameStateFrozen = Readonly<GameState>;
 export type EntryDataEng = {
 	word: string
 	definition: string
+	koreanDefinition?: string | null
+	koreanDefinitionUrl?: string | null
 };
 
 export type DictionaryEntry = {

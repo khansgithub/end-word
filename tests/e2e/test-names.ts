@@ -8,7 +8,8 @@ const namesOfTests = [
     "gameStartsAfterBothPlayersJoin",
     "playerDiesIn3PlayerGame",
     "endGameWith2Players",
-    "endGameWith3Players"
+    "endGameWith3Players",
+	"customTest",
 ] as const;
 
 export const roomFlowTestNames = arrayToMapped(namesOfTests);
@@ -23,4 +24,5 @@ export const roomFlowTestDescriptions: Record<RoomFlowTestName, string> = {
     playerDiesIn3PlayerGame: "Test that in a 3 player game, when the 2nd player dies the server skips them when progressing following turns.",
     endGameWith2Players: "Test that the end game screen appears when one player dies in a 2 player (alive) game",
     endGameWith3Players: "Test that the end game screen appears properly with 3 players", 
+	customTest: "",
 } as const;
