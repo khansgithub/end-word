@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, getAdmin } from "@/app/server/auth/session";
 import { joinRoom, joinRoomByInviteCode } from "@/app/server/game/roomService";
+import { fetchRoom, fetchRoomByInviteCode } from "@/app/server/game/roomDb";
+import { checkSiteAccess } from "@/lib/site-lock";
 
 export async function POST(request: Request) {
 	const user = await getSessionUser();
@@ -12,6 +14,17 @@ export async function POST(request: Request) {
 		const body = await request.json();
 		const displayName = String(body.displayName ?? "Player").slice(0, 40);
 		const admin = getAdmin();
+
+		if (!(await checkSiteAccess(request))) {
+			const row = body.inviteCode
+				? await fetchRoomByInviteCode(admin, String(body.inviteCode))
+				: body.roomId
+					? await fetchRoom(admin, String(body.roomId))
+					: null;
+			if (!row || row.status !== "playing") {
+				return NextResponse.json({ error: "Site locked", siteLocked: true }, { status: 401 });
+			}
+		}
 
 		if (body.inviteCode) {
 			const result = await joinRoomByInviteCode(

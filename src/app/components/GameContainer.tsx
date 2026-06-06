@@ -53,6 +53,13 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
 		(async () => {
 			const metaRes = await fetch(`/api/rooms/${roomId}`);
+			if (metaRes.status === 401) {
+				const body = await metaRes.json();
+				if (body.siteLocked) {
+					router.replace(`/site-login?returnTo=${encodeURIComponent(`/room/${roomId}`)}`);
+					return;
+				}
+			}
 			if (metaRes.ok) {
 				const meta = await metaRes.json();
 				setLanguage(meta.room.language ?? "ko");

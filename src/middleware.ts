@@ -6,7 +6,7 @@ import {
   siteAccessToken,
 } from "@/lib/site-lock";
 
-function isPublicPath(pathname: string): boolean {
+function isAuthPath(pathname: string): boolean {
   if (pathname === SITE_LOGIN_PATH || pathname.startsWith(`${SITE_LOGIN_PATH}/`)) {
     return true;
   }
@@ -20,19 +20,35 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
+/** Paths that bypass the site lock so invitees can reach a running room. */
+function isRoomInvitePath(pathname: string, method: string): boolean {
+  // Room page (direct invite link)
+  if (pathname.startsWith("/room/")) return true;
+  // Join API
+  if (pathname === "/api/rooms/join") return true;
+  // Get room info (GET /api/rooms/{roomId})
+  if (method === "GET" && /^\/api\/rooms\/[^/]+$/.test(pathname)) return true;
+  return false;
+}
+
 export async function middleware(request: NextRequest) {
   if (!isSiteLockEnabled()) {
     return NextResponse.next();
   }
 
   const { pathname } = request.nextUrl;
-  if (isPublicPath(pathname)) {
+  if (isAuthPath(pathname)) {
     return NextResponse.next();
   }
 
   const expected = await siteAccessToken(process.env.SITE_PASSWORD!);
   const token = request.cookies.get(SITE_ACCESS_COOKIE)?.value;
   if (token === expected) {
+    return NextResponse.next();
+  }
+
+  // Room invite paths are accessible without site auth.
+  if (isRoomInvitePath(pathname, request.method)) {
     return NextResponse.next();
   }
 
