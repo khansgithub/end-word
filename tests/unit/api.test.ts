@@ -1,5 +1,5 @@
-import { lookUpWordApi } from "@/server/api";
-import { inputIsValid } from "@/server/utils";
+import { lookUpWordApi } from "@/app/server/dictionary/korean-api";
+import { inputIsValid } from "@/legacy/socket/utils";
 import { beforeAll, describe, expect, it } from "vitest";
 
 /**

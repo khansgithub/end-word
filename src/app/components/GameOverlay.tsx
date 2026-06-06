@@ -1,63 +1,115 @@
 import { JSX } from "react";
-import { NoWinnerFoundError } from "../../shared/errors";
-import { GameStatus, PlayersArray } from "../../shared/types";
-import { gameStrings } from "../lib/gameStrings";
+import { GameStatus, PlayersArray } from "@/shared/types";
+import { getWinnerPlayer } from "@/shared/utils";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 interface GameOverlayProps {
     status: GameStatus;
     players: PlayersArray;
+    connectedPlayers: number;
+    isHost?: boolean;
+    onStartGame?: () => void;
+    onBackToLobby?: () => void;
+    isStartingGame?: boolean;
+    isLeavingLobby?: boolean;
 }
 
-// type GameOverOverlayProps = {
-//     status: 'finished',
-// } | {
-//     status: 'waiting'
-// }
-
-export default function GameOverlay({ status, players }: GameOverlayProps) {
+export default function GameOverlay({
+    status,
+    players,
+    connectedPlayers,
+    isHost = false,
+    onStartGame,
+    onBackToLobby,
+    isStartingGame = false,
+    isLeavingLobby = false,
+}: GameOverlayProps) {
     function winnerName() {
-        const winner = players.find(p => p && p.health !== 0);
-        if (!winner) throw new NoWinnerFoundError({players});
-        return winner.name;
+        return getWinnerPlayer(players)?.name ?? gameStrings.noWinner;
     }
 
     function waitingJsx() {
-        return (<>
-            <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{gameStrings.waitingForGameToStart}</p>
-        </>);
+        if (isStartingGame) {
+            return (
+                <>
+                    <div className="app-spinner mb-4" aria-hidden />
+                    <p className="text-lg" style={{ color: "var(--b-fg)" }}>
+                        {gameStrings.startingGameOverlay}
+                    </p>
+                </>
+            );
+        }
+
+        return (
+            <>
+                <div className="app-spinner mb-4" aria-hidden />
+                <p className="text-lg" style={{ color: "var(--b-fg)" }}>
+                    {gameStrings.waitingForGameToStart}
+                </p>
+                {isHost && onStartGame && (
+                    <button
+                        type="button"
+                        className="btn-fsm mt-4"
+                        onClick={onStartGame}
+                        disabled={isStartingGame}
+                        aria-busy={isStartingGame}
+                    >
+                        {gameStrings.startGame}
+                    </button>
+                )}
+            </>
+        );
     }
 
     function finishedJsx() {
-        return (<>
-            <div className="stats shadow">
-                <div className="stat">
-                    <div className="stat-title">Winner is:</div>
-                    <div className="stat-value text-center"> {winnerName()} </div>
-                    <div className="stat-desc text-center text-lg">Well Done</div>
+        return (
+            <>
+                <div className="stats shadow">
+                    <div className="stat">
+                        <div className="stat-title">Winner is:</div>
+                        <div className="stat-value text-center"> {winnerName()} </div>
+                        <div className="stat-desc text-center text-lg">Well Done</div>
+                    </div>
                 </div>
-            </div>
-        </>);
+                {onBackToLobby && (
+                    <button
+                        type="button"
+                        className="btn-fsm mt-4 inline-flex items-center justify-center gap-2 min-w-[10rem]"
+                        onClick={onBackToLobby}
+                        disabled={isLeavingLobby}
+                        aria-busy={isLeavingLobby}
+                    >
+                        {isLeavingLobby && (
+                            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                        )}
+                        {isLeavingLobby ? gameStrings.leavingRoom : "Back to lobby"}
+                    </button>
+                )}
+            </>
+        );
     }
 
     const mapping: { [key in GameStatus]: () => JSX.Element } = {
-        "waiting": waitingJsx,
-        "finished": finishedJsx,
-        "playing": () => <></>
+        waiting: waitingJsx,
+        finished: finishedJsx,
+        playing: () => <></>,
     };
 
-    console.log(`[GameOverlay]: status: ${status}`);
+    if (status === "playing") {
+        return null;
+    }
 
-    if (status == 'playing') {
+    if (status === "waiting" && connectedPlayers < 2) {
         return null;
     }
 
     return (
-        <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+        <div
+            className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"
+            style={{ backgroundColor: "var(--b-overlay)" }}
+        >
             <div className="panel">
-                <div className="flex flex-col items-center p-6">
-                    {mapping[status]()}
-                </div>
+                <div className="flex flex-col items-center p-6">{mapping[status]()}</div>
             </div>
         </div>
     );

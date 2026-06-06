@@ -1,6 +1,6 @@
 import type { HttpHandler } from "msw";
-import { handlers } from "./handlers";
-import { server } from "./server";
+import { handlers } from "@/mocks/handlers";
+import { server } from "@/mocks/server";
 
 export function startMswTestServer() {
     server.listen({ onUnhandledRequest: "error" });

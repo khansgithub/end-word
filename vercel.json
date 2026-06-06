@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "dictionary/data/{dict.marisa,metadata.jsonl}",
+      "excludeFiles": "{dictionary/data/raw/**,dictionary/.venv/**,dictionary/tests/**,dictionary/__pycache__/**,dictionary/foo/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/dictionary/:path*",
+      "destination": "/api"
+    }
+  ]
+}

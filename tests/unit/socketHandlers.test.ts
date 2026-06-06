@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import {
     broadcastGameState,
     fml,
-} from "../../src/server/socketHandlers";
-import { buildInitialGameState } from "../../src/shared/GameState";
-import { socketEvents } from "../../src/shared/socketEvents";
-import { GameState, ServerPlayerSocket } from "../../src/shared/types";
-import { createRequiredPlayerWithId } from "./GameState.test-helpers";
-import * as ServerGameState from "../../src/server/state";
-import * as metrics from "../../src/server/metrics";
+} from "@/legacy/socket/socketHandlers";
+import { buildInitialGameState } from "@/shared/GameState";
+import { socketEvents } from "@/shared/socketEvents";
+import { GameState, ServerPlayerSocket } from "@/shared/types";
+import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";
+import * as ServerGameState from "@/legacy/socket/state";
+import * as metrics from "@/legacy/socket/metrics";
 
 // =============================================================================
 // MOCK FACTORIES
@@ -150,7 +150,7 @@ describe("attachSocketHandlers", () => {
     it("should register isReturningPlayer handler - found", () => {
         const player = createRequiredPlayerWithId("Alice", "returning-client", 0);
         const state = buildInitialGameState() as GameState;
-        state.players = [player, null, null, null, null];
+        state.players = [player, null, null, null];
         state.socketPlayerMap = new Map([["returning-client", 0]]);
         mockGetGameState.mockReturnValue(state);
 
@@ -218,7 +218,7 @@ describe("attachSocketHandlers", () => {
     it("should register disconnect handler", () => {
         const player = createRequiredPlayerWithId("Alice", "test-client", 0);
         const state = buildInitialGameState() as GameState;
-        state.players = [player, null, null, null, null];
+        state.players = [player, null, null, null];
         state.socketPlayerMap = new Map([["test-client", 0]]);
         state.connectedPlayers = 1;
         mockGetGameState.mockReturnValue(state);

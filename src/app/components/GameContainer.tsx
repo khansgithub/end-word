@@ -1,133 +1,208 @@
-'use client';
+"use client";
 
-import { redirect } from 'next/navigation';
-import { useEffect, useRef, useState } from "react";
-import { UnexpectedConnectionStateError } from '../../shared/errors';
-import { assertIsGameStateClient } from '../../shared/guards';
-import { AckRegisterPlayerResponse, ClientPlayerSocket, GameStateClient, PlayerWithId } from '../../shared/types';
-import { makeNewPlayer } from '../../shared/utils';
-import { useSocketStore, useUserStore } from "../store/userStore";
-import Game from './Game';
-import { emitRegisterPlayer } from '../../shared/socketClient';
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { UnexpectedConnectionStateError } from "@/shared/errors";
+import { assertIsGameStateClient } from "@/shared/guards";
+import type { GameStateClient } from "@/shared/types";
+import { useUserStore } from "@/app/store/userStore";
+import { gameStrings } from "@/lib/client/ui/game-strings";
+import { buildLoginUrl } from "@/lib/client/ui/return-to";
+import { joinRoomApi, leaveRoomApi, startRoomApi } from "@/lib/client/api/room";
+import type { GameLanguage } from "@/shared/types";
+import BusyOverlay from "@/app/components/BusyOverlay";
+import { resetInput } from "@/app/components/InputBox";
+import GameV2 from "@/app/components/game-v2/GameV2";
 
-const L = "Game Container: "
-const log = console.log;
+const CONNECTED = 0;
+const CONNECTING = 1;
+const FAILED = 2;
 
+export default function GameContainer({ roomId }: { roomId: string }) {
+	const router = useRouter();
+	const playerName = useUserStore((s) => s.playerName);
+	const [connection, setConnection] = useState<typeof CONNECTED | typeof CONNECTING | typeof FAILED>(
+		CONNECTING
+	);
+	const [gameState, setGameState] = useState<GameStateClient | null>(null);
+	const [isHost, setIsHost] = useState(false);
+	const [userId, setUserId] = useState<string | null>(null);
+	const [language, setLanguage] = useState<GameLanguage>("ko");
+	const [roomName, setRoomName] = useState<string | null>(null);
+	const [roomClosedMessage, setRoomClosedMessage] = useState<string | null>(null);
+	const [isStartingGame, setIsStartingGame] = useState(false);
+	const leaveContextRef = useRef({ roomId, connected: false });
+	const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-export function unloadPage(socket: ClientPlayerSocket | null, cb?: ((...args: any[]) => void)) {
-    if (socket && socket.connected) {
-        socket.disconnect();
-    }
-    if (cb) cb();
+	leaveContextRef.current = {
+		roomId,
+		connected: connection === CONNECTED,
+	};
+
+	const handleStateChange = useCallback((next: GameStateClient) => {
+		setGameState((prev) => (prev === next ? prev : next));
+	}, []);
+
+	useEffect(() => {
+		resetInput();
+
+		if (!playerName) {
+			router.replace(buildLoginUrl(`/room/${roomId}`));
+			return;
+		}
+
+		(async () => {
+			const metaRes = await fetch(`/api/rooms/${roomId}`);
+			if (metaRes.ok) {
+				const meta = await metaRes.json();
+				setLanguage(meta.room.language ?? "ko");
+				setRoomName(meta.room.roomname ?? null);
+				const {
+					data: { user },
+				} = await (await import("@/lib/supabase/client")).createClient().auth.getUser();
+				if (user) {
+					setUserId(user.id);
+					setIsHost(meta.room.host_user_id === user.id);
+				}
+			}
+
+			const response = await joinRoomApi({ roomId, displayName: playerName });
+			if (response.success && response.player) {
+				setGameState({
+					...response.gameState,
+					thisPlayer: response.player,
+				});
+				setConnection(CONNECTED);
+			} else {
+				setConnection(FAILED);
+			}
+		})();
+
+		return () => {
+			resetInput();
+		};
+	}, [roomId, playerName, router]);
+
+	const handleRoomClosed = useCallback(() => {
+		if (isHost) {
+			router.replace("/lobby");
+			return;
+		}
+		setRoomClosedMessage(gameStrings.hostLeftTheRoom);
+	}, [router, isHost]);
+
+	useEffect(() => {
+		if (!roomClosedMessage) return;
+		const timeout = setTimeout(() => router.replace("/lobby"), 2500);
+		return () => clearTimeout(timeout);
+	}, [roomClosedMessage, router]);
+
+	// Cancel a pending leave from React Strict Mode's dev-only remount cycle.
+	useEffect(() => {
+		if (leaveTimeoutRef.current) {
+			clearTimeout(leaveTimeoutRef.current);
+			leaveTimeoutRef.current = null;
+		}
+	}, []);
+
+	// Tab close / refresh — do not call leave in effect cleanup (that runs on dep changes too).
+	useEffect(() => {
+		if (connection !== CONNECTED) return;
+
+		const leaveOnUnload = () => {
+			void leaveRoomApi(roomId);
+		};
+
+		window.addEventListener("pagehide", leaveOnUnload);
+		return () => {
+			window.removeEventListener("pagehide", leaveOnUnload);
+		};
+	}, [roomId, connection]);
+
+	// Leaving the room page (client navigation or unmount) — debounced to ignore Strict Mode remounts.
+	useEffect(() => {
+		return () => {
+			const { roomId: id, connected } = leaveContextRef.current;
+			if (!connected) return;
+
+			leaveTimeoutRef.current = setTimeout(() => {
+				void leaveRoomApi(id);
+			}, 100);
+		};
+	}, []);
+
+	async function handleStartGame() {
+		if (isStartingGame) return;
+		setIsStartingGame(true);
+		try {
+			const result = await startRoomApi(roomId);
+			if (result.success && result.gameState && gameState) {
+				setGameState({
+					...gameState,
+					...result.gameState,
+					thisPlayer: gameState.thisPlayer,
+				});
+			}
+		} finally {
+			setIsStartingGame(false);
+		}
+	}
+
+	if (!playerName) return null;
+
+	switch (connection) {
+		case CONNECTED:
+			assertIsGameStateClient(gameState!);
+			if (!userId) return null;
+			return (
+				<>
+					<GameV2
+						key={roomId}
+						roomId={roomId}
+						roomName={roomName}
+						userId={userId}
+						gameState={gameState!}
+						language={language}
+						onStateChange={handleStateChange}
+						onRoomClosed={handleRoomClosed}
+						isHost={isHost}
+						onStartGame={handleStartGame}
+						isStartingGame={isStartingGame}
+					/>
+					{roomClosedMessage && (
+						<BusyOverlay
+							message={roomClosedMessage}
+							detail={gameStrings.returningToLobby}
+							role="alertdialog"
+						/>
+					)}
+				</>
+			);
+		case CONNECTING:
+			return <BusyOverlay message={gameStrings.joiningRoomPage} />;
+		case FAILED:
+			return (
+				<div
+					className="app-ui flex min-h-dvh w-full flex-col items-center justify-center p-4"
+					style={{ backgroundColor: "var(--b-bg)", fontFamily: "var(--font-b-sans)" }}
+				>
+					<div className="panel w-full max-w-md">
+						<div className="flex flex-col items-center gap-4 p-4 text-center sm:p-6">
+							<p className="text-sm sm:text-base" style={{ color: "var(--b-danger)" }}>
+								Could not join this room.
+							</p>
+							<button
+								type="button"
+								className="btn-fsm w-full sm:w-auto"
+								onClick={() => router.push("/lobby")}
+							>
+								Back to lobby
+							</button>
+						</div>
+					</div>
+				</div>
+			);
+		default:
+			throw new UnexpectedConnectionStateError(connection);
+	}
 }
-
-function GameContainer() {
-    // connection constants and type
-    const [CONNECTED, CONNECTING, FAILED] = [0, 1, 2] as const;
-    type ConnectionState = typeof CONNECTED | typeof CONNECTING | typeof FAILED | null;
-
-    // external state from stores
-    const { playerName, clientId: playerId } = useUserStore.getState();
-    if (!playerName) redirect("/");
-    const { socket } = useSocketStore.getState();
-
-    // React state
-    const [userIsConnected, setUserIsConnected] = useState<ConnectionState>(CONNECTING);
-    const state = useRef<GameStateClient>(null);
-
-    // derived data
-    const player: PlayerWithId = makeNewPlayer(playerName, playerId);
-
-    if (socket === null || socket.disconnected) {
-        unloadPage(socket);
-        console.warn(`Socket is disconnected or has not be created yet: ${socket}`);
-        return;
-        // redirect("/");
-        // throw new Error(`Socket is disconnected or has not be created yet: ${socket}`);
-    }
-
-    // handleSocket(socket, state, dispatch);
-
-    useEffect(() => {
-        // window.addEventListener('beforeunload', (() => unloadPage(socket)));
-        // router.events.on('routeChangeStart', unloadPage);
-
-        log(L, `useEffect():
-            clientId: ${socket.auth}
-            useIsConencted: ${userIsConnected}
-        `);
-
-        if (userIsConnected !== CONNECTED) {
-            console.count("EMIT: REGISTER PLAYER");
-            log(L, 'Register player;', player, socket.auth);
-        }
-
-        emitRegisterPlayer(socket, player, (response: AckRegisterPlayerResponse) => {
-            if (response.success) {
-                const nextState: GameStateClient = {
-                    ...response.gameState,
-                    thisPlayer: response.player
-                }
-                state.current = nextState;
-                setUserIsConnected(CONNECTED);
-            } else {
-                setUserIsConnected(FAILED);
-            }
-        });
-        return () => { };
-
-    }, []);
-
-    console.count("GameContainer");
-
-    const StatusPanel = ({ children, hasError = false }: { children: React.ReactNode; hasError?: boolean }) => (
-        <div className="flex w-full h-screen justify-center items-center p-4" style={{ backgroundColor: 'transparent' }}>
-            <div className="panel max-w-md" style={{
-                ...(hasError && { borderColor: 'var(--border-error)' }),
-            }}>
-                {children}
-            </div>
-        </div>
-    );
-
-    switch (userIsConnected ?? CONNECTING) {
-        case CONNECTED:
-            log(L, "CONNECTED", CONNECTED);
-            assertIsGameStateClient(state.current!);
-            // unloadHandlers(socket);
-            // log(L, pp(state));
-            return (
-                // <></>
-                <Game gameState={state.current}></Game>
-            )
-        case CONNECTING:
-            return (
-                <StatusPanel>
-                    <div className="flex flex-col items-center p-6">
-                        <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="text-lg" style={{ color: 'var(--text-primary)' }}>Connecting to game...</p>
-                    </div>
-                </StatusPanel>
-            )
-        case FAILED:
-            return (
-                <StatusPanel hasError>
-                    <div className="flex flex-col items-start p-6 gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full" style={{
-                                background: 'var(--text-error-dark)',
-                                boxShadow: '0 0 8px var(--error-glow)',
-                            }}></div>
-                            <h3 className="font-semibold text-lg" style={{ color: 'var(--text-error)' }}>Connection Failed</h3>
-                        </div>
-                        <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>Failed to connect or register. Please try again.</div>
-                    </div>
-                </StatusPanel>
-            )
-        default:
-            console.error(`unexpted error: ${userIsConnected}`);
-            throw new UnexpectedConnectionStateError(userIsConnected);
-    }
-}
-
-export default GameContainer;

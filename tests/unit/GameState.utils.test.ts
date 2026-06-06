@@ -12,7 +12,12 @@ import {
     createRequiredPlayerWithId,
     createTestGameState,
     createTestPlayer,
-} from "./GameState.test-helpers";
+    createTestPlayerWithId,
+} from "@tests/unit/GameState.test-helpers";
+import {
+    getWinnerPlayer,
+    shouldEndGameOnPlayerDeath,
+} from "@/shared/utils";
 
 // =============================================================================
 // UTILITY FUNCTIONS TESTS
@@ -117,5 +122,57 @@ describe("isRequiredGameState", () => {
         const state = createTestGameState();
         delete (state as any).thisPlayer;
         expect(isRequiredGameState(state)).toBe(false);
+    });
+});
+
+describe("shouldEndGameOnPlayerDeath", () => {
+    it("is true when the hit is lethal and at most two players are alive", () => {
+        const solo = createGameStateWithPlayers([
+            createTestPlayerWithId("a", "1", 0),
+            null,
+            null,
+            null,
+        ]);
+        expect(shouldEndGameOnPlayerDeath(solo, 1)).toBe(true);
+        expect(shouldEndGameOnPlayerDeath(solo, 2)).toBe(false);
+
+        const twoAlive = createGameStateWithPlayers([
+            createTestPlayerWithId("a", "1", 0),
+            createTestPlayerWithId("b", "2", 1),
+            null,
+            null,
+        ]);
+        expect(shouldEndGameOnPlayerDeath(twoAlive, 1)).toBe(true);
+        expect(shouldEndGameOnPlayerDeath(twoAlive, 2)).toBe(false);
+
+        const threeAlive = createGameStateWithPlayers([
+            createTestPlayerWithId("a", "1", 0),
+            createTestPlayerWithId("b", "2", 1),
+            createTestPlayerWithId("c", "3", 2),
+            null,
+        ]);
+        expect(shouldEndGameOnPlayerDeath(threeAlive, 1)).toBe(false);
+    });
+});
+
+describe("getWinnerPlayer", () => {
+    it("returns the sole player with health above zero", () => {
+        const players = createGameStateWithPlayers([
+            { ...createTestPlayer("loser", "1", 0), health: 0 },
+            createTestPlayerWithId("winner", "2", 1),
+            null,
+            null,
+        ]).players;
+        expect(getWinnerPlayer(players)?.name).toBe("winner");
+    });
+
+    it("returns null when everyone is eliminated", () => {
+        const players = createGameStateWithPlayers([
+            { ...createTestPlayer("solo", "1", 0), health: 0 },
+            null,
+            null,
+            null,
+        ]).players;
+        expect(getWinnerPlayer(players)).toBeNull();
     });
 });

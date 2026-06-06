@@ -1,14 +1,14 @@
 import { spawn } from "child_process";
-import { roomFlowTestNames as t, type RoomFlowTestName } from "./test-names";
+import { roomFlowTestNames, roomFlowTestNames as t, type RoomFlowTestName } from "@tests/e2e/test-names";
 import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
-import { envSet, envGet } from "../../src/server/env";
+import { envSet, envGet } from "@/app/server/env";
 import {
     buildPlaywrightJsonReport,
     parseReportPath,
     type TestResult,
     writeReport,
-} from "./report";
-import playwrightConfig from "@/../playwright.config";
+} from "@tests/e2e/report";
+import playwrightConfig from "@root/playwright.config";
 // Playwright internal APIs - not officially documented, may change between versions
 import { runAllTestsWithConfig } from "playwright/lib/runner/testRunner";
 import { loadConfigFromFile } from "playwright/lib/common/configLoader";
@@ -20,6 +20,7 @@ import { loadConfigFromFile } from "playwright/lib/common/configLoader";
  * Supports per-test env overrides and custom report output.
  */
 
+var enableUi = (process.argv.includes("--ui")) ? true : false;
 
 type RunTestConfig = {
     envVars: Partial<typeof process.env>;
@@ -37,7 +38,7 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
         env,
         "playwright test tests/e2e/room-flow.spec.ts",
         "-g",
-        "--quiet",
+        // "--quiet",
         testName,
         enableUi ? "--ui" : ""
     ];
@@ -73,7 +74,7 @@ async function runTestInProcess(
         ...playwrightConfig,
         quiet: true,
         outputDir: `test-results/playwright/custom-runner/${testName}/`,
-        reporter: [["json", {outputFile: `test-results/playwright/custom-runner/${testName}/out.json`}]],
+        reporter: [["json", { outputFile: `test-results/playwright/custom-runner/${testName}/out.json` }]],
     });
     config.cliArgs = ["tests/e2e/room-flow.spec.ts"];
     config.cliGrep = testName;
@@ -134,6 +135,14 @@ const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
         },
         enableUi: true,
     },
+	[t.customTest]: {
+		envVars: {
+			MOCK_GET_RANDOM_WORD: "true",
+			MOCK_LOOKUP_WORD: "true",
+			MOCK_RANDOM_WORD: "boss",
+		},
+		enableUi: true,
+	},
 };
 
 function setupMockDictionaryData() {
@@ -144,16 +153,31 @@ function setupMockDictionaryData() {
     ]);
 }
 
-async function main() {
+async function main(testName?: RoomFlowTestName) {
     const results: TestResult[] = [];
     const startTime = new Date().toISOString();
     const runStart = performance.now();
+
+    console.log("enableUi: ", enableUi);
+    if (testName) {
+        const testConfig = testConfigs[testName];
+        if (!testConfig) {
+            console.error(`Test ${testName} not found`);
+            process.exit(1);
+        }
+        const { status, duration, error } = await runTest(testName, {
+            ...testConfig,
+            enableUi: enableUi,
+        });
+        results.push({ name: testName, status, duration, error });
+        return;
+    }
 
     for (const [testName, testConfig] of Object.entries(testConfigs)) {
         try {
             const { status, duration, error } = await runTest(testName as RoomFlowTestName, {
                 ...testConfig,
-                enableUi: false,
+                enableUi: enableUi,
             });
             results.push({ name: testName, status, duration, error });
         } catch (err) {
@@ -190,6 +214,26 @@ async function main() {
     process.exit(failed.length > 0 ? 1 : 0);
 }
 
-// ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.endGameWith3Players)
+// ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.customTest)
 
-main();
+const testNamesFromArgs = process.argv.slice(2).filter(arg => !arg.startsWith("--"));
+const testName = testNamesFromArgs.length > 0 ? testNamesFromArgs[0] : undefined;
+if (testName) {
+    // Validate that testName is in roomFlowTestNames (the object with test names as keys)
+    const allowedNames = Object.values(roomFlowTestNames) as RoomFlowTestName[];
+    if (!allowedNames.includes(testName as RoomFlowTestName)) {
+        console.error(
+            `Unknown test name: ${testName}. Must be one of: ${allowedNames.join(", ")}`
+        );
+        process.exit(1);
+    }
+    runTestSpawn(
+        testName as RoomFlowTestName,
+        {
+            ...testConfigs[testName as RoomFlowTestName]!,
+            enableUi
+        }
+    );
+} else {
+    main();
+}

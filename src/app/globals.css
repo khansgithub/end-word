@@ -4,15 +4,15 @@
 @import "./colours.css";
 
 :root {
-    --background: #0f172a;
-    --foreground: #e5e7eb;
+    --background: var(--b-bg);
+    --foreground: var(--b-fg);
 }
 
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
-    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --font-sans: var(--font-app-sans), var(--font-b-sans), system-ui, sans-serif;
+    --font-mono: var(--font-app-mono), ui-monospace, monospace;
 }
 
 @utility all-unset {
@@ -20,69 +20,103 @@
 }
 
 @layer utilities {
-  @keyframes glow-filter {
-    0%,100% {
-      filter: drop-shadow(0 0 4px var(--interactive-focus-light));
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+
+  .animate-shake {
+    animation: shake 0.45s ease-in-out;
+  }
+
+  @keyframes heart-loss {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+      filter: none;
+    }
+    35% {
+      transform: scale(1.25);
+      opacity: 1;
+      filter: brightness(1.4);
+    }
+    100% {
+      transform: scale(0.2);
+      opacity: 0;
+      filter: grayscale(1);
+    }
+  }
+
+  .animate-heart-loss {
+    animation: heart-loss 0.5s ease-in forwards;
+    transform-origin: center;
+  }
+
+  @keyframes health-damage {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: var(--b-shadow-card);
+    }
+    25% {
+      transform: scale(1.02);
+      box-shadow: 0 0 0 1px var(--border-error);
     }
     50% {
-      filter: drop-shadow(0 0 14px var(--interactive-focus-strong));
+      transform: translateX(-3px) scale(1.02);
+    }
+    75% {
+      transform: translateX(3px) scale(1.02);
     }
   }
 
-  @keyframes pulse-glow {
-    0%,100% {
-      box-shadow: 0 0 14px var(--interactive-focus-strong);
-    }
-    50% {
-      box-shadow: 0 0 20px var(--interactive-focus-strong);
-    }
+  .animate-health-damage {
+    animation: health-damage 0.45s ease-in-out;
   }
 
-	.animate-glow-filter {
-		animation: glow-filter 2.5s ease-in-out infinite;
-	}
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-
-  /* FSM Panel Style */
-  .panel, .player-panel {
-    background: var(--bg-secondary-solid);
-    border-radius: 0.9rem;
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-panel);
-    padding: clamp(0.5rem, 2vw, 1.15rem) clamp(0.65rem, 3vw, 1.25rem) clamp(0.6rem, 2.5vw, 1.2rem);
+  /* App card surface (legacy: .panel) */
+  .panel,
+  .player-panel {
+    background: var(--b-surface);
+    border-radius: 1rem;
+    border: 1px solid var(--b-surface-border);
+    box-shadow: var(--b-shadow-card);
+    padding: clamp(0.75rem, 2vw, 1.15rem) clamp(0.85rem, 3vw, 1.25rem);
     position: relative;
     overflow: hidden;
   }
 
   .player-panel {
-    background: var(--gradient-player-panel);
+    border-color: var(--b-accent);
+    box-shadow: var(--b-shadow-card), 0 0 0 1px var(--b-accent-muted);
   }
 
-  /* FSM Button Style */
+  /* App primary button (legacy: .btn-fsm) */
   .btn-fsm {
-    border-radius: 999px;
+    border-radius: 0.75rem;
     border: none;
-    padding: 0.35rem 0.8rem;
-    font-size: 0.78rem;
+    padding: 0.65rem 1rem;
+    min-height: 2.75rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    letter-spacing: 0.02em;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
-    color: var(--text-primary);
-    background: var(--gradient-button);
-    box-shadow: var(--shadow-button);
+    color: var(--b-accent-foreground);
+    background: var(--b-accent);
+    box-shadow: none;
     white-space: nowrap;
-    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+    transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
   }
 
-  .btn-fsm:active {
-    transform: translateY(1px) scale(0.99);
-    box-shadow: 0 0 0 1px var(--button-border), 0 5px 15px var(--shadow-color);
+  .btn-fsm:hover:not(:disabled) {
+    background: var(--b-accent-hover);
+  }
+
+  .btn-fsm:active:not(:disabled) {
+    transform: scale(0.99);
   }
 
   .btn-fsm:disabled {
@@ -90,35 +124,110 @@
     cursor: not-allowed;
   }
 
-  /* FSM Chip/Badge Style */
+  .btn-fsm--ghost {
+    background: transparent;
+    color: var(--b-fg);
+    border: 1px solid var(--b-line);
+  }
+
+  .btn-fsm--ghost:hover:not(:disabled) {
+    background: var(--b-surface-raised);
+    border-color: var(--b-line);
+  }
+
+  .btn-fsm--ghost.btn-fsm--active {
+    background: var(--b-accent);
+    color: var(--b-accent-foreground);
+    border-color: var(--b-accent);
+  }
+
+  /* Status chip (legacy: .chip) */
   .chip {
     border-radius: 999px;
-    border: 1px solid var(--border-accent);
-    padding: 0.18rem 0.45rem;
+    border: 1px solid var(--b-line);
+    padding: 0.2rem 0.5rem;
     font-size: 0.68rem;
-    color: var(--text-secondary);
+    font-weight: 500;
+    color: var(--b-muted);
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    background: var(--gradient-chip);
-    backdrop-filter: blur(16px);
+    background: var(--b-surface-raised);
   }
 
   .chip-dot {
     width: 0.38rem;
     height: 0.38rem;
     border-radius: 999px;
-    background: var(--color-success);
-    box-shadow: 0 0 8px rgba(34, 197, 94, 0.9);
+    background: var(--b-success);
   }
 
+  .app-spinner {
+    width: 3rem;
+    height: 3rem;
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--b-accent);
+    border-top-color: transparent;
+    border-radius: 999px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Shared form controls */
+  .app-input,
+  .home-input,
+  .home-b-input {
+    background: var(--b-surface-raised);
+    color: var(--b-fg);
+    border-color: var(--b-line);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .app-input::placeholder,
+  .home-input::placeholder,
+  .home-b-input::placeholder {
+    color: var(--b-muted);
+    opacity: 0.7;
+  }
+
+  .app-input:focus-visible,
+  .home-input:focus-visible,
+  .home-b-input:focus-visible {
+    outline: none;
+    border-color: var(--b-accent);
+    box-shadow: var(--b-ring-focus);
+  }
+
+  .app-btn,
+  .home-btn,
+  .home-b-btn {
+    background: var(--b-accent);
+    color: var(--b-accent-foreground);
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+
+  .app-btn:hover:not(:disabled),
+  .home-btn:hover:not(:disabled),
+  .home-b-btn:hover:not(:disabled) {
+    background: var(--b-accent-hover);
+  }
+
+  .app-btn:active:not(:disabled),
+  .home-btn:active:not(:disabled),
+  .home-b-btn:active:not(:disabled) {
+    transform: scale(0.99);
+  }
 }
 
 body {
-    background: var(--bg-primary);
-    background-image: var(--noise-texture);
-    background-size: 400px 400px;
-    color: var(--text-primary);
+    background: var(--b-bg);
+    color: var(--b-fg);
     font-family: var(--font-sans);
     margin: 0;
     padding: 0;

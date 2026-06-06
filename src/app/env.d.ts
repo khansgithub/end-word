@@ -17,6 +17,11 @@ export declare namespace NodeJS {
          */
         MOCK_GET_RANDOM_WORD: string
         /**
+         * Optional override for mock random-word responses.
+         * Used by both Korean and English dictionary mock random-word paths.
+         */
+        MOCK_RANDOM_WORD: string
+        /**
          * When "true", lookUpWord uses mock instead of real API.
          */
         MOCK_LOOKUP_WORD: string

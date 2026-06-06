@@ -1,0 +1,602 @@
+{
+	"against": [
+		{
+			"definition": "In opposition to; contrary to.",
+			"word": "against"
+		}
+	],
+	"although": [
+		{
+			"definition": "In spite of the fact that; even though.",
+			"word": "although"
+		}
+	],
+	"among": [
+		{
+			"definition": "In the midst of; surrounded by.",
+			"word": "among"
+		}
+	],
+	"anyone": [
+		{
+			"definition": "Any person.",
+			"word": "anyone"
+		}
+	],
+	"anything": [
+		{
+			"definition": "Any object, event, or matter.",
+			"word": "anything"
+		}
+	],
+	"associated": [
+		{
+			"definition": "Connected or linked with something else.",
+			"word": "associated"
+		}
+	],
+	"became": [
+		{
+			"definition": "Past tense of \"become\".",
+			"word": "became"
+		}
+	],
+	"because": [
+		{
+			"definition": "For the reason that; since.",
+			"word": "because"
+		}
+	],
+	"been": [
+		{
+			"definition": "Past participle of \"be\".",
+			"word": "been"
+		}
+	],
+	"began": [
+		{
+			"definition": "Past tense of \"begin\".",
+			"word": "began"
+		}
+	],
+	"bought": [
+		{
+			"definition": "Past tense of \"buy\".",
+			"word": "bought"
+		}
+	],
+	"brought": [
+		{
+			"definition": "Past tense of \"bring\".",
+			"word": "brought"
+		}
+	],
+	"came": [
+		{
+			"definition": "Past tense of \"come\".",
+			"word": "came"
+		}
+	],
+	"carried": [
+		{
+			"definition": "Transported or supported from one place to another.",
+			"word": "carried"
+		}
+	],
+	"caused": [
+		{
+			"definition": "Made something happen.",
+			"word": "caused"
+		}
+	],
+	"children": [
+		{
+			"definition": "Young human beings; plural of child.",
+			"word": "children"
+		}
+	],
+	"compared": [
+		{
+			"definition": "Examined for similarities or differences.",
+			"word": "compared"
+		}
+	],
+	"could": [
+		{
+			"definition": "Past tense of \"can\"; used to indicate possibility or ability.",
+			"word": "could"
+		}
+	],
+	"created": [
+		{
+			"definition": "Brought into existence.",
+			"word": "created"
+		}
+	],
+	"criteria": [
+		{
+			"definition": "Standards or principles for judgment or evaluation.",
+			"word": "criteria"
+		}
+	],
+	"designated": [
+		{
+			"definition": "Officially assigned or specified.",
+			"word": "designated"
+		}
+	],
+	"died": [
+		{
+			"definition": "Stopped living.",
+			"word": "died"
+		}
+	],
+	"does": [
+		{
+			"definition": "Third-person singular present of \"do\".",
+			"word": "does"
+		}
+	],
+	"doing": [
+		{
+			"definition": "Performing an action or task.",
+			"word": "doing"
+		}
+	],
+	"during": [
+		{
+			"definition": "Throughout the course or duration of.",
+			"word": "during"
+		}
+	],
+	"easier": [
+		{
+			"definition": "Less difficult.",
+			"word": "easier"
+		}
+	],
+	"else": [
+		{
+			"definition": "In addition; otherwise.",
+			"word": "else"
+		}
+	],
+	"estimated": [
+		{
+			"definition": "Approximated or roughly calculated.",
+			"word": "estimated"
+		}
+	],
+	"everyone": [
+		{
+			"definition": "Every person.",
+			"word": "everyone"
+		}
+	],
+	"everything": [
+		{
+			"definition": "All things.",
+			"word": "everything"
+		}
+	],
+	"feet": [
+		{
+			"definition": "Plural of foot; units of length or body parts.",
+			"word": "feet"
+		}
+	],
+	"filed": [
+		{
+			"definition": "Submitted or placed on record.",
+			"word": "filed"
+		}
+	],
+	"forgot": [
+		{
+			"definition": "Past tense of \"forget\".",
+			"word": "forgot"
+		}
+	],
+	"from": [
+		{
+			"definition": "Indicating origin, source, or separation.",
+			"word": "from"
+		}
+	],
+	"gave": [
+		{
+			"definition": "Past tense of \"give\".",
+			"word": "gave"
+		}
+	],
+	"generated": [
+		{
+			"definition": "Produced or created.",
+			"word": "generated"
+		}
+	],
+	"guaranteed": [
+		{
+			"definition": "Promised with assurance.",
+			"word": "guaranteed"
+		}
+	],
+	"highest": [
+		{
+			"definition": "Greatest in degree, amount, or level.",
+			"word": "highest"
+		}
+	],
+	"himself": [
+		{
+			"definition": "The reflexive form of \"he\".",
+			"word": "himself"
+		}
+	],
+	"into": [
+		{
+			"definition": "Moving to the inside of; toward the interior of.",
+			"word": "into"
+		}
+	],
+	"introduced": [
+		{
+			"definition": "Presented or brought into use.",
+			"word": "introduced"
+		}
+	],
+	"isbn": [
+		{
+			"definition": "International Standard Book Number.",
+			"word": "isbn"
+		}
+	],
+	"issued": [
+		{
+			"definition": "Distributed or officially released.",
+			"word": "issued"
+		}
+	],
+	"itself": [
+		{
+			"definition": "The reflexive form of \"it\".",
+			"word": "itself"
+		}
+	],
+	"knew": [
+		{
+			"definition": "Past tense of \"know\".",
+			"word": "knew"
+		}
+	],
+	"largest": [
+		{
+			"definition": "Greatest in size or extent.",
+			"word": "largest"
+		}
+	],
+	"managed": [
+		{
+			"definition": "Successfully handled or controlled.",
+			"word": "managed"
+		}
+	],
+	"media": [
+		{
+			"definition": "Means of mass communication collectively.",
+			"word": "media"
+		}
+	],
+	"moved": [
+		{
+			"definition": "Changed position or location.",
+			"word": "moved"
+		}
+	],
+	"myself": [
+		{
+			"definition": "The reflexive form of \"I\".",
+			"word": "myself"
+		}
+	],
+	"named": [
+		{
+			"definition": "Given a name or identified.",
+			"word": "named"
+		}
+	],
+	"onto": [
+		{
+			"definition": "To a position on the surface of.",
+			"word": "onto"
+		}
+	],
+	"produced": [
+		{
+			"definition": "Created, manufactured, or brought forth.",
+			"word": "produced"
+		}
+	],
+	"proposed": [
+		{
+			"definition": "Suggested or put forward for consideration.",
+			"word": "proposed"
+		}
+	],
+	"provided": [
+		{
+			"definition": "Supplied or made available.",
+			"word": "provided"
+		}
+	],
+	"pubmed": [
+		{
+			"definition": "An online database of biomedical literature.",
+			"word": "pubmed"
+		}
+	],
+	"referred": [
+		{
+			"definition": "Directed attention or made reference to something.",
+			"word": "referred"
+		}
+	],
+	"released": [
+		{
+			"definition": "Made available or set free.",
+			"word": "released"
+		}
+	],
+	"seen": [
+		{
+			"definition": "Past participle of \"see\".",
+			"word": "seen"
+		}
+	],
+	"served": [
+		{
+			"definition": "Performed duties for or supplied to.",
+			"word": "served"
+		}
+	],
+	"shall": [
+		{
+			"definition": "Used to express determination or future action.",
+			"word": "shall"
+		}
+	],
+	"should": [
+		{
+			"definition": "Used to indicate obligation, expectation, or advice.",
+			"word": "should"
+		}
+	],
+	"shown": [
+		{
+			"definition": "Past participle of \"show\".",
+			"word": "shown"
+		}
+	],
+	"since": [
+		{
+			"definition": "From a past time until now; because.",
+			"word": "since"
+		}
+	],
+	"something": [
+		{
+			"definition": "An unspecified thing.",
+			"word": "something"
+		}
+	],
+	"submitted": [
+		{
+			"definition": "Presented for review or consideration.",
+			"word": "submitted"
+		}
+	],
+	"supplied": [
+		{
+			"definition": "Provided or furnished.",
+			"word": "supplied"
+		}
+	],
+	"than": [
+		{
+			"definition": "Used in comparisons.",
+			"word": "than"
+		}
+	],
+	"that": [
+		{
+			"definition": "Used to identify a specific thing or introduce a clause.",
+			"word": "that"
+		}
+	],
+	"their": [
+		{
+			"definition": "Belonging to or associated with people or things previously mentioned.",
+			"word": "their"
+		}
+	],
+	"them": [
+		{
+			"definition": "The objective case of \"they\".",
+			"word": "them"
+		}
+	],
+	"themselves": [
+		{
+			"definition": "The reflexive form of \"they\".",
+			"word": "themselves"
+		}
+	],
+	"these": [
+		{
+			"definition": "Plural of \"this\"; referring to nearby things.",
+			"word": "these"
+		}
+	],
+	"they": [
+		{
+			"definition": "Used to refer to two or more people or things.",
+			"word": "they"
+		}
+	],
+	"this": [
+		{
+			"definition": "Used to identify something close in space or time.",
+			"word": "this"
+		}
+	],
+	"those": [
+		{
+			"definition": "Plural of \"that\"; referring to more distant things.",
+			"word": "those"
+		}
+	],
+	"told": [
+		{
+			"definition": "Past tense of \"tell\".",
+			"word": "told"
+		}
+	],
+	"took": [
+		{
+			"definition": "Past tense of \"take\".",
+			"word": "took"
+		}
+	],
+	"toward": [
+		{
+			"definition": "In the direction of.",
+			"word": "toward"
+		}
+	],
+	"towards": [
+		{
+			"definition": "Variant of \"toward\".",
+			"word": "towards"
+		}
+	],
+	"unless": [
+		{
+			"definition": "Except if.",
+			"word": "unless"
+		}
+	],
+	"until": [
+		{
+			"definition": "Up to the point in time or event mentioned.",
+			"word": "until"
+		}
+	],
+	"updated": [
+		{
+			"definition": "Made more current or accurate.",
+			"word": "updated"
+		}
+	],
+	"upon": [
+		{
+			"definition": "On; immediately after.",
+			"word": "upon"
+		}
+	],
+	"went": [
+		{
+			"definition": "Past tense of \"go\".",
+			"word": "went"
+		}
+	],
+	"were": [
+		{
+			"definition": "Past tense plural of \"be\"; second-person singular past of \"be\".",
+			"word": "were"
+		}
+	],
+	"what": [
+		{
+			"definition": "Asking for information specifying something.",
+			"word": "what"
+		}
+	],
+	"when": [
+		{
+			"definition": "At what time; at or during the time that.",
+			"word": "when"
+		}
+	],
+	"where": [
+		{
+			"definition": "In or to what place or position.",
+			"word": "where"
+		}
+	],
+	"whether": [
+		{
+			"definition": "Expressing a doubt or choice between alternatives.",
+			"word": "whether"
+		}
+	],
+	"which": [
+		{
+			"definition": "Asking for information specifying one or more from a set.",
+			"word": "which"
+		}
+	],
+	"whom": [
+		{
+			"definition": "The objective case of \"who\".",
+			"word": "whom"
+		}
+	],
+	"whose": [
+		{
+			"definition": "Belonging to or associated with which person.",
+			"word": "whose"
+		}
+	],
+	"with": [
+		{
+			"definition": "Accompanied by; having or using.",
+			"word": "with"
+		}
+	],
+	"without": [
+		{
+			"definition": "Not having or lacking.",
+			"word": "without"
+		}
+	],
+	"women": [
+		{
+			"definition": "Plural of woman.",
+			"word": "women"
+		}
+	],
+	"would": [
+		{
+			"definition": "Past of \"will\"; used for conditional or polite statements.",
+			"word": "would"
+		}
+	],
+	"wrote": [
+		{
+			"definition": "Past tense of \"write\".",
+			"word": "wrote"
+		}
+	],
+	"your": [
+		{
+			"definition": "Belonging to or associated with the person being addressed.",
+			"word": "your"
+		}
+	],
+	"yourself": [
+		{
+			"definition": "The reflexive form of \"you\".",
+			"word": "yourself"
+		}
+	]
+}

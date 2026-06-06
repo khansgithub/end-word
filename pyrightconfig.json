@@ -1,0 +1,23 @@
+{
+	"include": ["dictionary", "api"],
+	"exclude": [
+		"**/node_modules",
+		"**/.venv",
+		"**/__pycache__",
+		"dictionary/foo"
+	],
+	"venvPath": "dictionary",
+	"venv": ".venv",
+	"stubPath": "dictionary/stubs",
+	"pythonVersion": "3.13",
+	"executionEnvironments": [
+		{
+			"root": "dictionary",
+			"extraPaths": ["dictionary/stubs"]
+		},
+		{
+			"root": "api",
+			"extraPaths": ["dictionary"]
+		}
+	]
+}

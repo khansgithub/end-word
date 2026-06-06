@@ -1,10 +1,10 @@
-import { invalidWord } from "@/server/socketHandlers";
+import { invalidWord } from "@/legacy/socket/socketHandlers";
 import { DEFAULT_HEALTH } from "@/shared/consts";
 import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
-import * as ServerGameState from "../../src/server/state";
-import { buildInitialGameState } from "../../src/shared/GameState";
-import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayers, ServerPlayerSocket } from "../../src/shared/types";
-import { createRequiredPlayerWithId } from "./GameState.test-helpers";
+import * as ServerGameState from "@/legacy/socket/state";
+import { buildInitialGameState } from "@/shared/GameState";
+import { AckSubmitWordResponse, GameState as GameStateType, ServerPlayers, ServerPlayerSocket } from "@/shared/types";
+import { createRequiredPlayerWithId } from "@tests/unit/GameState.test-helpers";
 
 // =============================================================================
 // MOCK FACTORIES
@@ -38,7 +38,7 @@ function createStateWithPlayer(
     const player = createRequiredPlayerWithId("TestPlayer", clientId, 0);
     player.health = health;
 
-    const players: ServerPlayers = [player, null, null, null, null];
+    const players: ServerPlayers = [player, null, null, null];
     for (let i = 1; i < alivePlayerCount; i++) {
         players[i] = createRequiredPlayerWithId(`Player${i + 1}`, `client-${i + 1}`, i);
     }

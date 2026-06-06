@@ -1,7 +1,7 @@
-import { GameState } from "../foo/foo2-1";
-import { Player as PlayerType } from "../../shared/types";
-import { PlayerHealth } from "./PlayerHealth";
-import { gameStrings } from "../lib/gameStrings";
+import { GameState } from "@/app/foo/foo2-1";
+import { Player as PlayerType } from "@/shared/types";
+import { PlayerHealth } from "@/app/components/PlayerHealth";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 type PanelTypes = "player" | "empty";
 
@@ -47,7 +47,6 @@ const emptyStyles = {
 }
 
 function styleRules(styles: any) {
-    console.log("STYLES ><>>><M><<<", styles);
     // throw new Error("test");
     return {
         panel: {
@@ -78,9 +77,6 @@ export function PlayerPanel({ type, styles, playerName, isCurrentPlayer, lastWor
         const emptyStyle = emptyStyles[key as keyof typeof emptyStyles] ?? "";
         return `${baseStyle} ${isPlayer ? playerStyle : emptyStyle}`
     };
-
-    console.log("[PlayerPanel.tsx] styles:", styles);
-
 
     /**
      * Section with Player name, last word, turn chip, health

@@ -1,47 +1,42 @@
-import { createStore } from "zustand";
+import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { ClientPlayerSocket } from "../../shared/types";
 
 interface PlayerSession {
-    playerName: string;
-    clientId: string;
-    setName: (name: string) => void;
+  playerName: string;
+  clientId: string;
+  setName: (name: string) => void;
 }
 
-interface Socket {
-    socket: ClientPlayerSocket | null,
-    setSocket: (socket: ClientPlayerSocket) => void;
-}
-
-export interface InputState {
-    inputValue: string;
-    highlightValue: string;
-    isComposing: boolean;
-    isError: boolean;
-    lastKey: string;
-    setInputValue: (value: string) => void;
-    setHighlightValue: (value: string) => void;
-    setIsComposing: (value: boolean) => void;
-    setIsError: (value: boolean) => void;
-    setLastKey: (value: string) => void;
-    reset: () => void;
-}
-
-const _userStore = (set: any) => ({
-    playerName: "",
-    clientId: crypto.randomUUID(),
-    setName: (name: string) => set({ playerName: name }),
-});
-
-export const useUserStore = createStore<PlayerSession>()(
-    // FIXME: can't connect to game when localstorage is being used
-    persist(_userStore, { name: "user-storage" })
-    // _userStore
+export const useUserStore = create<PlayerSession>()(
+  persist(
+    (set) => ({
+      playerName: "",
+      clientId: crypto.randomUUID(),
+      setName: (name: string) => set({ playerName: name }),
+    }),
+    { name: "user-storage" }
+  )
 );
 
-export const useSocketStore = createStore<Socket>()(
-    (set) => ({
-        socket: null,
-        setSocket: (socket) => set({ socket: socket })
-    }),
-)
+/** @deprecated Socket.IO removed; stub for legacy imports */
+export const useSocketStore = {
+  getState: () => ({ socket: null as null, setSocket: (_s: unknown) => {} }),
+};
+
+export interface InputState {
+  inputValue: string;
+  highlightValue: string;
+  isComposing: boolean;
+  isError: boolean;
+  errorMessage: string | null;
+  errorShakeTick: number;
+  lastKey: string;
+  setInputValue: (value: string) => void;
+  setHighlightValue: (value: string) => void;
+  setIsComposing: (value: boolean) => void;
+  setIsError: (value: boolean) => void;
+  setErrorMessage: (value: string | null) => void;
+  bumpErrorShake: () => void;
+  setLastKey: (value: string) => void;
+  reset: () => void;
+}

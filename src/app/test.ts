@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { NullValueError } from "../shared/errors";
-import { BoolMap, PropertyBoolMap } from "../shared/types";
-import { pp } from "../shared/utils";
+import { NullValueError } from "@/shared/errors";
+import { BoolMap, PropertyBoolMap } from "@/shared/types";
+import { pp } from "@/shared/utils";
 
 const stylesMap = {
     // Container div styles

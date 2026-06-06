@@ -1,5 +1,5 @@
-import { GameStatus } from "../../shared/types";
-import { gameStrings } from "../lib/gameStrings";
+import { GameStatus } from "@/shared/types";
+import { gameStrings } from "@/lib/client/ui/game-strings";
 
 interface WaitingOverlayProps {
     status: GameStatus;
@@ -11,11 +11,14 @@ export default function WaitingOverlay({ status }: WaitingOverlayProps) {
     }
 
     return (
-        <div className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm" style={{ backgroundColor: 'var(--bg-overlay)' }}>
+        <div
+            className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"
+            style={{ backgroundColor: "var(--b-overlay)" }}
+        >
             <div className="panel">
                 <div className="flex flex-col items-center p-6">
-                    <div className="w-12 h-12 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="text-lg" style={{ color: 'var(--text-primary)' }}>{gameStrings.waitingForGameToStart}</p>
+                    <div className="app-spinner mb-4" aria-hidden />
+                    <p className="text-lg" style={{ color: "var(--b-fg)" }}>{gameStrings.waitingForGameToStart}</p>
                 </div>
             </div>
         </div>

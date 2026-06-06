@@ -1,5 +1,5 @@
 // @ts-nocheck
-// import { Server, Player } from './foo2-1';
+// import { Server, Player } from '@/app/foo/foo2-1';
 
 const server = new Server();
 const p1 = new Player("p1");

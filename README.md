@@ -1,67 +1,93 @@
-# End Word - WIP
+# End Word
 
-Building a prototype game based on 끝말잇기 / word chains.
-A multiplayer game where each player has to write a word starting with the last letter of the word submitted by the previous player.
+Multiplayer word-chain game: Korean **끝말잇기** and English (last-letter chains). Multiple concurrent matches use **rooms** backed by **Supabase Postgres** with **Realtime** broadcasts. Deployable on **Vercel** (Next.js App Router only — no custom Socket.IO server).
 
-caT > taP > pooL > linK ...
+## Stack
 
-Project is WIP and primarily for learning and experimentation.
+- **Next.js 16** — UI, Route Handlers, middleware (Supabase session)
+- **Supabase** — anonymous auth, `rooms` table, Realtime `postgres_changes`
+- **English dictionary** — `an-array-of-english-words` + `wink-lexicon` (offline, in-process)
+- **Korean dictionary** — optional Python FastAPI service in `dictionary/` (`DICTIONARY_URL`)
 
-## Technologies / Learning
-- **React** + **Next.js**
-- **Socket.IO** (real-time multiplayer)
-- Designing multiplayer games + UI/UX
-- A little bit about **lookup trees** (MARISA trie) for dictionary-style word checks
-- **First project** where I’m leveraging **Cursor / AI** for code generation
+## Features
 
-## Progress
-- **Python FASTAPI dictionary service with comprehensive word data**
-- **Game supports multiplayer for up to 5 players**
-- **Playwright tests + Unittests**
+- Lobby with public room list; create public/private rooms
+- Join via `/room/[roomId]` or 6-character invite code
+- Host starts the game (1–4 players, solo practice allowed)
+- Bilingual: Korean or English per room
+- Rooms archived after a match ends
 
-### Game Mechanics
-Following game mechanics are working:
-- Turn changes on valid word submission
-- Health decreases on incorrect word
-- Players with 0 lives have their turn skipped
+## Environment
 
-## Running _production_
+Copy `.env.example` to `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+DICTIONARY_URL=http://localhost:8000   # Korean only
+```
+
+Enable **anonymous sign-ins** in the Supabase dashboard (Authentication → Providers).
+
+## Development
+
 ```bash
 npm install
+npm run dev          # http://localhost:3000
+```
+
+Optional Korean dictionary:
+
+```bash
 npm run install-python-venv
-npm build
-npm run prod
-```
-Open `http://localhost:4000`.
-
-## Running locally
-```bash
-npm install
-npm run dev
+cd dictionary && .venv/bin/python main.py   # or Scripts on Windows
 ```
 
-Open `http://localhost:4000`.
+## Database
 
-## Dictionary
-
-There’s a small Python project in `dictionary/` that uses a **MARISA trie** and a FastAPI lookup endpoint (`GET /lookup/{word}`), which the app will call for word validation. It parses a large XML dataset of words filters out verbs.
-
-## Testing
-Used AI to help setup and build tests:
-- Playwright for testing user scenarios
-- Vitest for unit tests
+Linked project: `end-word` (`wvvpheefkzildcguzzfn`). Migrations live in `supabase/migrations/`.
 
 ```bash
+supabase link --project-ref wvvpheefkzildcguzzfn
+supabase db query --linked -f supabase/migrations/<file>.sql
+```
+
+## Tests
+
+```bash
+# Unit tests (runs Vitest once and exits)
+npm run test:unit
+
+# End-to-end tests (default: Playwright + custom E2E runner)
 npm run test:playwright
-npm run test:playwright:grep <name of test from roomFlowTestNames> // specific test
-```
 
-### Dashboard
-A HTML visualising the test results can be found under `test-results/dashboard.html`.
-```bash
+# Build E2E test dashboard (generates HTML dashboard for test results)
+npm run test:dashboard
+
+# Run all tests (unit + E2E)
 npm run test:all
+
+# Open Playwright UI for E2E tests (interactive test runner)
+npm run test:playwright:ui
+
+# Run Playwright E2E tests matching a pattern (use --grep for test name)
+npm run test:playwright:grep
+
+# Run Playwright E2E tests with UI and filtering (--grep + --ui)
+npm run test:playwright:grep:ui
+
+# Run custom Playwright E2E script (custom-runner.ts)
+npm run test:playwright:custom <name of test>
+
+# Run custom Playwright E2E script with UI (--ui)
+npm run test:playwright:custom:ui <name of test>
+
+# Watch unit tests (Vitest in watch mode)
+npm run test:watch
+
 ```
 
-# To-Do
-Currently the project uses Node.js as the server to manage the game state, and Socket.io for communications.
-This can be changed to use Supabase Realtime for socket communication, Supabase database to maintain the game state. This will allow for the project to be hosted on Vercel, not requiring any specific server configurations.
+## Legacy
+
+`npm run dev:legacy` runs the old Express + Socket.IO server on port 4000 (not used for Vercel).

@@ -1,11 +1,23 @@
-# api/trie_loader.py
-from models import Entry
+from __future__ import annotations
+
+import os
+import random
+from pathlib import Path
+
 import marisa_trie
 import orjson
-import random
+from models import Entry
 
-TRIE_PATH = "data/dict.marisa"
-META_PATH = "data/metadata.jsonl"
+
+def _data_dir() -> Path:
+    override = os.environ.get("DICTIONARY_DATA_DIR")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parent / "data"
+
+
+TRIE_PATH = _data_dir() / "dict.marisa"
+META_PATH = _data_dir() / "metadata.jsonl"
 
 
 class Dictionary:
@@ -29,8 +41,6 @@ class Dictionary:
 
     def prefix_search(self, prefix: str, limit=20):
         results = []
-        import ipdb; ipdb.set_trace()
-        
         for key, id_ in zip(
             self.trie.keys(prefix),
             self.trie.values(prefix)
@@ -47,30 +57,24 @@ class Dictionary:
         return self.metadata[random.randint(0, len(self.metadata) - 1)]
 
 
-dictionary = Dictionary()
+_dictionary: Dictionary | None = None
 
-def p():
-    prefix = "-가"
-    t = dictionary.trie
-    p = t.keys(prefix)
-    p = t.get(prefix)
-    print(p)
-    import ipdb; ipdb.set_trace()
-    # results = zip(p, [dictionary.metadata[t.get(p_)] for p_ in p])
-    # print(list(results))
 
-def q():
-    t = dictionary.trie
-    r = t.keys()[0]
-    r = t.get(r)
-    import ipdb; ipdb.set_trace()
-    print(r)
+def get_dictionary() -> Dictionary:
+    global _dictionary
+    if _dictionary is None:
+        _dictionary = Dictionary()
+    return _dictionary
 
-def getWord(word: str):
-    w = dictionary.lookup(word)
-    return w
 
-# p()
-# x = dictionary.random()
-# print(x)
-print(getWord("줄임"))
+class _DictionaryProxy:
+    """Lazy singleton used by local `dictionary/main.py`."""
+
+    def lookup(self, word: str) -> Entry | None:
+        return get_dictionary().lookup(word)
+
+    def random(self) -> Entry:
+        return get_dictionary().random()
+
+
+dictionary = _DictionaryProxy()

@@ -1,8 +1,7 @@
-import { buildSyllableSteps } from "../app/hangul-decomposer";
-import { envGet } from "../server/env";
-import { DEFAULT_HEALTH } from "./consts";
-import { InvalidSyllableError } from "./errors";
-import { ClientPlayers, GameState, MatchLetter, PlayerWithId, PlayerWithoutId, RunExclusive, ServerPlayers } from "./types";
+import { buildSyllableSteps } from "@/app/hangul-decomposer";
+import { DEFAULT_HEALTH } from "@/shared/consts";
+import { InvalidSyllableError } from "@/shared/errors";
+import { ClientPlayers, GameState, MatchLetter, Player, PlayerWithId, PlayerWithoutId, PlayersArray, RunExclusive, ServerPlayers } from "@/shared/types";
 
 // ============================================================================
 // Core Utilities
@@ -91,6 +90,11 @@ export function turnToPlayerIndex(turn: number, connectedPlayers: number): numbe
     return turn % connectedPlayers;
 }
 
+/** Active in the match (connected, not departed). */
+export function isActivePlayer(player: Player | null): player is Player {
+    return player != null && !player.left;
+}
+
 /**
  * Get the player whose turn it is.
  */
@@ -103,8 +107,20 @@ export function getCurrentTurnPlayer(state: GameState) {
 export function getAlivePlayerCount(state: GameState): number {
     return state.players.reduce(
         (count, player) =>
-            (player && player.health > 0 ? count + 1 : count),
+            (isActivePlayer(player) && player.health > 0 ? count + 1 : count),
         0);
+}
+
+/** True when a hit at 1 HP leaves at most one survivor (solo or final duel). */
+export function shouldEndGameOnPlayerDeath(
+    state: GameState,
+    healthBeforeHit: number
+): boolean {
+    return healthBeforeHit === 1 && getAlivePlayerCount(state) <= 2;
+}
+
+export function getWinnerPlayer(players: PlayersArray): Player | null {
+    return players.find((p) => isActivePlayer(p) && p.health > 0) ?? null;
 }
 
 /**
@@ -146,6 +162,24 @@ export function buildMatchLetter(
     } satisfies MatchLetter;
 }
 
+/** English: single-letter match (no Hangul decomposition). */
+export function buildEnglishMatchLetter(letter: string): MatchLetter {
+    const block = letter.toLowerCase().slice(0, 1);
+    return {
+        block,
+        steps: [block],
+        value: block,
+        next: 0,
+    };
+}
+
+export function buildMatchLetterForLanguage(
+    block: string,
+    language: "en" | "ko"
+): MatchLetter {
+    return language === "en" ? buildEnglishMatchLetter(block) : buildMatchLetter(block);
+}
+
 // ============================================================================
 // Environment Utilities
 // ============================================================================
@@ -168,4 +202,9 @@ export function arrayToMapped<T extends readonly string[]>(arr: T) {
     return Object.fromEntries(
         arr.map((name) => [name, name])
     ) as { [K in T[number]]: K };
+}
+
+
+export function normalizeEnglishWord(word: string): string {
+	return word.trim().toLowerCase();
 }

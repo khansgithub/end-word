@@ -1,46 +1,59 @@
 {
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "commonjs",
-    // "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": [
-        "./src/*"
-      ]
-    },
-    "moduleResolution": "node"
-  },
-  "include": [
-    "next-env.d.ts",
-    "playwright-internal.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts",
-    "src/.next//types/**/*.ts",
-    "src/.next//dev/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+	"compilerOptions": {
+		"target": "ES2017",
+		"lib": [
+			"dom",
+			"dom.iterable",
+			"esnext"
+		],
+		"allowJs": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"module": "commonjs",
+		// "moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"jsx": "react-jsx",
+		"incremental": true,
+		"baseUrl": ".",
+		"typeRoots": [
+			"./src/types",
+			"./node_modules/@types"	  
+		],
+		"plugins": [
+			{
+				"name": "next"
+			}
+		],
+		"paths": {
+			"@/*": [
+				"./src/*"
+			],
+			"@tests/*": [
+				"./tests/*"
+			],
+			"@scripts/*": [
+				"./scripts/*"
+			],
+			"@root/*": [
+				"./*"
+			]
+		},
+		"moduleResolution": "node"
+	},
+	"include": [
+		"next-env.d.ts",
+		"playwright-internal.d.ts",
+		"**/*.ts",
+		"**/*.tsx",
+		".next/types/**/*.ts",
+		".next/dev/types/**/*.ts",
+		"**/*.mts",
+	],
+	"exclude": [
+		"node_modules",
+		"tests"
+	]
 }
