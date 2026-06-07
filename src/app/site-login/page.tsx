@@ -28,7 +28,6 @@ function SiteLoginForm() {
         return;
       }
       router.replace(returnTo);
-      router.refresh();
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
