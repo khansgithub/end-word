@@ -5,6 +5,7 @@
   },
   "include": [
     "e2e/**/*.ts",
+    "unit/**/*.ts",
     "../playwright-internal.d.ts"
   ],
   "exclude": [

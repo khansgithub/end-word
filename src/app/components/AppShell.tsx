@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { AppNav } from "@/app/components/AppNav";
-import { SITE_LOGIN_PATH } from "@/lib/site-lock";
+import { SITE_LOGIN_PATH } from "@/shared/site-lock";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
 	const pathname = usePathname();

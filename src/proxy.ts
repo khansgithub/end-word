@@ -1,10 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
     isSiteLockEnabled,
-    SITE_ACCESS_COOKIE,
-    SITE_LOGIN_PATH,
     siteAccessToken,
 } from "@/lib/site-lock";
+import {
+    SITE_ACCESS_COOKIE,
+    SITE_LOGIN_PATH,
+} from "@/shared/site-lock";
+import { envGet } from "./app/server/env";
 
 function isAuthPath(pathname: string): boolean {
     if (
@@ -50,7 +53,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.next();
     }
 
-    const expected = await siteAccessToken(process.env.SITE_PASSWORD!);
+    const expected = await siteAccessToken(envGet("SITE_PASSWORD")!);
     const token = request.cookies.get(SITE_ACCESS_COOKIE)?.value;
     if (token === expected) {
         console.log("[proxy] Valid site access token, allowing request");

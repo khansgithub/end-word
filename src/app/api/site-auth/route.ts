@@ -1,10 +1,8 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import {
-    isSiteLockEnabled,
-    SITE_ACCESS_COOKIE,
-    siteAccessToken,
-} from "@/lib/site-lock";
+import { isSiteLockEnabled, siteAccessToken } from "@/lib/site-lock";
+import { SITE_ACCESS_COOKIE } from "@/shared/site-lock";
+import { envGet } from "@/app/server/env";
 
 function passwordsMatch(input: string, expected: string): boolean {
     const a = Buffer.from(input);
@@ -26,7 +24,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const expected = process.env.SITE_PASSWORD!;
+    const expected = envGet("SITE_PASSWORD")!;
     if (!passwordsMatch(password, expected)) {
         return NextResponse.json(
             { error: "Invalid password" },
@@ -38,7 +36,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true });
     response.cookies.set(SITE_ACCESS_COOKIE, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: envGet("NODE_ENV") === "production",
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7,
         path: "/",

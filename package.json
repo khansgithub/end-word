@@ -4,7 +4,6 @@
 	"private": true,
 	"scripts": {
 		"build": "next build",
-		"debug": "cross-env DEBUG=engine.io:* tsx watch src/legacy/socket/server.ts",
 		"dev": "concurrently -n next,dict -c blue,green \"next dev\" \"npm run dev:dictionary\"",
 		"dev:dictionary": "node scripts/run-dictionary.js",
 		"dev:legacy": "cross-env SUPPRESS=true tsx watch src/legacy/socket/server.ts",
