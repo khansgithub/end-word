@@ -27,6 +27,13 @@ function SiteLoginForm() {
                 return;
             }
             router.push(returnTo);
+			// Check if router.push actually changed the browser url, otherwise use window.location as fallback
+			// Fuck knows why this shit doesn't work in PROD only...
+            setTimeout(() => {
+                if (window.location.pathname + window.location.search + window.location.hash !== returnTo) {
+                    window.location.href = returnTo;
+                }
+            }, 100);
         } catch {
             setError("Something went wrong. Try again.");
         } finally {

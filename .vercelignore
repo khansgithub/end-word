@@ -12,5 +12,4 @@ coverage/
 .opencode/
 .vercel/output/
 scratch/
-stubs/
 *.log
