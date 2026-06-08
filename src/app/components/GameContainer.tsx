@@ -52,7 +52,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
         resetInput();
 
         if (!playerName) {
-            router.replace(buildLoginUrl(`/room/${roomId}`));
+            router.push(buildLoginUrl(`/room/${roomId}`));
             return;
         }
 
@@ -73,7 +73,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
                     console.log(
                         `[GameContainer] Site locked, redirecting to site-login`,
                     );
-                    router.replace(
+                    router.push(
                         `/site-login?returnTo=${encodeURIComponent(`/room/${roomId}`)}`,
                     );
                     return;
@@ -145,7 +145,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
     const handleRoomClosed = useCallback(() => {
         if (isHost) {
-            router.replace("/lobby");
+            router.push("/lobby");
             return;
         }
         setRoomClosedMessage(gameStrings.hostLeftTheRoom);
@@ -153,7 +153,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
     useEffect(() => {
         if (!roomClosedMessage) return;
-        const timeout = setTimeout(() => router.replace("/lobby"), 2500);
+        const timeout = setTimeout(() => router.push("/lobby"), 2500);
         return () => clearTimeout(timeout);
     }, [roomClosedMessage, router]);
 

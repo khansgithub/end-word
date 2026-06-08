@@ -11,7 +11,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "proxy.ts"  ],
   "exclude": [
     "node_modules",
     ".next"
