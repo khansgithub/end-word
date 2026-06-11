@@ -18,6 +18,7 @@ import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
 import { DictionaryEntry, GameStateClient, GameStateEmit } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
+import { appendDefinitionToHistory } from "@/shared/wordDefinition";
 import { isPlayerTurn, turnToPlayerIndex } from "@/shared/utils";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -93,6 +94,10 @@ export default function GameV2({
 		[]
 	);
 
+	const appendDefinition = useCallback((definition: DictionaryEntry) => {
+		setDefinitionHistory((current) => appendDefinitionToHistory(current, definition));
+	}, []);
+
 	const multiplayer = shouldShowPlayersBar(gameState);
 	const isMyTurn =
 		gameState.status === "playing" &&
@@ -132,6 +137,7 @@ export default function GameV2({
 		turnSeat: gameState.thisPlayer?.seat,
 		receiveEnabled: multiplayer && gameState.status === "playing",
 		onUpdate: applyRemote,
+		onWordDefinition: appendDefinition,
 		onRoomClosed,
 		onPlayerLeft,
 		presenceSeat: gameState.thisPlayer?.seat,
@@ -211,17 +217,13 @@ export default function GameV2({
 		submitWordCallback(gameState, dispatch, setInputError, response, word);
 		if (response.success) {
 			if (response.definition) {
-				setDefinitionHistory((current) => {
-					const deduped = new Map(current.map((entry) => [entry.key, entry]));
-					deduped.set(response.definition.key, response.definition);
-					return Array.from(deduped.values());
-				});
+				appendDefinition(response.definition);
 			}
 			resetInput();
 		} else {
 			focusInputBox();
 		}
-	}, [gameState, roomId]);
+	}, [gameState, roomId, appendDefinition]);
 
 	const handleExit = useCallback(() => {
 		if (interactionLocked) return;

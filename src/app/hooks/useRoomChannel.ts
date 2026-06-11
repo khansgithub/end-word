@@ -7,6 +7,7 @@ import { isCompletedGameRow, rowToGameState } from "@/shared/roomRow";
 import type { RoomRow } from "@/shared/roomTypes";
 import type { GameStateEmit } from "@/shared/types";
 import { TYPING_DRAFT_EVENT, type TypingDraftPayload } from "@/shared/typingDraft";
+import { WORD_DEFINITION_EVENT, type WordDefinitionPayload } from "@/shared/wordDefinition";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -34,15 +35,17 @@ export function useRoomChannel(
 		onUpdate: (emit: GameStateEmit) => void;
 		onRoomClosed?: () => void;
 		onTypingDraft?: (payload: TypingDraftPayload) => void;
+		onWordDefinition?: (definition: WordDefinitionPayload) => void;
 		onPlayerLeft?: (leavingPlayers: Array<{ userId: string; seat: number }>) => GameStateEmit | null | undefined;
 		presenceSeat?: number;
 	}
 ) {
 	const supabase = useSupabase();
-	const { userId, isHost, onUpdate, onRoomClosed, onTypingDraft, onPlayerLeft, presenceSeat } = options;
+	const { userId, isHost, onUpdate, onRoomClosed, onTypingDraft, onWordDefinition, onPlayerLeft, presenceSeat } = options;
 	const onUpdateRef = useRef(onUpdate);
 	const onRoomClosedRef = useRef(onRoomClosed);
 	const onTypingDraftRef = useRef(onTypingDraft);
+	const onWordDefinitionRef = useRef(onWordDefinition);
 	const onPlayerLeftRef = useRef(onPlayerLeft);
 	const channelRef = useRef<RealtimeChannel | null>(null);
 	const subscribedRef = useRef(false);
@@ -60,6 +63,10 @@ export function useRoomChannel(
 	useEffect(() => {
 		onTypingDraftRef.current = onTypingDraft;
 	}, [onTypingDraft]);
+
+	useEffect(() => {
+		onWordDefinitionRef.current = onWordDefinition;
+	}, [onWordDefinition]);
 
 	useEffect(() => {
 		onPlayerLeftRef.current = onPlayerLeft;
@@ -93,6 +100,9 @@ export function useRoomChannel(
 			})
 			.on("broadcast", { event: TYPING_DRAFT_EVENT }, ({ payload }) => {
 				onTypingDraftRef.current?.(payload as TypingDraftPayload);
+			})
+			.on("broadcast", { event: WORD_DEFINITION_EVENT }, ({ payload }) => {
+				onWordDefinitionRef.current?.(payload as WordDefinitionPayload);
 			})
 			.on(
 				"postgres_changes",

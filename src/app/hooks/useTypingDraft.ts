@@ -4,6 +4,7 @@ import { useRoomChannel } from "@/app/hooks/useRoomChannel";
 import { useInputBoxStore } from "@/app/components/InputBox";
 import type { TypingDraftPayload } from "@/shared/typingDraft";
 import type { GameStateEmit } from "@/shared/types";
+import type { WordDefinitionPayload } from "@/shared/wordDefinition";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const THROTTLE_MS = 80;
@@ -80,11 +81,12 @@ export function useTypingDraft(
 		receiveEnabled: boolean;
 		onUpdate: (emit: GameStateEmit) => void;
 		onRoomClosed?: () => void;
+		onWordDefinition?: (definition: WordDefinitionPayload) => void;
 		onPlayerLeft?: (leavingPlayers: Array<{ userId: string; seat: number }>) => GameStateEmit | null | undefined;
 		presenceSeat?: number;
 	}
 ) {
-	const { userId, isHost, broadcastEnabled, turnSeat, receiveEnabled, onUpdate, onRoomClosed, onPlayerLeft, presenceSeat } = options;
+	const { userId, isHost, broadcastEnabled, turnSeat, receiveEnabled, onUpdate, onRoomClosed, onWordDefinition, onPlayerLeft, presenceSeat } = options;
 	const [remoteDraft, setRemoteDraft] = useState<TypingDraftPayload | null>(null);
 	const sendRef = useRef<(text: string) => void>(() => { });
 	const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,6 +121,7 @@ export function useTypingDraft(
 		onUpdate,
 		onRoomClosed,
 		onTypingDraft,
+		onWordDefinition,
 		onPlayerLeft,
 		presenceSeat,
 	});

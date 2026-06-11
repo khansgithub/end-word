@@ -5,7 +5,7 @@ import {
 	wordStartsWithMatchLetter,
 } from "@/app/server/dictionary";
 import { resolveKoreanExplanation } from "@/app/server/dictionary/english-korean";
-import { broadcastRoomGameState } from "@/app/server/game/roomBroadcast";
+import { broadcastRoomGameState, broadcastRoomWordDefinition } from "@/app/server/game/roomBroadcast";
 import {
 	archiveRoom,
 	buildFreshRoomState,
@@ -250,9 +250,12 @@ export async function submitWord(
 	const nextState = progressNextTurn(state, block, word);
 	await persistRoomState(admin, roomId, nextState);
 
+	const emit = toGameStateEmit(nextState);
+	await broadcastRoomWordDefinition(admin, roomId, definition);
+
 	return {
 		success: true,
-		gameState: toGameStateEmit(nextState),
+		gameState: emit,
 		definition,
 	};
 }
