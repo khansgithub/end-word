@@ -6,6 +6,7 @@ import {
 import {
     SITE_ACCESS_COOKIE,
     SITE_LOGIN_PATH,
+    roomAccessCookie,
 } from "@/shared/site-lock";
 import { envGet } from "./app/server/env";
 
@@ -39,6 +40,12 @@ function isRoomInvitePath(pathname: string, method: string): boolean {
 	return false;
 }
 
+/** Extract roomId from room action paths like /api/rooms/{roomId}/submit or /api/rooms/{roomId}/leave. */
+function extractRoomIdForAction(pathname: string): string | null {
+	const match = pathname.match(/^\/api\/rooms\/([^/]+)\/(submit|leave)$/);
+	return match ? match[1] : null;
+}
+
 export async function proxy(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
     console.log(`[proxy] ${request.method} ${pathname}${search}`);
@@ -64,6 +71,17 @@ export async function proxy(request: NextRequest) {
     if (isRoomInvitePath(pathname, request.method)) {
         console.log("[proxy] Room invite path, allowing request");
         return NextResponse.next();
+    }
+
+    // Room action paths (submit, leave) require room-specific cookie for non-site-authenticated users.
+    const roomActionId = extractRoomIdForAction(pathname);
+    if (roomActionId && request.method === "POST") {
+        const roomCookieName = roomAccessCookie(roomActionId);
+        const roomCookie = request.cookies.get(roomCookieName)?.value;
+        if (roomCookie === "1") {
+            console.log("[proxy] Valid room access cookie for room " + roomActionId + ", allowing request");
+            return NextResponse.next();
+        }
     }
 
     if (pathname.startsWith("/api/")) {
