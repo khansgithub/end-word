@@ -13,7 +13,7 @@
   --g2-danger: var(--b-danger);
   --g2-shadow: var(--b-shadow-card);
   --g2-ring: 0 0 0 1px var(--g2-border);
-  --g2-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --g2-transition: 300ms ease-in-out;
 }
 
 .g2-panel {
@@ -21,6 +21,20 @@
   border: 1px solid var(--b-surface-border);
   border-radius: var(--g2-radius-lg);
   box-shadow: var(--g2-shadow);
+}
+
+.g2-play-focus-panel {
+  transition:
+    border-color var(--g2-transition),
+    box-shadow var(--g2-transition);
+}
+
+.g2-play-focus-active {
+  border-color: var(--g2-accent);
+  box-shadow:
+    var(--g2-shadow),
+    0 0 0 2px var(--g2-accent),
+    0 0 5px 2px var(--g2-accent);
 }
 
 .g2-label {

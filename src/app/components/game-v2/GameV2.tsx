@@ -275,6 +275,7 @@ export default function GameV2({
 								embedded
 							/>
 						}
+						disabled={isDisabled}
 					/>
 				}
 				wordHistory={<DefinitionsPanel definitions={definitionHistory} language={language} />}

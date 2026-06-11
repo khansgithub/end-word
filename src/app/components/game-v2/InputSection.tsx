@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
-import type { MatchLetter } from "@/shared/types";
 import InputBox from "@/app/components/InputBox";
 import InputErrorLabel from "@/app/components/game-v2/InputErrorLabel";
 import SubmitButton from "@/app/components/game-v2/SubmitButton";
+import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
+import type { MatchLetter } from "@/shared/types";
+import { useCallback, useState } from "react";
 import "./game-v2.css";
 
 export interface InputSectionProps {
