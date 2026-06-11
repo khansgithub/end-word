@@ -1,18 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { UnexpectedConnectionStateError } from "@/shared/errors";
-import { assertIsGameStateClient } from "@/shared/guards";
-import type { GameStateClient } from "@/shared/types";
-import { useUserStore } from "@/app/store/userStore";
-import { gameStrings } from "@/lib/client/ui/game-strings";
-import { buildLoginUrl } from "@/lib/client/ui/return-to";
-import { joinRoomApi, leaveRoomApi, startRoomApi } from "@/lib/client/api/room";
-import type { GameLanguage } from "@/shared/types";
 import BusyOverlay from "@/app/components/BusyOverlay";
 import { resetInput } from "@/app/components/InputBox";
 import GameV2 from "@/app/components/game-v2/GameV2";
+import { useUserStore } from "@/app/store/userStore";
+import { joinRoomApi, leaveRoomApi, startRoomApi } from "@/lib/client/api/room";
+import { gameStrings } from "@/lib/client/ui/game-strings";
+import { buildLoginUrl } from "@/lib/client/ui/return-to";
+import { UnexpectedConnectionStateError } from "@/shared/errors";
+import { assertIsGameStateClient } from "@/shared/guards";
+import type { GameLanguage, GameStateClient } from "@/shared/types";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const CONNECTED = 0;
 const CONNECTING = 1;
@@ -217,17 +216,18 @@ export default function GameContainer({ roomId }: { roomId: string }) {
             return (
                 <>
                     <GameV2
+                        gameState={gameState!}
+                        isHost={isHost}
+                        isStartingGame={isStartingGame}
                         key={roomId}
+                        language={language}
+                        onRoomClosed={handleRoomClosed}
+                        onStartGame={handleStartGame}
+                        onStateChange={handleStateChange}
                         roomId={roomId}
                         roomName={roomName}
                         userId={userId}
-                        gameState={gameState!}
-                        language={language}
-                        onStateChange={handleStateChange}
-                        onRoomClosed={handleRoomClosed}
-                        isHost={isHost}
-                        onStartGame={handleStartGame}
-                        isStartingGame={isStartingGame}
+                   
                     />
                     {roomClosedMessage && (
                         <BusyOverlay

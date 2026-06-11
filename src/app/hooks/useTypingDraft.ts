@@ -41,6 +41,32 @@ function createThrottledSend(send: (text: string) => void) {
 	};
 }
 
+/**
+ * React hook for managing real-time "typing draft" communication in a multiplayer game room.
+ *
+ * `useTypingDraft` enables sharing in-progress input (e.g., partially typed words) from one player
+ * to others during their turn, and receiving live typing updates from other clients.
+ * This provides spectatorship features such as "see what your opponent is typing in real-time!"
+ *
+ * The hook abstracts away:
+ *   - Sending partial input (drafts) to the server/broadcast channel on the active player's turn,
+ *     using an internal throttling algorithm to avoid network flooding.
+ *   - Receiving and displaying drafts from other players when appropriate (e.g., showing what the current
+ *     turn player is typing to spectators).
+ *   - Cleaning up and clearing the "other player's draft" display (using a brief debounce) when the
+ *     sender stops typing or submits their turn.
+ *   - Seamless integration with the game’s communication channel (via `useRoomChannel`).
+ *
+ * Returns:
+ *   - remoteDraft: the most recent TypingDraftPayload (or null), representing the current typing
+ *     of another player to be shown, or null if not applicable.
+ *   - clearRemoteDraft: a function to immediately clear remote drafts (used, for example, on turn/block change).
+ *
+ * Usage:
+ *   const { remoteDraft, clearRemoteDraft } = useTypingDraft(roomId, { ...options });
+ *
+ * See `@/shared/typingDraft` and game-v2 input components for usage details.
+ */
 export function useTypingDraft(
 	roomId: string,
 	options: {
@@ -54,12 +80,13 @@ export function useTypingDraft(
 		receiveEnabled: boolean;
 		onUpdate: (emit: GameStateEmit) => void;
 		onRoomClosed?: () => void;
+		onPlayerLeft?: (leavingPlayers: Array<{ userId: string; seat: number }>) => GameStateEmit | null | undefined;
+		presenceSeat?: number;
 	}
 ) {
-	const { userId, isHost, broadcastEnabled, turnSeat, receiveEnabled, onUpdate, onRoomClosed } =
-		options;
+	const { userId, isHost, broadcastEnabled, turnSeat, receiveEnabled, onUpdate, onRoomClosed, onPlayerLeft, presenceSeat } = options;
 	const [remoteDraft, setRemoteDraft] = useState<TypingDraftPayload | null>(null);
-	const sendRef = useRef<(text: string) => void>(() => {});
+	const sendRef = useRef<(text: string) => void>(() => { });
 	const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const turnSeatRef = useRef(turnSeat);
 	turnSeatRef.current = turnSeat;
@@ -92,6 +119,8 @@ export function useTypingDraft(
 		onUpdate,
 		onRoomClosed,
 		onTypingDraft,
+		onPlayerLeft,
+		presenceSeat,
 	});
 
 	useEffect(() => {

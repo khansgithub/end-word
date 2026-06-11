@@ -2,17 +2,18 @@
 
 import { useSupabase } from "@/app/components/SupabaseProvider";
 import { dissolveRoomApi } from "@/lib/client/api/room";
+import { toGameStateEmit } from "@/shared/GameState";
 import { isCompletedGameRow, rowToGameState } from "@/shared/roomRow";
 import type { RoomRow } from "@/shared/roomTypes";
-import { toGameStateEmit } from "@/shared/GameState";
 import type { GameStateEmit } from "@/shared/types";
 import { TYPING_DRAFT_EVENT, type TypingDraftPayload } from "@/shared/typingDraft";
-import { useCallback, useEffect, useRef } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { useCallback, useEffect, useRef } from "react";
 
 type RoomPresenceMeta = {
 	user_id: string;
 	is_host: boolean;
+	seat?: number;
 };
 
 function presenceIncludesHost(presences: RoomPresenceMeta[]): boolean {
@@ -33,13 +34,16 @@ export function useRoomChannel(
 		onUpdate: (emit: GameStateEmit) => void;
 		onRoomClosed?: () => void;
 		onTypingDraft?: (payload: TypingDraftPayload) => void;
+		onPlayerLeft?: (leavingPlayers: Array<{ userId: string; seat: number }>) => GameStateEmit | null | undefined;
+		presenceSeat?: number;
 	}
 ) {
 	const supabase = useSupabase();
-	const { userId, isHost, onUpdate, onRoomClosed, onTypingDraft } = options;
+	const { userId, isHost, onUpdate, onRoomClosed, onTypingDraft, onPlayerLeft, presenceSeat } = options;
 	const onUpdateRef = useRef(onUpdate);
 	const onRoomClosedRef = useRef(onRoomClosed);
 	const onTypingDraftRef = useRef(onTypingDraft);
+	const onPlayerLeftRef = useRef(onPlayerLeft);
 	const channelRef = useRef<RealtimeChannel | null>(null);
 	const subscribedRef = useRef(false);
 	const dissolvedRef = useRef(false);
@@ -56,6 +60,21 @@ export function useRoomChannel(
 	useEffect(() => {
 		onTypingDraftRef.current = onTypingDraft;
 	}, [onTypingDraft]);
+
+	useEffect(() => {
+		onPlayerLeftRef.current = onPlayerLeft;
+	}, [onPlayerLeft]);
+
+	/** Re-track presence whenever seat changes so other clients can identify this client by seat. */
+	useEffect(() => {
+		const channel = channelRef.current;
+		if (!channel || !subscribedRef.current) return;
+		void channel.track({
+			user_id: userId,
+			is_host: isHost,
+			...(presenceSeat !== undefined ? { seat: presenceSeat } : {}),
+		});
+	}, [userId, isHost, presenceSeat]);
 
 	useEffect(() => {
 		dissolvedRef.current = false;
@@ -109,8 +128,26 @@ export function useRoomChannel(
 				}
 			})
 			.on("presence", { event: "leave" }, ({ leftPresences }) => {
-				if (isHost || dissolvedRef.current || !hostWasOnlineRef.current) return;
 				const left = leftPresences as unknown as RoomPresenceMeta[];
+
+				if (isHost) {
+					const leaving = left
+						.filter((p): p is RoomPresenceMeta & { seat: number } => !p.is_host && p.seat !== undefined);
+					if (leaving.length === 0) return;
+
+					const newState = onPlayerLeftRef.current?.(leaving.map((p) => ({ userId: p.user_id, seat: p.seat })));
+					if (newState) {
+						onUpdateRef.current(newState);
+						void channel.send({
+							type: "broadcast",
+							event: "gameStateUpdate",
+							payload: newState,
+						});
+					}
+					return;
+				}
+
+				if (dissolvedRef.current || !hostWasOnlineRef.current) return;
 				if (!presenceIncludesHost(left)) return;
 
 				dissolvedRef.current = true;
@@ -121,7 +158,11 @@ export function useRoomChannel(
 			.subscribe(async (status) => {
 				if (status === "SUBSCRIBED") {
 					subscribedRef.current = true;
-					await channel.track({ user_id: userId, is_host: isHost });
+					await channel.track({
+						user_id: userId,
+						is_host: isHost,
+						...(presenceSeat !== undefined ? { seat: presenceSeat } : {}),
+					});
 				}
 			});
 

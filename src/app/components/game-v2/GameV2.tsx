@@ -16,7 +16,7 @@ import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
-import { DictionaryEntry, GameStateClient } from "@/shared/types";
+import { DictionaryEntry, GameStateClient, GameStateEmit } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
 import { isPlayerTurn, turnToPlayerIndex } from "@/shared/utils";
 import { useRouter } from "next/navigation";
@@ -27,12 +27,12 @@ export interface GameV2Props {
 	roomName?: string | null;
 	userId: string;
 	gameState: GameStateClient;
-	onStateChange: (state: GameStateClient) => void;
-	onRoomClosed?: () => void;
 	language?: "en" | "ko";
 	isHost?: boolean;
-	onStartGame?: () => void;
 	isStartingGame?: boolean;
+	onStateChange: (state: GameStateClient) => void;
+	onRoomClosed?: () => void;
+	onStartGame?: () => void;
 }
 
 export default function GameV2({
@@ -40,21 +40,32 @@ export default function GameV2({
 	roomName = null,
 	userId,
 	gameState: initialState,
-	onStateChange,
-	onRoomClosed,
 	language = "ko",
 	isHost = false,
-	onStartGame,
 	isStartingGame = false,
+	onStartGame,
+	onStateChange,
+	onRoomClosed,
 }: GameV2Props) {
 	const router = useRouter();
 	const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
 	const [definitionHistory, setDefinitionHistory] = useState<DictionaryEntry[]>([]);
 	const [isLeavingLobby, setIsLeavingLobby] = useState(false);
 	const parentStateRef = useRef(initialState);
+	const gameStateRef = useRef<GameStateEmit>(gameState);
+	gameStateRef.current = gameState;
 
 	const interactionLocked = isLeavingLobby || isStartingGame;
 
+	/**
+	 * Synchronizes the local game state with the parent component.
+	 * 
+	 * This function ensures any changes to the local game state are communicated back
+	 * to the parent component via the `onStateChange` callback. It's wrapped in a
+	 * useCallback to prevent unnecessary re-creations and to optimize performance.
+	 *
+	 * @param next - The updated GameStateClient to propagate to the parent.
+	 */
 	const syncParent = useCallback(
 		(next: GameStateClient) => {
 			onStateChange(next);
@@ -62,8 +73,18 @@ export default function GameV2({
 		[onStateChange]
 	);
 
+	/**
+	 * Updates the local game state in response to a remote game state emission.
+	 * 
+	 * `applyRemote` applies an incoming GameStateEmit update from the server (or another player)
+	 * by dispatching a `gameStateUpdateClient` action to the reducer. This action merges the
+	 * incoming update into the current local state, ensuring the UI stays in sync with
+	 * the latest authoritative game state.
+	 *
+	 * @param emit - The new state emitted from the server (GameStateEmit).
+	 */
 	const applyRemote = useCallback(
-		(emit: Parameters<typeof gameStateUpdateClient>[0]) => {
+		(emit: GameStateEmit) => {
 			dispatch({
 				type: "gameStateUpdateClient",
 				payload: [emit],
@@ -78,6 +99,32 @@ export default function GameV2({
 		gameState.thisPlayer?.seat !== undefined &&
 		isPlayerTurn(gameState, gameState.thisPlayer.seat);
 
+	const onPlayerLeft = useCallback((leavingPlayers: Array<{ userId: string; seat: number }>) => {
+		const state = gameStateRef.current;
+		if (!state) return null;
+
+		const newPlayers = [...state.players] as GameStateEmit["players"];
+		let changed = false;
+
+		for (const { seat } of leavingPlayers) {
+			if (seat < 0 || seat >= newPlayers.length) continue;
+			newPlayers[seat] = null;
+			changed = true;
+		}
+
+		if (!changed) return null;
+
+		const connectedPlayers = newPlayers.filter(
+			(pl): pl is NonNullable<typeof pl> => pl !== null && !pl.left
+		).length;
+
+		return {
+			...state,
+			players: newPlayers,
+			connectedPlayers,
+		} as GameStateEmit;
+	}, []);
+
 	const { remoteDraft, clearRemoteDraft } = useTypingDraft(roomId, {
 		userId,
 		isHost,
@@ -86,6 +133,8 @@ export default function GameV2({
 		receiveEnabled: multiplayer && gameState.status === "playing",
 		onUpdate: applyRemote,
 		onRoomClosed,
+		onPlayerLeft,
+		presenceSeat: gameState.thisPlayer?.seat,
 	});
 
 	useEffect(() => {
@@ -137,9 +186,9 @@ export default function GameV2({
 	const turnSeat = turnToPlayerIndex(gameState.turn, gameState.connectedPlayers);
 	const turnTypingText =
 		multiplayer &&
-		!isMyTurn &&
-		remoteDraft?.text &&
-		remoteDraft.seat === turnSeat
+			!isMyTurn &&
+			remoteDraft?.text &&
+			remoteDraft.seat === turnSeat
 			? remoteDraft.text
 			: undefined;
 

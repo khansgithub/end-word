@@ -14,7 +14,7 @@ import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer, gameStateUpdateClient } from "@/shared/GameState";
-import { DictionaryEntry, GameStateClient } from "@/shared/types";
+import { DictionaryEntry, GameStateClient, GameStateEmit } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
 import { isPlayerTurn } from "@/shared/utils";
 import { useRouter } from "next/navigation";
@@ -48,6 +48,7 @@ export default function Game({
 	const [gameState, dispatch] = useReducer(gameStateReducer, initialState);
 	const [lastDefinition, setLastDefinition] = useState<DictionaryEntry | null>(null);
 	const parentStateRef = useRef(initialState);
+	const gameStateEmitRef = useRef<GameStateEmit | null>(null);
 
 	const syncParent = useCallback(
 		(next: GameStateClient) => {
@@ -66,11 +67,45 @@ export default function Game({
 		[]
 	);
 
+	useEffect(() => {
+		const { thisPlayer, ...emit } = gameState;
+		gameStateEmitRef.current = emit as GameStateEmit;
+		console.log(`[useEffect.Game] updating gameStateEmitRef.current to new GameState`);
+	}, [gameState]);
+
+	const onPlayerLeft = useCallback((leavingPlayers: Array<{ userId: string; seat: number }>) => {
+		const state = gameStateEmitRef.current;
+		if (!state) return null;
+
+		const newPlayers = [...state.players] as GameStateEmit["players"];
+		let changed = false;
+
+		for (const { seat } of leavingPlayers) {
+			if (seat < 0 || seat >= newPlayers.length) continue;
+			newPlayers[seat] = null;
+			changed = true;
+		}
+
+		if (!changed) return null;
+
+		const connectedPlayers = newPlayers.filter(
+			(pl): pl is NonNullable<typeof pl> => pl !== null && !pl.left
+		).length;
+
+		return {
+			...state,
+			players: newPlayers,
+			connectedPlayers,
+		} as GameStateEmit;
+	}, []);
+
 	useRoomChannel(roomId, {
 		userId,
 		isHost,
 		onUpdate: applyRemote,
 		onRoomClosed,
+		onPlayerLeft,
+		presenceSeat: gameState.thisPlayer?.seat,
 	});
 
 	useEffect(() => {
