@@ -58,11 +58,12 @@ export async function createRoom(
 		roomName: string;
 		language: GameLanguage;
 		isPrivate: boolean;
+		timerDuration?: number;
 	}
 ): Promise<RoomRow> {
 	const word = await randomWord(options.language);
 	const matchChar = await matchLetterFromWord(word, options.language);
-	const state = buildFreshRoomState(options.language, matchChar);
+	const state = buildFreshRoomState(options.language, matchChar, options.timerDuration);
 
 	let inviteCode = generateInviteCode();
 	for (let attempt = 0; attempt < 5; attempt++) {
@@ -82,6 +83,7 @@ export async function createRoom(
 				players: state.players,
 				player_user_map: {},
 				connected_players: 0,
+				timer_duration: state.timerDuration,
 			})
 			.select("*")
 			.single();

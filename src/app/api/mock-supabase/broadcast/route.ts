@@ -5,7 +5,10 @@ import { TYPING_DRAFT_EVENT } from "@/shared/typingDraft";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_EVENTS: ReadonlySet<string> = new Set([TYPING_DRAFT_EVENT]);
+const ALLOWED_EVENTS: ReadonlySet<string> = new Set([
+  TYPING_DRAFT_EVENT,
+  "gameStateUpdate",
+]);
 
 export async function POST(request: Request) {
 	if (!isMockSupabase()) {

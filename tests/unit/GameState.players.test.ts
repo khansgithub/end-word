@@ -23,7 +23,7 @@ describe("registerPlayer", () => {
             payload: [state, player] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
-        expect(result.thisPlayer).toEqual(player);
+        expect(result.thisPlayer).toMatchObject(player);
     });
 
     it("should replace existing thisPlayer", () => {
@@ -35,7 +35,7 @@ describe("registerPlayer", () => {
             payload: [state, newPlayer] as [GameState, PlayerWithId],
         };
         const result = gameStateReducer(state, action);
-        expect(result.thisPlayer).toEqual(newPlayer);
+        expect(result.thisPlayer).toMatchObject(newPlayer);
         expect(result.thisPlayer?.uid).toBe("uid1");
     });
 

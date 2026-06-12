@@ -22,7 +22,7 @@ export default function PlayersRoster({
   hideEmptySeats = true,
   turnTypingText,
 }: PlayersRosterProps) {
-  const { players, turn, connectedPlayers, thisPlayer } = gameState;
+  const { players, turn, connectedPlayers, thisPlayer, timerDuration } = gameState;
   const activeCount = players.filter((p) => isActivePlayer(p)).length;
   const leftCount = players.filter((p) => p != null && p.left).length;
 
@@ -59,6 +59,8 @@ export default function PlayersRoster({
               typingDraft={onTurn ? turnTypingText : undefined}
               isCurrentPlayer={thisPlayer?.seat === i}
               compact
+              timeRemaining={"timeRemaining" in p ? p.timeRemaining : undefined}
+              timerDuration={timerDuration}
             />
           );
         })}

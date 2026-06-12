@@ -14,6 +14,7 @@ export async function createRoomApi(options: {
 	roomName: string;
 	language: GameLanguage;
 	isPrivate: boolean;
+	timerDuration?: number;
 }) {
 	const res = await fetch("/api/rooms", {
 		method: "POST",
@@ -86,14 +87,14 @@ export async function submitWordApi(
 	let data: SubmitResult;
 	try {
 		const text = await res.clone().text();
-		console.log("[submitWordApi] text", text);
+		// console.log("[submitWordApi] text", text);
 		data = JSON.parse(text) as SubmitResult;
 		// data = await res.json();
 	} catch (error) {
 		console.error("[submitWordApi] Failed to parse JSON response:", error);
 		data = { success: false, reason: "Invalid server response" } as SubmitResult;
 	}
-	console.log("[submitWordApi] data", JSON.stringify(data, null, 2));
+	// console.log("[submitWordApi] data", JSON.stringify(data, null, 2));
 	const parsed = parseSubmitWordResponse(res, data);
 
 	return parsed;

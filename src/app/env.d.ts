@@ -45,5 +45,15 @@ export declare namespace NodeJS {
          * Intended to suppress verbose output; usages in pp() and socketClient are commented out.
          */
         SUPPRESS: string
+        /**
+         * When "true", use in-memory mock Supabase instead of real Supabase.
+         * Server-side reads MOCK_SUPABASE; client-side reads NEXT_PUBLIC_MOCK_SUPABASE.
+         */
+        MOCK_SUPABASE: string
+        /**
+         * Client-side mirror of MOCK_SUPABASE (Next.js requires NEXT_PUBLIC_ prefix
+         * for env vars available in the browser bundle).
+         */
+        NEXT_PUBLIC_MOCK_SUPABASE: string
     }
 }

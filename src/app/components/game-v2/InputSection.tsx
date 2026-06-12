@@ -5,13 +5,15 @@ import InputErrorLabel from "@/app/components/game-v2/InputErrorLabel";
 import SubmitButton from "@/app/components/game-v2/SubmitButton";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { MatchLetter } from "@/shared/types";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import "./game-v2.css";
 
 export interface InputSectionProps {
 	matchLetter: MatchLetter;
 	disabled: boolean;
 	onSubmit: () => void | Promise<void>;
+	setIsSubmitting: (isSubmitting: boolean) => void
+	submitState: boolean,
 	language?: "en" | "ko";
 	/** Inside PlayFocusPanel — no outer panel wrapper. */
 	embedded?: boolean;
@@ -21,22 +23,27 @@ export default function InputSection({
 	matchLetter,
 	disabled,
 	onSubmit,
+	setIsSubmitting,
+	submitState,
 	language = "ko",
 	embedded = false,
 }: InputSectionProps) {
-	const [isSubmitting, setIsSubmitting] = useState(false);
+	// const [isSubmitting] = useState(false);
+	const isSubmitting = submitState;
 	const isLocked = disabled || isSubmitting;
 	const opacity = isLocked ? 0.5 : 1;
 
 	const handleSubmit = useCallback(async () => {
 		if (disabled || isSubmitting) return;
 		setIsSubmitting(true);
-		try {
+        try {
+            console.log(`[handleSubmit] submit word -- start`);
 			await onSubmit();
+			console.log(`[handleSubmit] submit word -- end`);
 		} finally {
-			setIsSubmitting(false);
+			// setIsSubmitting(false);
 		}
-	}, [disabled, isSubmitting, onSubmit]);
+	}, [disabled, isSubmitting, onSubmit, setIsSubmitting]);
 
 	const maxLength = language === "en" ? 20 : 7;
 	const minLength = language === "en" ? ENGLISH_MIN_WORD_LENGTH : 2;

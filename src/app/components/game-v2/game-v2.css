@@ -1,185 +1,246 @@
 /* Game v2 — scoped layout tokens (uses app theme from colours.css) */
 
 .g2 {
-  --g2-radius: 0.75rem;
-  --g2-radius-lg: 1rem;
-  --g2-border: var(--b-line);
-  --g2-surface: var(--b-surface);
-  --g2-surface-raised: var(--b-surface-raised);
-  --g2-muted: var(--b-muted);
-  --g2-accent: var(--b-accent);
-  --g2-accent-muted: var(--b-accent-muted);
-  --g2-success: var(--b-success);
-  --g2-danger: var(--b-danger);
-  --g2-shadow: var(--b-shadow-card);
-  --g2-ring: 0 0 0 1px var(--g2-border);
-  --g2-transition: 300ms ease-in-out;
+    --g2-radius: 0.75rem;
+    --g2-radius-lg: 1rem;
+    --g2-border: var(--b-line);
+    --g2-surface: var(--b-surface);
+    --g2-surface-raised: var(--b-surface-raised);
+    --g2-muted: var(--b-muted);
+    --g2-accent: var(--b-accent);
+    --g2-accent-muted: var(--b-accent-muted);
+    --g2-success: var(--b-success);
+    --g2-danger: var(--b-danger);
+    --g2-shadow: var(--b-shadow-card);
+    --g2-ring: 0 0 0 1px var(--g2-border);
+    --g2-transition: 300ms ease-in-out;
 }
 
 .g2-panel {
-  background: var(--g2-surface);
-  border: 1px solid var(--b-surface-border);
-  border-radius: var(--g2-radius-lg);
-  box-shadow: var(--g2-shadow);
+    background: var(--g2-surface);
+    border: 1px solid var(--b-surface-border);
+    border-radius: var(--g2-radius-lg);
+    box-shadow: var(--g2-shadow);
 }
 
 .g2-play-focus-panel {
-  transition:
-    border-color var(--g2-transition),
-    box-shadow var(--g2-transition);
+    transition:
+        border-color var(--g2-transition),
+        box-shadow var(--g2-transition);
 }
 
 .g2-play-focus-active {
-  border-color: var(--g2-accent);
-  box-shadow:
-    var(--g2-shadow),
-    0 0 0 2px var(--g2-accent),
-    0 0 5px 2px var(--g2-accent);
+    border-color: var(--g2-accent);
+    box-shadow:
+        var(--g2-shadow),
+        0 0 0 2px var(--g2-accent),
+        0 0 5px 2px var(--g2-accent);
 }
 
 .g2-label {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--g2-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--g2-muted);
 }
 
 .g2-focus-ring:focus-visible {
-  outline: none;
-  box-shadow: var(--g2-ring), var(--b-ring-focus);
+    outline: none;
+    box-shadow: var(--g2-ring), var(--b-ring-focus);
 }
 
 @keyframes g2-pulse-turn {
-  0%,
-  100% {
-    box-shadow: var(--g2-ring);
-  }
-  50% {
-    box-shadow: var(--g2-ring), 0 0 0 2px var(--g2-accent-muted);
-  }
+    0%,
+    100% {
+        box-shadow: var(--g2-ring);
+    }
+    50% {
+        box-shadow:
+            var(--g2-ring),
+            0 0 0 2px var(--g2-accent-muted);
+    }
 }
 
 .g2-turn-active {
-  animation: g2-pulse-turn 2.4s ease-in-out infinite;
+    animation: g2-pulse-turn 2.4s ease-in-out infinite;
 }
 
 @keyframes g2-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(4px);
-  }
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-4px);
+    }
+    75% {
+        transform: translateX(4px);
+    }
 }
 
 .g2-shake {
-  animation: g2-shake 0.4s ease-in-out;
+    animation: g2-shake 0.4s ease-in-out;
 }
 
 @keyframes g2-damage {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  40% {
-    transform: scale(0.97);
-    filter: brightness(1.08);
-  }
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(0.97);
+        filter: brightness(1.08);
+    }
 }
 
 .g2-damage {
-  animation: g2-damage 0.45s ease-out;
+    animation: g2-damage 0.45s ease-out;
 }
 
 .g2-status-grid {
-  min-height: 8.5rem;
+    min-height: 8.5rem;
 }
 
 @media (min-width: 640px) {
-  .g2-status-grid {
-    min-height: 9.5rem;
-  }
+    .g2-status-grid {
+        min-height: 9.5rem;
+    }
 }
 
 .g2-status-tile {
-  min-height: 100%;
+    min-height: 100%;
 }
 
 .g2-input-legacy-host {
-  width: 100%;
-  border-radius: var(--g2-radius);
-  border: 1px solid var(--g2-border);
-  background: var(--g2-surface-raised);
-  padding: 0.5rem;
+    width: 100%;
+    border-radius: var(--g2-radius);
+    border: 1px solid var(--g2-border);
+    background: var(--g2-surface-raised);
+    padding: 0.5rem;
 }
 
 .g2-input-legacy-host > .relative {
-  width: 100%;
+    width: 100%;
 }
 
 .g2-input-legacy-host .form-control {
-  width: 100%;
-  flex: 1;
+    width: 100%;
+    flex: 1;
 }
 
 .g2-input-legacy-host .grid {
-  width: 100%;
+    width: 100%;
 }
 
 .g2-input-legacy-host input {
-  font-size: 1.35rem !important;
-  line-height: 1.25 !important;
-  padding: 0.65rem 0.75rem !important;
-  min-height: 2.75rem;
+    font-size: 1.35rem !important;
+    line-height: 1.25 !important;
+    padding: 0.65rem 0.75rem !important;
+    min-height: 2.75rem;
 }
 
 @media (min-width: 768px) {
-  .g2-input-legacy-host input {
-    font-size: 1.65rem !important;
-    min-height: 3.25rem;
-  }
+    .g2-input-legacy-host input {
+        font-size: 1.65rem !important;
+        min-height: 3.25rem;
+    }
 }
 
 .g2-input-legacy-host .label {
-  display: none;
+    display: none;
 }
 
 .g2-player-card--typing .g2-player-subline {
-  border-left: 2px solid var(--g2-accent);
-  padding-left: 0.35rem;
+    border-left: 2px solid var(--g2-accent);
+    padding-left: 0.35rem;
 }
 
 .g2-player-avatar--typing {
-  box-shadow: 0 0 0 2px var(--g2-accent-muted);
+    box-shadow: 0 0 0 2px var(--g2-accent-muted);
 }
 
 @keyframes g2-player-typing-caret {
-  0%,
-  45% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
+    0%,
+    45% {
+        opacity: 1;
+    }
+    50%,
+    100% {
+        opacity: 0;
+    }
 }
 
 .g2-player-typing-caret {
-  display: inline-block;
-  width: 1.5px;
-  height: 0.85em;
-  margin-left: 1px;
-  vertical-align: text-bottom;
-  background: var(--g2-accent);
-  animation: g2-player-typing-caret 1s step-end infinite;
+    display: inline-block;
+    width: 1.5px;
+    height: 0.85em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    background: var(--g2-accent);
+    animation: g2-player-typing-caret 1s step-end infinite;
 }
 
 .g2-player-card--left {
-  opacity: 0.55;
-  border-style: dashed !important;
+    opacity: 0.55;
+    border-style: dashed !important;
+}
+
+/* ------------------------------------------------------------------
+ * Timer Bar — bullet-style countdown
+ * ------------------------------------------------------------------ */
+
+.g2-timer-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+}
+
+.g2-timer-bar-track {
+    flex: 1;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--b-surface-raised);
+    overflow: hidden;
+}
+
+.g2-timer-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #06b6d4, #22d3ee);
+    transition: width 1s linear;
+}
+
+.g2-timer-bar-fill-frozen {
+    background: var(--g2-muted) !important;
+}
+
+.g2-timer-bar-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #06b6d4;
+    min-width: 2.4rem;
+    text-align: right;
+    transition: color var(--g2-transition);
+}
+
+.g2-timer-bar-label-frozen {
+    color: var(--g2-muted);
+}
+
+@media (min-width: 640px) {
+    .g2-timer-bar-track {
+        height: 0.6rem;
+    }
+}
+
+@keyframes shrink-width {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
 }

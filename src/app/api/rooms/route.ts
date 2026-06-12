@@ -25,9 +25,10 @@ export async function POST(request: Request) {
 		const roomName = String(body.roomName ?? "Game Room").slice(0, 80);
 		const language = (body.language === "en" ? "en" : "ko") as GameLanguage;
 		const isPrivate = Boolean(body.isPrivate);
+		const timerDuration = typeof body.timerDuration === "number" ? body.timerDuration : undefined;
 
 		const admin = getAdmin();
-		const room = await createRoom(admin, user.id, { roomName, language, isPrivate });
+		const room = await createRoom(admin, user.id, { roomName, language, isPrivate, timerDuration });
 		return NextResponse.json({ room });
 	} catch (e) {
 		console.error("[POST /api/rooms]", e);

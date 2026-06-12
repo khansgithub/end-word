@@ -39,6 +39,7 @@ export type Player = {
 	name: string;
 	lastWord: string;
 	health: typeof DEFAULT_HEALTH;
+	timeRemaining?: number;
 	/** Set when the player leaves mid-game; seat stays occupied for the roster. */
 	left?: boolean;
 };
@@ -144,10 +145,7 @@ export type GameState = {
 	/** Normalized words already submitted successfully in this match. */
 	usedWords: string[],
 	language?: GameLanguage,
-	// socketPlayerMap?: WeakMap<string, Player>, // only on server - don't really know if using a weakmap is necessary here
-	// socketPlayerMap?: Map<string, Player>,
-	// socketPlayerMap?: Map<string, PlayerWithId>,
-	// socketPlayerMap?: Map<string, PlayerWithId>,
+	timerDuration: number,
 	socketPlayerMap?: Map<string, number>,
 }
 
@@ -158,7 +156,10 @@ export type GameStateEmit = (
 export type GameStateServer = Omit<GameState, "thisPlayer"> & Required<Pick<GameState, "socketPlayerMap">>;
 export type GameStateClient = (
 	Omit<GameState, "socketPlayerMap">
-	& { thisPlayer: PlayerWithId }
+	& {
+		thisPlayer: PlayerWithId,
+		submitting?: boolean,
+	}
 )
 
 export type GameStateFrozen = Readonly<GameState>;

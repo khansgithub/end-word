@@ -1,3 +1,4 @@
+import { DEFAULT_TIMER_DURATION } from "@/shared/consts";
 import type { GameStateServer, ServerPlayers } from "@/shared/types";
 import { buildMatchLetterForLanguage, getAlivePlayerCount } from "@/shared/utils";
 import type { RoomRow } from "@/shared/roomTypes";
@@ -25,6 +26,7 @@ export function rowToGameState(row: RoomRow): GameStateServer {
     players,
     connectedPlayers: row.connected_players,
     turn: row.turn,
+    timerDuration: row.timer_duration ?? DEFAULT_TIMER_DURATION,
     usedWords: Array.isArray(row.used_words) ? row.used_words : [],
     socketPlayerMap: map,
     language: row.language,

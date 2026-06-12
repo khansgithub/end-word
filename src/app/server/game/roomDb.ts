@@ -36,6 +36,7 @@ export function gameStateToRowPatch(state: GameState): Partial<RoomRow> {
 		player_user_map: playerUserMap,
 		connected_players: state.connectedPlayers,
 		used_words: state.usedWords ?? [],
+		timer_duration: state.timerDuration,
 		updated_at: new Date().toISOString(),
 	};
 }
@@ -137,8 +138,9 @@ export function toClientEmit(
 
 export function buildFreshRoomState(
 	language: GameLanguage,
-	startingLetter: string
+	startingLetter: string,
+	timerDuration?: number
 ): GameState {
-	const state = buildInitialGameState(startingLetter, language);
+	const state = buildInitialGameState(startingLetter, language, timerDuration);
 	return { ...state, language };
 }

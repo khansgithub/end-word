@@ -19,6 +19,7 @@ export type RoomRow = {
   archived_at: string | null;
   created_at?: string;
   updated_at?: string;
+  timer_duration?: number;
 };
 
 export type RoomListItem = {

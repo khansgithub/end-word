@@ -7,6 +7,7 @@ import { buildLoginUrl } from "@/lib/client/ui/return-to";
 import { createRoomApi, fetchLobbyRooms, joinRoomApi } from "@/lib/client/api/room";
 import type { RoomListItem } from "@/shared/roomTypes";
 import type { GameLanguage } from "@/shared/types";
+import { DEFAULT_TIMER_DURATION } from "@/shared/consts";
 import BusyOverlay from "@/app/components/BusyOverlay";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 
@@ -20,6 +21,7 @@ export default function LobbyPage() {
 	const [roomName, setRoomName] = useState("");
 	const [language, setLanguage] = useState<GameLanguage>("ko");
 	const [isPrivate, setIsPrivate] = useState(false);
+	const [timerDuration, setTimerDuration] = useState<number>(DEFAULT_TIMER_DURATION);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [lobbyBusy, setLobbyBusy] = useState<LobbyBusy | null>(null);
@@ -65,6 +67,7 @@ export default function LobbyPage() {
 				roomName: roomName.trim(),
 				language,
 				isPrivate,
+				timerDuration,
 			});
 			const join = await joinRoomApi({
 				roomId: room.roomid,
@@ -181,6 +184,23 @@ export default function LobbyPage() {
 						>
 							English
 						</button>
+					</div>
+					<div>
+						<p className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: "var(--b-muted)" }}>
+							Timer per player
+						</p>
+						<div className="flex gap-1">
+							{[15, 30, 45, 60, 90].map((t) => (
+								<button
+									key={t}
+									type="button"
+									className={`btn-fsm btn-fsm--ghost flex-1 ${timerDuration === t ? "btn-fsm--active" : ""}`}
+									onClick={() => setTimerDuration(t)}
+								>
+									{t}s
+								</button>
+							))}
+						</div>
 					</div>
 					<label className="flex items-center gap-2 text-sm" style={{ color: "var(--b-muted)" }}>
 						<input

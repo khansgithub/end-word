@@ -13,5 +13,6 @@ export { default as GameTopBar } from "@/app/components/game-v2/GameTopBar";
 export { default as PlayStatusGrid } from "@/app/components/game-v2/PlayStatusGrid";
 export { default as PlayFocusPanel } from "@/app/components/game-v2/PlayFocusPanel";
 export { default as PlayHeader } from "@/app/components/game-v2/PlayHeader";
+export { default as TimerBar } from "@/app/components/game-v2/TimerBar";
 export { default as GameBoardLayout } from "@/app/components/game-v2/GameBoardLayout";
 export { default as GameV2 } from "@/app/components/game-v2/GameV2";

@@ -1,4 +1,5 @@
 import { envGet } from "@/app/server/env";
+import { isMockSupabase } from "@/app/server/supabase/config";
 
 import { SITE_ACCESS_COOKIE } from "@/shared/site-lock";
 
@@ -12,6 +13,7 @@ export async function siteAccessToken(password: string): Promise<string> {
 }
 
 export function isSiteLockEnabled(): boolean {
+    if (isMockSupabase()) return false;
     const password = envGet("SITE_PASSWORD");
     return typeof password === "string" && password.length > 0;
 }
