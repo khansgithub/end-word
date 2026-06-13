@@ -3,7 +3,7 @@
 import type { GameStateClient } from "@/shared/types";
 import { isActivePlayer, isPlayerTurn } from "@/shared/utils";
 import { gameStrings } from "@/lib/client/ui/game-strings";
-import PlayerCard, { EmptySeatCard } from "@/app/components/game-v2/PlayerCard";
+import PlayerCard, { EmptySeatCard } from "@/app/components/game/PlayerCard";
 import "./game-v2.css";
 
 export interface PlayersRosterProps {

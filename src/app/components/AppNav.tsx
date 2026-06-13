@@ -62,7 +62,7 @@ export function AppNav() {
 				</div>
 				<div className="flex items-center gap-3">
 					{playerName && (
-						<span className="text-sm truncate max-w-[10rem]" style={{ color: "var(--b-muted)" }}>
+						<span className="text-sm truncate`max-w-40" style={{ color: "var(--b-muted)" }}>
 							{playerName}
 						</span>
 					)}

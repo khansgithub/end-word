@@ -1,27 +1,31 @@
 "use client";
 
-import BusyOverlay from "@/app/components/BusyOverlay";
-import DefinitionsPanel from "@/app/components/game-v2/DefinitionsPanel";
-import GameBoardLayout from "@/app/components/game-v2/GameBoardLayout";
-import GameTopBar from "@/app/components/game-v2/GameTopBar";
-import InputSection from "@/app/components/game-v2/InputSection";
+import BusyOverlay from "@/app/components/game/BusyOverlay";
+import DefinitionsPanel from "@/app/components/game/DefinitionsPanel";
+import GameBoardLayout from "@/app/components/game/GameBoardLayout";
+import GameTopBar from "@/app/components/game/GameTopBar";
+import InputSection from "@/app/components/game/InputSection";
 import PlayersRoster, {
     shouldShowPlayersBar,
-} from "@/app/components/game-v2/PlayersRoster";
-import PlayFocusPanel from "@/app/components/game-v2/PlayFocusPanel";
-import PlayStatusGrid from "@/app/components/game-v2/PlayStatusGrid";
-import TimerBar from "@/app/components/game-v2/TimerBar";
-import GameOverlay from "@/app/components/GameOverlay";
+} from "@/app/components/game/PlayersRoster";
+import PlayFocusPanel from "@/app/components/game/PlayFocusPanel";
+import PlayStatusGrid from "@/app/components/game/PlayStatusGrid";
+import TimerBar from "@/app/components/game/TimerBar";
+import GameOverlay from "@/app/components/game/GameOverlay";
 import {
     focusInputBox,
     getInputValue,
     resetInput,
     setInputError,
-} from "@/app/components/InputBox";
+} from "@/app/components/game/InputBox";
 import { useRoomChannel } from "@/app/hooks/useRoomChannel";
 import { useTimer } from "@/app/hooks/useTimer";
 import { useTypingDraft } from "@/app/hooks/useTypingDraft";
-import { leaveRoomApi, submitWordApi } from "@/lib/client/api/room";
+import {
+    leaveRoomApi,
+    submitWordApi,
+    timerExpiryApi,
+} from "@/lib/client/api/room";
 import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
@@ -74,13 +78,17 @@ export default function GameV2({
         initialState,
     );
 
-    const [definitionHistory, setDefinitionHistory] = useState<DictionaryEntry[]>([]);
+    const [definitionHistory, setDefinitionHistory] = useState<
+        DictionaryEntry[]
+    >([]);
     const [isLeavingLobby, setIsLeavingLobby] = useState(false);
 
     const parentStateRef = useRef(gameState);
     const gameStateRef = useRef(gameState);
     const timerRef = useRef(gameState.timerDuration);
-    const onTypingDraftRef = useRef<(payload: TypingDraftPayload) => void>(() => {});
+    const onTypingDraftRef = useRef<(payload: TypingDraftPayload) => void>(
+        () => {},
+    );
 
     // =========================================================================
     // ## variables
@@ -228,13 +236,22 @@ export default function GameV2({
 
     const handleTimerExpire = useCallback(
         (seat: number) => {
+            // alert("YOU DIED");
             console.log(`[handleTimerExpire] kill player and go next turn`);
             gameStateDispatch({
                 type: "killPlayerAndNextTurn",
                 payload: [gameState, seat],
             });
+            void timerExpiryApi(roomId).then((result) => {
+                if (!result.success) {
+                    console.warn(
+                        "[handleTimerExpire] server timer expiry failed:",
+                        result.reason,
+                    );
+                }
+            });
         },
-        [gameStateDispatch, gameState],
+        [gameStateDispatch, gameState, roomId],
     );
 
     const setIsSubmitting = useCallback(
@@ -268,7 +285,8 @@ export default function GameV2({
         return (
             gameState.thisPlayer?.seat === undefined ||
             !isMyTurn() ||
-            gameState.status !== "playing"
+            gameState.status !== "playing" ||
+            gameState.thisPlayer?.health < 1
         );
     }, [isMyTurn, gameState.thisPlayer, gameState.status]);
 
@@ -279,12 +297,8 @@ export default function GameV2({
             !isMyTurn();
         // console.log(`[isTimerPaused] → ${result} (submitting=${gameState.submitting}, status=${gameState.status}, isMyTurn=${!isMyTurn()})`);
         return result;
-    }, [
-        gameState.submitting,
-        gameState.status,
-        isMyTurn,
-    ]);
-    
+    }, [gameState.submitting, gameState.status, isMyTurn]);
+
     // =========================================================================
     // ## custom hooks
     // =========================================================================
@@ -297,22 +311,32 @@ export default function GameV2({
         isHost,
         onUpdate: applyRemote,
         onRoomClosed,
-        onTypingDraft: (payload) => { onTypingDraftRef.current(payload); },
+        onTypingDraft: (payload) => {
+            onTypingDraftRef.current(payload);
+        },
         onWordDefinition: appendDefinition,
         onPlayerLeft,
         presenceSeat: gameState.thisPlayer?.seat,
     });
 
-    const { remoteDraft, clearRemoteDraft, onTypingDraft } = useTypingDraft(roomId, {
-        userId,
-        broadcastEnabled: multiplayer && isMyTurn(),
-        turnSeat: gameState.thisPlayer?.seat,
-        receiveEnabled: multiplayer && gameState.status === "playing",
-        sendTypingDraft,
-    });
+    const { remoteDraft, clearRemoteDraft, onTypingDraft } = useTypingDraft(
+        roomId,
+        {
+            userId,
+            broadcastEnabled: multiplayer && isMyTurn(),
+            turnSeat: gameState.thisPlayer?.seat,
+            receiveEnabled: multiplayer && gameState.status === "playing",
+            sendTypingDraft,
+        },
+    );
     onTypingDraftRef.current = onTypingDraft;
 
-    useTimer(gameState, gameStateDispatch, handleTimerExpire, isTimerPaused);
+    // const { timer } = useTimer(
+    //     gameState,
+    //     gameStateDispatch,
+    //     handleTimerExpire,
+    //     isTimerPaused,
+    // );
 
     const turnTypingText =
         multiplayer &&
@@ -417,15 +441,18 @@ export default function GameV2({
                             />
                         }
                         disabled={isDisabled()}
-                        timerBar={
-                            <TimerBar
-                                // timeRemaining={timeRemaining}
-                                timerDuration={gameState.timerDuration}
-                                // frozen={timerFrozen}
-                                isPaused={isTimerPaused}
-                                time={timerRef}
-                            />
-                        }
+                        // timerBar={
+                        //     <TimerBar
+                        //         timeRemaining={
+                        //             gameState.thisPlayer.timeRemaining
+                        //         }
+                        //         timerDuration={gameState.timerDuration}
+                        //         // frozen={timerFrozen}
+                        //         isPaused={isTimerPaused}
+                        //         time={timerRef}
+                        //         timer={timer}
+                        //     />
+                        // }
                     />
                 }
                 wordHistory={

@@ -8,7 +8,7 @@ import { createRoomApi, fetchLobbyRooms, joinRoomApi } from "@/lib/client/api/ro
 import type { RoomListItem } from "@/shared/roomTypes";
 import type { GameLanguage } from "@/shared/types";
 import { DEFAULT_TIMER_DURATION } from "@/shared/consts";
-import BusyOverlay from "@/app/components/BusyOverlay";
+import BusyOverlay from "@/app/components/game/BusyOverlay";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 
 type LobbyBusy = "create" | "join";

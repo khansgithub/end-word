@@ -1,8 +1,8 @@
 "use client";
 
 import { gameStrings } from "@/lib/client/ui/game-strings";
-import RoundBadge from "@/app/components/game-v2/RoundBadge";
-import GameExit from "@/app/components/game-v2/GameExit";
+import RoundBadge from "@/app/components/game/RoundBadge";
+import GameExit from "@/app/components/game/GameExit";
 import "./game-v2.css";
 
 export interface GameTopBarProps {

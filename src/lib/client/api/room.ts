@@ -100,6 +100,20 @@ export async function submitWordApi(
 	return parsed;
 }
 
+export type TimerExpiryApiResult =
+	| { success: true; gameState: GameStateEmit }
+	| { success: false; reason: string };
+
+export async function timerExpiryApi(roomId: string): Promise<TimerExpiryApiResult> {
+	const res = await fetch(`/api/rooms/${roomId}/timer-expiry`, {
+		method: "POST",
+	});
+	if (res.status !== 200) {
+		return { success: false, reason: "Timer expiry request failed" };
+	}
+	return res.json();
+}
+
 export async function leaveRoomApi(roomId: string) {
 	const res = await fetch(`/api/rooms/${roomId}/leave`, {
 		method: "POST",

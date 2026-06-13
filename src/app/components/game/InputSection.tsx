@@ -1,8 +1,8 @@
 "use client";
 
-import InputBox from "@/app/components/InputBox";
-import InputErrorLabel from "@/app/components/game-v2/InputErrorLabel";
-import SubmitButton from "@/app/components/game-v2/SubmitButton";
+import InputBox from "@/app/components/game/InputBox";
+import InputErrorLabel from "@/app/components/game/InputErrorLabel";
+import SubmitButton from "@/app/components/game/SubmitButton";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { MatchLetter } from "@/shared/types";
 import { useCallback } from "react";

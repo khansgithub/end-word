@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useInputBoxStore } from "@/app/components/InputBox";
+import { useInputBoxStore } from "@/app/components/game/InputBox";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 
 /** Surfaces InputBox zustand error state with game-v2 styling. */

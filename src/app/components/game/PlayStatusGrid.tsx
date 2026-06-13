@@ -1,8 +1,8 @@
 "use client";
 
 import type { MatchLetter as MatchLetterType } from "@/shared/types";
-import MatchLetter from "@/app/components/game-v2/MatchLetter";
-import YourStatusTile from "@/app/components/game-v2/YourStatusTile";
+import MatchLetter from "@/app/components/game/MatchLetter";
+import YourStatusTile from "@/app/components/game/YourStatusTile";
 import "./game-v2.css";
 
 export interface PlayStatusGridProps {

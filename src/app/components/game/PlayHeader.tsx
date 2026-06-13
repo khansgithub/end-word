@@ -1,8 +1,8 @@
 "use client";
 
 import type { MatchLetter } from "@/shared/types";
-import GameTopBar from "@/app/components/game-v2/GameTopBar";
-import PlayStatusGrid from "@/app/components/game-v2/PlayStatusGrid";
+import GameTopBar from "@/app/components/game/GameTopBar";
+import PlayStatusGrid from "@/app/components/game/PlayStatusGrid";
 import "./game-v2.css";
 
 export interface PlayHeaderProps {

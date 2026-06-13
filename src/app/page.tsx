@@ -2,10 +2,10 @@
 
 import { Suspense, memo, useEffect, useRef, useState } from "react";
 import { buildInitialGameState } from "@/shared/GameState";
-import InputBox from "@/app/components/InputBox";
+import InputBox from "@/app/components/game/InputBox";
 import { Homescreen } from "@/app/components/Homescreen";
 
-export default function () {
+export default function Page() {
 	const [data, setData] = useState(0);
 	// const foobar2 = foobar(data);
 	// const onChange = foobar(data);
@@ -31,23 +31,3 @@ export default function () {
 		// </div>
 	);
 }
-
-
-const Foo = memo(function (props: { state: number }) {
-	// const [count, setCount] = useState(0);
-	const count = useRef(0);
-	useEffect(() => {
-		count.current += 1;
-	}, []);
-	return (
-		// <input className="border-2 border-white" onChange={onChange}/>
-		<div className="border-2 p-4 m-2" style={{ borderColor: 'var(--border-success)' }}>
-			<h4>foo</h4>
-			<p>times rendered: {count.current}</p>
-			<input name="foo"></input>
-			<p>data: {props.state}</p>
-		</div>
-	)
-}, ((prev, next) => {
-	return false;
-}));

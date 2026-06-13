@@ -42,7 +42,7 @@ function isRoomInvitePath(pathname: string, method: string): boolean {
 
 /** Extract roomId from room action paths like /api/rooms/{roomId}/submit or /api/rooms/{roomId}/leave. */
 function extractRoomIdForAction(pathname: string): string | null {
-	const match = pathname.match(/^\/api\/rooms\/([^/]+)\/(submit|leave)$/);
+	const match = pathname.match(/^\/api\/rooms\/([^/]+)\/(submit|leave|timer-expiry)$/);
 	return match ? match[1] : null;
 }
 

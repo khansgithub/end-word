@@ -1,6 +1,6 @@
 "use client";
 
-import { useInputBoxStore } from "@/app/components/InputBox";
+import { useInputBoxStore } from "@/app/components/game/InputBox";
 import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { useCallback, useEffect, useRef, useState } from "react";
 

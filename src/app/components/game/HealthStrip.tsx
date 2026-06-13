@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PlayerHealth } from "@/app/components/PlayerHealth";
+import { PlayerHealth } from "@/app/components/game/PlayerHealth";
 import "./game-v2.css";
 
 export interface HealthStripProps {

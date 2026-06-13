@@ -1,4 +1,4 @@
-import GameContainer from "@/app/components/GameContainer";
+import GameContainer from "@/app/components/game/GameContainer";
 
 type Props = { params: Promise<{ roomId: string }> };
 

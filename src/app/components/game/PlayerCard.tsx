@@ -1,7 +1,7 @@
 "use client";
 
 import type { Player as PlayerType } from "@/shared/types";
-import { PlayerHealth } from "@/app/components/PlayerHealth";
+import { PlayerHealth } from "@/app/components/game/PlayerHealth";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import "./game-v2.css";
 

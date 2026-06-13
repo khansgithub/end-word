@@ -22,6 +22,7 @@ import {
 	decreasePlayerHealth,
 	endGame,
 	getPlayerByClientId,
+	killPlayer,
 	nextTurn,
 	progressNextTurn,
 	compactActivePlayers,
@@ -29,11 +30,10 @@ import {
 	removePlayer,
 	toGameStateEmit
 } from "@/shared/GameState";
-import { isActivePlayer, normalizeEnglishWord } from "@/shared/utils";
+import { isActivePlayer, normalizeEnglishWord, getAlivePlayerCount, shouldEndGameOnPlayerDeath } from "@/shared/utils";
 import { DEFAULT_HEALTH, ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { GameLanguage, GameState, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
-import { shouldEndGameOnPlayerDeath } from "@/shared/utils";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type JoinResult =
@@ -303,6 +303,53 @@ async function invalidWord(
 		reason,
 		gameState: toGameStateEmit(nextState),
 	};
+}
+
+export type TimerExpiryResult =
+	| { success: true; gameState: GameStateEmit }
+	| { success: false; reason: string };
+
+/**
+ * Called when a player's timer expires.
+ * Kills the player (health → 0), advances the turn,
+ * and ends the game if only one (or zero) players remain alive.
+ */
+export async function timerExpired(
+	admin: SupabaseClient,
+	roomId: string,
+	userId: string
+): Promise<TimerExpiryResult> {
+	const row = await fetchRoom(admin, roomId);
+	if (!row || row.archived_at) {
+		return { success: false, reason: "Room not found" };
+	}
+
+	const state: GameState = { ...rowToGameState(row), language: row.language };
+
+	if (state.status !== "playing") {
+		return { success: false, reason: "Game is not in progress" };
+	}
+
+	const player = getPlayerByClientId(state, userId);
+	if (!player || player.seat === undefined) {
+		return { success: false, reason: "Player not in room" };
+	}
+
+	let nextState: GameState = killPlayer(state, player.seat);
+
+	const aliveCount = getAlivePlayerCount(nextState);
+	if (aliveCount <= 1) {
+		nextState = endGame(nextState);
+		await persistRoomState(admin, roomId, nextState);
+		await broadcastRoomGameState(admin, roomId, toGameStateEmit(nextState));
+		await archiveRoom(admin, roomId, "finished");
+		return { success: true, gameState: toGameStateEmit(nextState) };
+	}
+
+	nextState = nextTurn(nextState);
+	await persistRoomState(admin, roomId, nextState);
+	await broadcastRoomGameState(admin, roomId, toGameStateEmit(nextState));
+	return { success: true, gameState: toGameStateEmit(nextState) };
 }
 
 export async function leaveRoom(
