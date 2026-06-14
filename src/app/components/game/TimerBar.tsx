@@ -1,68 +1,52 @@
 "use client";
-import { RefObject, useEffect, useState, useRef } from "react";
+import { Countdown } from "@/app/hooks/useCountdown";
 import "./game-v2.css";
 
 export interface TimerBarProps {
-    timeRemaining?: number;
-    timerDuration: number;
-    // frozen: boolean;
-    time: RefObject<number>;
-    isPaused: () => boolean;
-    timer: number;
+    timer: Countdown;
 }
 
-export default function TimerBar({
-    timer,
-    timerDuration,
-    timeRemaining,
-    isPaused,
-}: TimerBarProps) {
-    // const [pct, setPct] = useState(timer == 0 ? 0 : (100 / (timerDuration)) * timer);
-    const barRef = useRef<HTMLDivElement>(null);
-    const pct = timer > 0 ? (timer / timerDuration) * 100 : 0;
-    // const seconds = Math.ceil(timeRemaining);
+export default function TimerBar({ timer }: TimerBarProps) {
+    // JS "width-transition" bar
+    const pct =
+        timer.duration > 0
+            ? Math.max(
+                  0,
+                  Math.min(
+                      100,
+                      (timer.remainingMilliSeconds / 1000 / timer.duration) *
+                          100,
+                  ),
+              )
+            : 0;
 
-    useEffect(() => {
-        console.log(`[TimerBar] isPaused: ${isPaused()}`);
-        if (!barRef.current) return;
-        if (isPaused()) {
-            const currentWidth = getComputedStyle(barRef.current).width;
-            barRef.current.style.transition = "none";
-            barRef.current.style.width = currentWidth;
-        } else {
-            barRef.current.style.transition = "width 1s linear";
-            barRef.current.style.width = Math.min(
-                parseFloat(barRef.current.style.width),
-                timer > 0 ? (timer / timerDuration) * 100 : 0
-            ).toString() + "%";
-        }
-    }, [isPaused]);
+    function getPercentage(remaingingMs: number) {
+        if (remaingingMs <= 0) return 0;
+        return Math.max(
+            0,
+            Math.min(100, (remaingingMs / 1000 / timer.duration) * 100),
+        );
+    }
+    // console.log(timer.remainingSeconds);
 
-    console.log(
-        `[TimerBar] render: timerDuration=${timerDuration}, timer=${timer}, pct=${pct}%`,
-    );
     return (
-        <div className="g2-timer-bar" role="timer">
-            <p> {timer}s </p>
-            <div className="g2-timer-bar-track">
-                <div
-                    ref={barRef}
-                    className="w-full h-2 bg-blue-500 origin-right"
-                    style={{
-                        transition: `width 1s linear`,
-                        width: `${Math.max(pct - 0.005, 0)}%`,
-                        // animation: `shrink-width ${duration}s linear forwards ${frozen ? "paused" : "running"}`,
-                        transformOrigin: "left", // just in case
-                    }}
-                />
-                {/*<div
-					className={`g2-timer-bar-fill ${frozen ? "g2-timer-bar-fill-frozen" : ""}`}
-					style={{ width: `${pct}%` }}
-				/>*/}
+        <>
+            {/* CSS animation bar - visually smooth from 100%->0%, pauses when timer pauses */}
+            <div className="g2-timer-bar" role="timer">
+                <p> {timer.remainingSeconds}s </p>
+                <div className="g2-timer-bar-track">
+                    <div
+                        className={`w-full h-2 ${timer.isPaused ? "bg-gray-500" : "bg-blue-500"} origin-left`}
+                        style={{
+                            width: "100%",
+                            transition: "background-color var(--g2-transition)",
+                            animation: `shrink-width ${timer.duration}s linear forwards`,
+                            animationPlayState: `${timer.isPaused ? "paused" : "running"}`,
+                            transformOrigin: "left",
+                        }}
+                    />
+                </div>
             </div>
-            {/*<span className={`g2-timer-bar-label ${frozen ? "g2-timer-bar-label-frozen" : ""}`}>
-				{seconds}s
-			</span>*/}
-        </div>
+        </>
     );
 }

@@ -241,7 +241,7 @@ function InputBox({
 
     // Event handlers
     const handleCompositionStart = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
-        console.log("IME composition started");
+        // console.log("IME composition started");
         useInputStore.getState().setIsComposing(true);
     }, []);
 
@@ -254,19 +254,19 @@ function InputBox({
     }, [updateCaretPosition]);
 
     const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLInputElement>) => {
-        console.log("IME composition ended");
+        // console.log("IME composition ended");
         useInputStore.getState().setIsComposing(false);
 
         const input = e.currentTarget.value;
         const prev = prevInputRef.current;
         const letter = ""; // No letter detail from IME composition end
 
-        console.clear();
-        console.log("--------------");
-        console.log("(onCompositionEnd) input:", input);
-        console.log("prev input:", prev);
-        console.log("composition state:", false);
-        console.log("--------------");
+        // console.clear();
+        // console.log("--------------");
+        // console.log("(onCompositionEnd) input:", input);
+        // console.log("prev input:", prev);
+        // console.log("composition state:", false);
+        // console.log("--------------");
 
         validateInput(input, prev, letter, false);
     }, [validateInput]);
@@ -284,12 +284,12 @@ function InputBox({
             store.setErrorMessage(null);
         }
 
-        console.clear();
-        console.log("--------------");
-        console.log("input:", input, "letter:", letter);
-        console.log("prev input:", prevInputRef.current);
-        console.log("composition state:", isComposing);
-        console.log("--------------");
+        // console.clear();
+        // console.log("--------------");
+        // console.log("input:", input, "letter:", letter);
+        // console.log("prev input:", prevInputRef.current);
+        // console.log("composition state:", isComposing);
+        // console.log("--------------");
 
         store.setLastKey(letter.slice(-1));
 

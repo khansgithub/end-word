@@ -3,23 +3,22 @@
 import BusyOverlay from "@/app/components/game/BusyOverlay";
 import DefinitionsPanel from "@/app/components/game/DefinitionsPanel";
 import GameBoardLayout from "@/app/components/game/GameBoardLayout";
-import GameTopBar from "@/app/components/game/GameTopBar";
-import InputSection from "@/app/components/game/InputSection";
-import PlayersRoster, {
-    shouldShowPlayersBar,
-} from "@/app/components/game/PlayersRoster";
-import PlayFocusPanel from "@/app/components/game/PlayFocusPanel";
-import PlayStatusGrid from "@/app/components/game/PlayStatusGrid";
-import TimerBar from "@/app/components/game/TimerBar";
 import GameOverlay from "@/app/components/game/GameOverlay";
+import GameTopBar from "@/app/components/game/GameTopBar";
 import {
     focusInputBox,
     getInputValue,
     resetInput,
     setInputError,
 } from "@/app/components/game/InputBox";
+import InputSection from "@/app/components/game/InputSection";
+import PlayersRoster, {
+    shouldShowPlayersBar,
+} from "@/app/components/game/PlayersRoster";
+import PlayFocusPanel from "@/app/components/game/PlayFocusPanel";
+import PlayStatusGrid from "@/app/components/game/PlayStatusGrid";
+import { useGameState } from "@/app/hooks/useGameState";
 import { useRoomChannel } from "@/app/hooks/useRoomChannel";
-import { useTimer } from "@/app/hooks/useTimer";
 import { useTypingDraft } from "@/app/hooks/useTypingDraft";
 import {
     leaveRoomApi,
@@ -30,17 +29,26 @@ import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { gameStateReducer } from "@/shared/GameState";
-import type { TypingDraftPayload } from "@/shared/typingDraft";
 import {
     DictionaryEntry,
     GameStateClient,
     GameStateEmit,
 } from "@/shared/types";
+import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
-import { isPlayerTurn, turnToPlayerIndex } from "@/shared/utils";
+import {
+    isPlayerTurn,
+    turnToPlayerIndex,
+    numberToSeconds,
+} from "@/shared/utils";
 import { appendDefinitionToHistory } from "@/shared/wordDefinition";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import TimerBar from "./TimerBar";
+// import { useTimer } from "@/app/hooks/useTimer";
+import { useTimer } from "react-timer-hook";
+import { useCountdown } from "@/app/hooks/useCountdown";
+import { count } from "node:console";
 
 export interface GameV2Props {
     roomId: string;
@@ -100,11 +108,6 @@ export default function GameV2({
         gameState.turn,
         gameState.connectedPlayers,
     );
-    // timer
-    // const turnSeatTimer = turnToPlayerIndex(gameState.turn, gameState.connectedPlayers);
-    // const currentTimerPlayer = gameState.players[turnSeatTimer];
-    // const timeRemaining = currentTimerPlayer?.timeRemaining ?? gameState.timerDuration;
-    // const timerFrozen = !isMyTurn || gameState.status !== "playing";
 
     // =========================================================================
     // ## callback hooks
@@ -119,6 +122,7 @@ export default function GameV2({
         if (interactionLocked) return;
         setIsLeavingLobby(true);
         void leaveRoomApi(roomId).finally(() => {
+            countdown.reset();
             router.push("/lobby");
         });
     }, [router, interactionLocked, roomId]);
@@ -234,13 +238,19 @@ export default function GameV2({
         }
     }, [gameState, roomId, appendDefinition]);
 
-    const handleTimerExpire = useCallback(
-        (seat: number) => {
-            // alert("YOU DIED");
-            console.log(`[handleTimerExpire] kill player and go next turn`);
+    const handleTimerExpire = useCallback(() => {
+        // alert("YOU DIED");
+        setForceInputDisabled(true);
+        if (playerCount > 1) {
+            const seat = gameState.thisPlayer.seat;
+            if (seat === undefined) {
+                console.error(`[handleTimerExpire] seat is undefined`);
+                return;
+            } else
+                console.log(`[handleTimerExpire] kill player and go next turn`);
             gameStateDispatch({
                 type: "killPlayerAndNextTurn",
-                payload: [gameState, seat],
+                payload: [gameState, gameState.thisPlayer.seat!],
             });
             void timerExpiryApi(roomId).then((result) => {
                 if (!result.success) {
@@ -250,9 +260,10 @@ export default function GameV2({
                     );
                 }
             });
-        },
-        [gameStateDispatch, gameState, roomId],
-    );
+        } else {
+            
+        }
+    }, [gameStateDispatch, gameState, roomId]);
 
     const setIsSubmitting = useCallback(
         (isSubmiting: boolean) => {
@@ -272,36 +283,23 @@ export default function GameV2({
         [gameState, gameStateDispatch],
     );
 
-    const isMyTurn: () => boolean = useCallback(() => {
-        return (
-            gameState.status === "playing" &&
-            gameState.thisPlayer?.seat !== undefined &&
-            isPlayerTurn(gameState, gameState.thisPlayer.seat)
-        );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gameState.status, gameState.thisPlayer]);
-
-    const isDisabled = useCallback(() => {
-        return (
-            gameState.thisPlayer?.seat === undefined ||
-            !isMyTurn() ||
-            gameState.status !== "playing" ||
-            gameState.thisPlayer?.health < 1
-        );
-    }, [isMyTurn, gameState.thisPlayer, gameState.status]);
-
-    const isTimerPaused = useCallback(() => {
-        const result =
-            gameState.submitting ||
-            gameState.status !== "playing" ||
-            !isMyTurn();
-        // console.log(`[isTimerPaused] → ${result} (submitting=${gameState.submitting}, status=${gameState.status}, isMyTurn=${!isMyTurn()})`);
-        return result;
-    }, [gameState.submitting, gameState.status, isMyTurn]);
-
     // =========================================================================
     // ## custom hooks
     // =========================================================================
+
+    const {
+        isSubmitting,
+        isGamePlaying,
+        isMyTurn,
+        isPlayerDead,
+        isInputDisabled,
+        isTimerPaused,
+        isSoloGame,
+        playerCount,
+        forceInputDisabled,
+        setForceInputDisabled,
+    } = useGameState(gameState);
+
     /**
      * Ref bridge so `useRoomChannel` (called first) can forward incoming typing-draft
      * broadcasts to the `onTypingDraft` callback created by `useTypingDraft` (called second).
@@ -318,34 +316,30 @@ export default function GameV2({
         onPlayerLeft,
         presenceSeat: gameState.thisPlayer?.seat,
     });
-
     const { remoteDraft, clearRemoteDraft, onTypingDraft } = useTypingDraft(
         roomId,
         {
             userId,
-            broadcastEnabled: multiplayer && isMyTurn(),
+            broadcastEnabled: multiplayer && isMyTurn,
             turnSeat: gameState.thisPlayer?.seat,
             receiveEnabled: multiplayer && gameState.status === "playing",
             sendTypingDraft,
         },
     );
     onTypingDraftRef.current = onTypingDraft;
-
-    // const { timer } = useTimer(
-    //     gameState,
-    //     gameStateDispatch,
-    //     handleTimerExpire,
-    //     isTimerPaused,
-    // );
-
     const turnTypingText =
         multiplayer &&
-        !isMyTurn() &&
+        !isMyTurn &&
         remoteDraft?.text &&
         remoteDraft.seat === turnSeat
             ? remoteDraft.text
             : undefined;
 
+    const countdown = useCountdown(
+        gameState.timerDuration,
+        gameState.status,
+        isTimerPaused,
+    );
     // =========================================================================
     // effects
     // =========================================================================
@@ -392,7 +386,26 @@ export default function GameV2({
         if (gameState.thisPlayer === undefined) {
             throw new ThisPlayerUndefinedError("", gameState);
         }
-    }, [gameState]);
+    }, [gameState.thisPlayer]);
+
+    useEffect(() => {
+        if (gameState.status === "playing") {
+            void (isMyTurn ? countdown.start() : countdown.pause());
+            if (countdown.remainingSeconds === 0) {
+                handleTimerExpire();
+            }
+        } else {
+            countdown.pause();
+        }
+    }, [countdown.remainingSeconds, gameState.status, isMyTurn]);
+
+    useEffect(() => {
+        if (gameState.status === "playing") {
+            countdown.start();
+        } else {
+            countdown.pause();
+        }
+    }, [gameState.status]);
 
     return (
         <>
@@ -411,6 +424,7 @@ export default function GameV2({
                 isStartingGame={isStartingGame}
                 isLeavingLobby={isLeavingLobby}
             />
+            {/* <p> timer: {countdown.remainingSeconds}</p> */}
             <GameBoardLayout
                 topBar={
                     <GameTopBar
@@ -432,7 +446,7 @@ export default function GameV2({
                         input={
                             <InputSection
                                 matchLetter={gameState.matchLetter}
-                                disabled={isDisabled()}
+                                disabled={isInputDisabled || forceInputDisabled}
                                 onSubmit={submitButton}
                                 setIsSubmitting={setIsSubmitting}
                                 submitState={gameState.submitting!}
@@ -440,19 +454,8 @@ export default function GameV2({
                                 embedded
                             />
                         }
-                        disabled={isDisabled()}
-                        // timerBar={
-                        //     <TimerBar
-                        //         timeRemaining={
-                        //             gameState.thisPlayer.timeRemaining
-                        //         }
-                        //         timerDuration={gameState.timerDuration}
-                        //         // frozen={timerFrozen}
-                        //         isPaused={isTimerPaused}
-                        //         time={timerRef}
-                        //         timer={timer}
-                        //     />
-                        // }
+                        disabled={isInputDisabled || forceInputDisabled}
+                        timerBar={<TimerBar timer={countdown} />}
                     />
                 }
                 wordHistory={

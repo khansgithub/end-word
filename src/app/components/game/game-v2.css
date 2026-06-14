@@ -235,3 +235,12 @@
         height: 0.6rem;
     }
 }
+
+@keyframes shrink-width {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}

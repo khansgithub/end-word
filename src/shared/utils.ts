@@ -208,3 +208,9 @@ export function arrayToMapped<T extends readonly string[]>(arr: T) {
 export function normalizeEnglishWord(word: string): string {
 	return word.trim().toLowerCase();
 }
+
+export function numberToSeconds(seconds: number): Date{
+	const d = new Date();
+	d.setSeconds(d.getSeconds() + seconds);
+	return d;
+}

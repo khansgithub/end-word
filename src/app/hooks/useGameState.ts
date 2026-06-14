@@ -1,0 +1,60 @@
+"use client";
+
+import { GameStateClient } from "@/shared/types";
+import { isPlayerTurn } from "@/shared/utils";
+import { useUserStore } from "../store/userStore";
+import { useState } from "react";
+
+
+export function useGameState(gameState: GameStateClient) {
+	const playerName = useUserStore((s) => s.playerName);
+
+	const isSubmitting = gameState.submitting ?? false;
+	const isGamePlaying = gameState.status === "playing";
+
+	const playerCount = gameState.players.filter(
+		(p) => p !== null
+	).length;
+
+	const isSoloGame = playerCount < 2;
+
+	const isMyTurn =
+		isGamePlaying &&
+		gameState.thisPlayer?.seat !== undefined &&
+		isPlayerTurn(gameState, gameState.thisPlayer.seat);
+
+	const player = gameState.players.find(
+		(p) => p?.name === playerName
+	);
+
+	const isPlayerDead =
+		gameState.thisPlayer?.health < 1 ||
+		(player?.health ?? 1) < 1;
+
+	const isInputDisabled =
+		!isMyTurn ||
+		!isGamePlaying ||
+		isPlayerDead ||
+		isSubmitting;
+
+	const isTimerPaused =
+		isInputDisabled ||
+		isPlayerDead ||
+		isSubmitting ||
+		!isGamePlaying;
+
+	const [forceInputDisabled, setForceInputDisabled] = useState(false);
+	
+	return {
+		isSubmitting,
+		isGamePlaying,
+		isMyTurn,
+		isPlayerDead,
+		isInputDisabled,
+		isTimerPaused,
+		isSoloGame,
+        playerCount,
+        forceInputDisabled,
+        setForceInputDisabled,
+	};
+}
