@@ -109,6 +109,20 @@ export default function GameV2({
         gameState.connectedPlayers,
     );
 
+
+    const {
+        isSubmitting,
+        isGamePlaying,
+        isMyTurn,
+        isPlayerDead,
+        isInputDisabled,
+        isTimerPaused,
+        isSoloGame,
+        playerCount,
+        forceInputDisabled,
+        setForceInputDisabled,
+    } = useGameState(gameState);
+
     // =========================================================================
     // ## callback hooks
     // =========================================================================
@@ -207,37 +221,6 @@ export default function GameV2({
         [],
     );
 
-    const submitButton = useCallback(async () => {
-        if (gameState.status === "finished") return;
-        const word = getInputValue();
-        const emptyInput = !word || word.length === 0;
-
-        if (emptyInput) {
-            setInputError(true);
-        } else if (isWordAlreadyUsed(gameState, word)) {
-            setInputError(true, gameStrings.wordAlreadyUsed);
-            focusInputBox();
-        } else {
-            const response = await submitWordApi(roomId, word);
-            submitWordCallback(
-                gameState,
-                gameStateDispatch,
-                setInputError,
-                response,
-                word,
-            );
-            if (response.success) {
-                if (response.definition) {
-                    appendDefinition(response.definition);
-                }
-                resetInput();
-            } else {
-                focusInputBox();
-                console.log(`[submitButton] time -> unpaused`);
-            }
-        }
-    }, [gameState, roomId, appendDefinition]);
-
     const handleTimerExpire = useCallback(() => {
         // alert("YOU DIED");
         setForceInputDisabled(true);
@@ -265,6 +248,7 @@ export default function GameV2({
         }
     }, [gameStateDispatch, gameState, roomId]);
 
+
     const setIsSubmitting = useCallback(
         (isSubmiting: boolean) => {
             console.log(
@@ -286,19 +270,6 @@ export default function GameV2({
     // =========================================================================
     // ## custom hooks
     // =========================================================================
-
-    const {
-        isSubmitting,
-        isGamePlaying,
-        isMyTurn,
-        isPlayerDead,
-        isInputDisabled,
-        isTimerPaused,
-        isSoloGame,
-        playerCount,
-        forceInputDisabled,
-        setForceInputDisabled,
-    } = useGameState(gameState);
 
     /**
      * Ref bridge so `useRoomChannel` (called first) can forward incoming typing-draft
@@ -340,6 +311,38 @@ export default function GameV2({
         gameState.status,
         isTimerPaused,
     );
+
+	const submitButton = useCallback(async () => {
+        if (gameState.status === "finished") return;
+        const word = getInputValue();
+        const emptyInput = !word || word.length === 0;
+
+        if (emptyInput) {
+            setInputError(true);
+        } else if (isWordAlreadyUsed(gameState, word)) {
+            setInputError(true, gameStrings.wordAlreadyUsed);
+            focusInputBox();
+        } else {
+            const response = await submitWordApi(roomId, word, countdown.remainingSeconds);
+            submitWordCallback(
+                gameState,
+                gameStateDispatch,
+                setInputError,
+                response,
+                word,
+            );
+            if (response.success) {
+                if (response.definition) {
+                    appendDefinition(response.definition);
+                }
+                resetInput();
+            } else {
+                focusInputBox();
+                console.log(`[submitButton] time -> unpaused`);
+            }
+        }
+    }, [gameState, roomId, appendDefinition, countdown.remainingSeconds]);
+
     // =========================================================================
     // effects
     // =========================================================================

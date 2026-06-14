@@ -23,13 +23,8 @@ export function useGameState(gameState: GameStateClient) {
 		gameState.thisPlayer?.seat !== undefined &&
 		isPlayerTurn(gameState, gameState.thisPlayer.seat);
 
-	const player = gameState.players.find(
-		(p) => p?.name === playerName
-	);
-
 	const isPlayerDead =
-		gameState.thisPlayer?.health < 1 ||
-		(player?.health ?? 1) < 1;
+		gameState.thisPlayer?.health < 1
 
 	const isInputDisabled =
 		!isMyTurn ||

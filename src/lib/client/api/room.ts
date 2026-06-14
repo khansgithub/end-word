@@ -69,12 +69,14 @@ function parseSubmitWordResponse(
 
 export async function submitWordApi(
 	roomId: string,
-	word: string
+	word: string,
+	timeRemaining?: number
 ): Promise<SubmitWordApiResult> {
+	console.log(`[submitWord API] timeRemaining=${timeRemaining}`)
 	const res = await fetch(`/api/rooms/${roomId}/submit`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ word }),
+		body: JSON.stringify({ word, timeRemaining }),
 	});
 
 	if (res.status !== 200) {

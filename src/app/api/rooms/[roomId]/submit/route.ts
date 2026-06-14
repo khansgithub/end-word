@@ -18,8 +18,10 @@ export async function POST(request: Request, { params }: Params) {
 		const { roomId } = await params;
 		const body = await request.json();
 		const word = String(body.word ?? "");
+		const timeRemaining =
+			body.timeRemaining !== undefined ? Number(body.timeRemaining) : undefined;
 		const admin = getAdmin();
-		const result: SubmitResult = await submitWord(admin, roomId, user.id, word);
+		const result: SubmitResult = await submitWord(admin, roomId, user.id, word, timeRemaining);
 		console.log("[POST /api/rooms/:id/submit] result:", JSON.stringify(result, null, 2));
 		return NextResponse.json(result, { status: 200 });
 	} catch (e) {

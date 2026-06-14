@@ -25,6 +25,7 @@ import {
 	killPlayer,
 	nextTurn,
 	progressNextTurn,
+	setTimerForPlayer,
 	compactActivePlayers,
 	markPlayerLeft,
 	removePlayer,
@@ -193,8 +194,10 @@ export async function submitWord(
 	admin: SupabaseClient,
 	roomId: string,
 	userId: string,
-	word: string
+	word: string,
+	timeRemaining?: number
 ): Promise<SubmitResult> {
+	console.log(`[roomService] submirWord POST word=${word} timeRemaining=${timeRemaining}`)
 	const row = await fetchRoom(admin, roomId);
 	if (!row || row.archived_at) {
 		return { success: false, reason: "Room not found" };
@@ -249,7 +252,11 @@ export async function submitWord(
 			? await matchLetterFromWord(word, language)
 			: word.slice(-1);
 
-	const nextState = progressNextTurn(state, block, word);
+	const stateWithTimer =
+		timeRemaining !== undefined
+			? setTimerForPlayer(state, timeRemaining, player.seat)
+			: state;
+	const nextState = progressNextTurn(stateWithTimer, block, word);
 	await persistRoomState(admin, roomId, nextState);
 
 	const emit = toGameStateEmit(nextState);

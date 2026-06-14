@@ -574,7 +574,7 @@ export function gameStateUpdateClient(newState: GameStateEmit, currentState?: Ga
 		? {
 			...currentState.thisPlayer,
 			...playerFromEmit,
-			timeRemaining: freshTimer ?? currentState.thisPlayer.timeRemaining ?? playerFromEmit.timeRemaining,
+			timeRemaining: freshTimer ?? playerFromEmit.timeRemaining ?? currentState.thisPlayer.timeRemaining,
 		}
 		: currentState.thisPlayer;
 
@@ -582,7 +582,7 @@ export function gameStateUpdateClient(newState: GameStateEmit, currentState?: Ga
 		if (!p) return null;
 		const current = currentState.players[i];
 		if (!current) return p;
-		const timeRemaining = freshTimer ?? (current as Record<string, unknown>).timeRemaining ?? (p as Record<string, unknown>).timeRemaining;
+		const timeRemaining = freshTimer ?? (p as Record<string, unknown>).timeRemaining ?? (current as Record<string, unknown>).timeRemaining;
 		return { ...p, timeRemaining } as typeof p;
 	}) as GameStateEmit["players"];
 

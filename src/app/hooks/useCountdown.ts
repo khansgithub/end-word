@@ -1,97 +1,83 @@
 import { useStopwatch } from "react-timer-hook";
-import { useEffect, useState } from "react"; // BUG 7: unused import useRef
+import { RefObject, useEffect, useRef, useState } from "react"; // BUG 7: unused import useRef
 import { GameStatus } from "@/shared/types";
 
 export type Countdown = {
-    remainingSeconds: number;
-    remainingMilliSeconds: number;
-    duration: number;
-    isPaused: boolean;
-    start: () => void;
-    pause: () => void;
-    reset: () => void;
+	remainingSeconds: number;
+	remainingMilliSeconds: number;
+	pasuedRemainingSeconds: RefObject<number>;
+	pasuedRemainingMilliSeconds: RefObject<number>;
+	duration: number;
+	isPaused: boolean;
+	start: () => void;
+	pause: () => void;
+	reset: () => void;
 };
 
 export function useCountdown(
-    duration: number,
-    gameStatus: GameStatus,
-    isPaused: boolean,
+	duration: number,
+	gameStatus: GameStatus,
+	isPaused: boolean,
 ): Countdown {
-    const durationMs = duration * 1000;
-    const sw = useStopwatch({
-        autoStart: false,
-    });
+	const durationMs = duration * 1000;
+	const sw = useStopwatch({
+		autoStart: false,
+	});
 
-    // const [countdownSeconds, setCountdownSeconds] = useState(duration);
-    // const [countdownMilliseconds, setCountdownMilliseconds] = useState(durationMs);
-    const countdownMilliseconds = Math.max(
-        0,
-        durationMs - sw.totalMilliseconds,
-    );
-    const countdownSeconds = Math.max(0, duration - sw.totalSeconds);
-    
-    function reset() {
-        sw.reset(undefined, false);
-    }
+	const pasuedRemainingSeconds = useRef(0);
+	const pasuedRemainingMilliSeconds = useRef(0);
 
-    // useEffect(() => {
-    // 	const ms = durationMs - sw.totalMilliseconds;
-    // 	const s = duration - sw.totalSeconds;
-    // 	console.log(
-    // 		`[useCountdown]ms: ${ms} | s: ${s} | countdownMilliseconds: ${countdownMilliseconds} | countdownSeconds: ${countdownSeconds}`
-    // 	);
-    // 	if (ms <= 0 || s <= 0) {
-    // 		console.log("[useCountdown][sw.milliseconds effect] Timer ended. Resetting.");
-    // 		// reset();
-    // 		return;
-    // 	}
-    // 	setCountdownSeconds(s);
-    // 	setCountdownMilliseconds(ms);
-    // }, [sw.totalMilliseconds]);
+	const remainingMilliSeconds = Math.max(
+		0,
+		durationMs - sw.totalMilliseconds,
+	);
+	const remainingSeconds = Math.max(0, duration - sw.totalSeconds);
 
-    // useEffect(() => {
-    //     console.log(
-    //         "[useCountdown][gameStatus effect] gameStatus changed:",
-    //         gameStatus,
-    //     );
-    //     if (gameStatus === "playing") {
-    //         console.log(
-    //             "[useCountdown][gameStatus effect] Starting stopwatch.",
-    //         );
-    //         sw.start();
-    //     } else {
-    //         console.log(
-    //             "[useCountdown][gameStatus effect] Resetting countdown (not playing).",
-    //         );
-    //         // reset(); // NOTE: intentionally commented out — countdown frozen on finish
-    //     }
-    // }, [gameStatus]);
+	function reset() {
+		sw.reset(undefined, false);
+	}
 
-    useEffect(() => {
-        console.log(
-            "[useCountdown][isPaused effect] isPaused changed:",
-            isPaused,
-        );
-        if (isPaused) {
-            console.log(
-                `[useCountdown][isPaused effect] Pausing stopwatch at ${countdownSeconds}/${countdownMilliseconds}.`,
-            );
-            sw.pause();
-        } else {
-            console.log(
-                "[useCountdown][isPaused effect] Starting stopwatch (unpaused).",
-            );
-            sw.start();
-        }
-    }, [isPaused]);
+	function pause() {
+		sw.pause();
+		pasuedRemainingSeconds.current = remainingSeconds;
+		pasuedRemainingMilliSeconds.current = remainingMilliSeconds;
+	}
 
-    return {
-        remainingSeconds: countdownSeconds,
-        remainingMilliSeconds: countdownMilliseconds,
-        duration: duration,
-        isPaused: !sw.isRunning,
-        start: sw.start,
-        pause: sw.pause,
-        reset,
-    };
+	useEffect(() => {
+		console.log(
+			"[useCountdown][isPaused effect] isPaused changed:",
+			isPaused,
+		);
+		if (isPaused) {
+			console.log(
+				`[useCountdown][isPaused effect] Pausing stopwatch at ${remainingSeconds}/${remainingMilliSeconds}.`,
+			);
+			pause();
+		} else {
+			console.log(
+				"[useCountdown][isPaused effect] Starting stopwatch (unpaused).",
+			);
+			sw.start();
+		}
+	}, [isPaused]);
+
+	useEffect(() => {
+		console.log(`[useCountdown] remainingSeconds=${remainingSeconds}`)
+	}, [remainingSeconds])
+
+	function foo (){
+		return remainingSeconds;
+	}
+
+	return {
+		remainingSeconds,
+		remainingMilliSeconds,
+		pasuedRemainingSeconds,
+		pasuedRemainingMilliSeconds,
+		duration: duration,
+		isPaused: !sw.isRunning,
+		start: sw.start,
+		pause: pause,
+		reset,
+	};
 }
