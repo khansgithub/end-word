@@ -97,6 +97,8 @@ export default function GameV2({
     const onTypingDraftRef = useRef<(payload: TypingDraftPayload) => void>(
         () => {},
     );
+    const timerExpiredRef = useRef(false);
+    const timerExpiredTurnRef = useRef(gameState.turn);
 
     // =========================================================================
     // ## variables
@@ -394,11 +396,16 @@ export default function GameV2({
     useEffect(() => {
         if (gameState.status === "playing") {
             void (isMyTurn ? countdown.start() : countdown.pause());
-            if (countdown.remainingSeconds === 0) {
+            if (countdown.remainingSeconds === 0 && !timerExpiredRef.current) {
+                timerExpiredRef.current = true;
+                timerExpiredTurnRef.current = gameState.turn;
                 handleTimerExpire();
+            } else if (countdown.remainingSeconds > 0) {
+                timerExpiredRef.current = false;
             }
         } else {
             countdown.pause();
+            timerExpiredRef.current = false;
         }
     }, [countdown.remainingSeconds, gameState.status, isMyTurn]);
 
@@ -409,6 +416,12 @@ export default function GameV2({
             countdown.pause();
         }
     }, [gameState.status]);
+
+	useEffect(()=>{
+		if(isStartingGame){
+			countdown.reset();
+		}
+	}, [isStartingGame]);
 
     return (
         <>

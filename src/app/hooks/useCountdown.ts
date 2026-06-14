@@ -5,8 +5,6 @@ import { GameStatus } from "@/shared/types";
 export type Countdown = {
 	remainingSeconds: number;
 	remainingMilliSeconds: number;
-	pasuedRemainingSeconds: RefObject<number>;
-	pasuedRemainingMilliSeconds: RefObject<number>;
 	duration: number;
 	isPaused: boolean;
 	start: () => void;
@@ -24,9 +22,6 @@ export function useCountdown(
 		autoStart: false,
 	});
 
-	const pasuedRemainingSeconds = useRef(0);
-	const pasuedRemainingMilliSeconds = useRef(0);
-
 	const remainingMilliSeconds = Math.max(
 		0,
 		durationMs - sw.totalMilliseconds,
@@ -35,12 +30,6 @@ export function useCountdown(
 
 	function reset() {
 		sw.reset(undefined, false);
-	}
-
-	function pause() {
-		sw.pause();
-		pasuedRemainingSeconds.current = remainingSeconds;
-		pasuedRemainingMilliSeconds.current = remainingMilliSeconds;
 	}
 
 	useEffect(() => {
@@ -52,7 +41,6 @@ export function useCountdown(
 			console.log(
 				`[useCountdown][isPaused effect] Pausing stopwatch at ${remainingSeconds}/${remainingMilliSeconds}.`,
 			);
-			pause();
 		} else {
 			console.log(
 				"[useCountdown][isPaused effect] Starting stopwatch (unpaused).",
@@ -65,19 +53,17 @@ export function useCountdown(
 		console.log(`[useCountdown] remainingSeconds=${remainingSeconds}`)
 	}, [remainingSeconds])
 
-	function foo (){
+	function foo() {
 		return remainingSeconds;
 	}
 
 	return {
 		remainingSeconds,
 		remainingMilliSeconds,
-		pasuedRemainingSeconds,
-		pasuedRemainingMilliSeconds,
 		duration: duration,
 		isPaused: !sw.isRunning,
 		start: sw.start,
-		pause: pause,
+		pause: sw.pause,
 		reset,
 	};
 }
