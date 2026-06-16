@@ -5,7 +5,7 @@ import { dissolveRoomApi } from "@/lib/client/api/room";
 import { toGameStateEmit } from "@/shared/GameState";
 import { isCompletedGameRow, rowToGameState } from "@/shared/roomRow";
 import type { RoomRow } from "@/shared/roomTypes";
-import type { GameStateEmit } from "@/shared/types";
+import type { GameState, GameStateEmit } from "@/shared/types";
 import { TYPING_DRAFT_EVENT, type TypingDraftPayload } from "@/shared/typingDraft";
 import { WORD_DEFINITION_EVENT, type WordDefinitionPayload } from "@/shared/wordDefinition";
 import type { RealtimeChannel } from "@supabase/supabase-js";

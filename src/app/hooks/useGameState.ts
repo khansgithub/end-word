@@ -39,6 +39,16 @@ export function useGameState(gameState: GameStateClient) {
 		!isGamePlaying;
 
 	const [forceInputDisabled, setForceInputDisabled] = useState(false);
+
+	console.log(
+		`[useGameState]` +
+		` submitting=${gameState.submitting} isSubmitting=${isSubmitting}` +
+		` isMyTurn=${isMyTurn} isInputDisabled=${isInputDisabled}` +
+		` isTimerPaused=${isTimerPaused}` +
+		` turn=${gameState.turn} seat=${gameState.thisPlayer?.seat}` +
+		` status=${gameState.status}` +
+		` health=${gameState.thisPlayer?.health}`,
+	);
 	
 	return {
 		isSubmitting,

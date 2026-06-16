@@ -20,22 +20,27 @@ export default function TimerBar({ timer, isSubmitting }: TimerBarProps) {
 			)
 			: 0;
 
-	// nextjs complains about the 2 css properties being updated. to fix later.
+	const animationPaused = isSubmitting || timer.isPaused;
 	const animationCss = pct == 100 ? 'none' : `shrink-width ${timer.duration}s linear forwards`;
+
+	console.log(
+		`[TimerBar] isSubmitting=${isSubmitting} timer.isPaused=${timer.isPaused}` +
+		` animationPaused=${animationPaused} remaining=${timer.remainingSeconds}s` +
+		` pct=${pct.toFixed(1)}`,
+	);
 
 	return (
 		<>
-			{/* CSS animation bar - visually smooth from 100%->0%, pauses when timer pauses */}
 			<div className="g2-timer-bar" role="timer">
 				<p> {timer.remainingSeconds}s </p>
 				<div className="g2-timer-bar-track">
 					<div
-						className={`w-full h-2 ${isSubmitting ? "bg-gray-500" : "bg-blue-500"} origin-left`}
+						className={`w-full h-2 ${animationPaused ? "bg-gray-500" : "bg-blue-500"} origin-left`}
 						style={{
 							width: "100%",
 							transition: "background-color var(--g2-transition)",
 							animation: animationCss,
-							animationPlayState: `${isSubmitting ? "paused" : "running"}`,
+							animationPlayState: animationPaused ? "paused" : "running",
 							transformOrigin: "left",
 						}}
 					/>

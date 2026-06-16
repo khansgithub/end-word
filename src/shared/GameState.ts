@@ -48,7 +48,6 @@ export type GameStateDispatch = ActionDispatch<[action: GameStateActionsType]>;
 
 
 const GameStateActions = {
-
 	// ========================================
 	// Game Progression & Turn Management
 	// ========================================
@@ -90,6 +89,11 @@ const GameStateActions = {
 	updateConnectedPlayersCount,
 	replaceGameState, // TODO: remove/consider refactor
 	gameStateUpdateClient,
+
+	// ========================================
+	// ---
+	// ========================================
+	custom,
 
 } satisfies { [key: string]: (...args: any[]) => GameState };
 
@@ -590,8 +594,31 @@ export function gameStateUpdateClient(newState: GameStateEmit, currentState?: Ga
 		...newState,
 		players: mergedPlayers,
 		thisPlayer,
+		submitting: currentState.submitting,
 	};
 }
+
+// =============================================================================
+// CUSTOM
+// =============================================================================
+export function custom(
+	state: GameState,
+	reducerFunctions: string[],
+	reducerPayloads: any[][]
+): GameState {
+	let nextState = state;
+	for (let i = 0; i < reducerFunctions.length; i++) {
+		const funcName = reducerFunctions[i];
+		const payload = reducerPayloads[i] || [];
+		const reducer = (GameStateActions as Record<string, any>)[funcName];
+		if (typeof reducer !== "function") {
+			throw new UnknownActionTypeError(`Reducer function "${funcName}" does not exist`);
+		}
+		nextState = reducer(nextState, ...payload);
+	}
+	return nextState;
+}
+
 
 // =============================================================================
 // REDUCER

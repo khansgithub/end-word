@@ -34,24 +34,24 @@ export function useCountdown(
 
 	useEffect(() => {
 		console.log(
-			"[useCountdown][isPaused effect] isPaused changed:",
-			isPaused,
+			`[useCountdown][isPaused effect] isPaused=${isPaused} isRunning=${sw.isRunning} remaining=${remainingSeconds}s totalMs=${sw.totalMilliseconds}`,
 		);
 		if (isPaused) {
 			console.log(
-				`[useCountdown][isPaused effect] Pausing stopwatch at ${remainingSeconds}/${remainingMilliSeconds}.`,
+				`[useCountdown][isPaused effect] Pausing stopwatch at ${remainingSeconds}s / ${remainingMilliSeconds}ms.`,
 			);
+			sw.pause();
 		} else {
 			console.log(
-				"[useCountdown][isPaused effect] Starting stopwatch (unpaused).",
+				`[useCountdown][isPaused effect] Starting stopwatch (unpaused).`,
 			);
 			sw.start();
 		}
 	}, [isPaused]);
 
-	useEffect(() => {
-		console.log(`[useCountdown] remainingSeconds=${remainingSeconds}`)
-	}, [remainingSeconds])
+	// useEffect(() => {
+	// 	console.log(`[useCountdown] remainingSeconds=${remainingSeconds}`)
+	// }, [remainingSeconds])
 
 	function foo() {
 		return remainingSeconds;

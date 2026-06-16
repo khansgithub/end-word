@@ -28,9 +28,10 @@ import {
 import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
-import { gameStateReducer } from "@/shared/GameState";
+import { GameStateActionsType, gameStateReducer } from "@/shared/GameState";
 import {
     DictionaryEntry,
+    GameState,
     GameStateClient,
     GameStateEmit,
 } from "@/shared/types";
@@ -327,14 +328,29 @@ export default function GameV2({
             focusInputBox();
 			setIsSubmitting(false);
         } else {
+            console.log(
+                `[submitButton] submitting word="${word}"` +
+                ` isMyTurn=${isMyTurn} isSubmitting=${isSubmitting}` +
+                ` remaining=${countdown.remainingSeconds}s` +
+                ` turn=${gameState.turn}`,
+            );
             const response = await submitWordApi(roomId, word, countdown.remainingSeconds);
-            submitWordCallback(
+            console.log(
+                `[submitButton] response success=${response.success}` +
+                ` reason=${response.success ? "" : (response as {reason?: string}).reason}` +
+                ` remaining=${countdown.remainingSeconds}s`,
+            );
+			type CustomDispatch = {
+				type: "custom",
+				payload: [GameState, string[], any[][]]
+			}
+            const customDispatch = submitWordCallback(
                 gameState,
                 gameStateDispatch,
                 setInputError,
                 response,
                 word,
-            );
+            ) as CustomDispatch;
             if (response.success) {
                 if (response.definition) {
                     appendDefinition(response.definition);
@@ -342,10 +358,14 @@ export default function GameV2({
                 resetInput();
             } else {
                 focusInputBox();
-                console.log(`[submitButton] time -> unpaused`);
+				customDispatch.payload[1].push("clientSetIsSubmitting");
+				customDispatch.payload[2].push([false]);
+				// setIsSubmitting(false);
+                console.log(`[submitButton] wrong word -> timer stays unpaused`);
             }
+			gameStateDispatch(customDispatch)
         }
-    }, [gameState, roomId, appendDefinition, countdown.remainingSeconds]);
+    }, [gameState, roomId, appendDefinition, countdown.remainingSeconds, isMyTurn, isSubmitting]);
 
     // =========================================================================
     // effects
@@ -396,6 +416,13 @@ export default function GameV2({
     }, [gameState.thisPlayer]);
 
     useEffect(() => {
+        console.log(
+            `[GameV2][turn/timer effect] status=${gameState.status}` +
+            ` isMyTurn=${isMyTurn} remaining=${countdown.remainingSeconds}s` +
+            ` timerExpiredRef=${timerExpiredRef.current}` +
+            ` turn=${gameState.turn}` +
+            ` isTimerPaused=${isTimerPaused}`,
+        );
         if (gameState.status === "playing") {
             void (isMyTurn ? countdown.start() : countdown.pause());
             if (countdown.remainingSeconds === 0 && !timerExpiredRef.current) {
@@ -412,7 +439,11 @@ export default function GameV2({
     }, [countdown.remainingSeconds, gameState.status, isMyTurn]);
 
     useEffect(() => {
-        if (gameState.status === "playing") {
+        console.log(
+            `[GameV2][status effect] status=${gameState.status} isMyTurn=${isMyTurn}` +
+            ` countdown.isPaused=${countdown.isPaused} remaining=${countdown.remainingSeconds}s`,
+        );
+        if (gameState.status === "playing" && isMyTurn) {
             countdown.start();
         } else {
             countdown.pause();
@@ -424,6 +455,19 @@ export default function GameV2({
 			countdown.reset();
 		}
 	}, [isStartingGame]);
+
+    useEffect(() => {
+        if (gameState.submitting) {
+            console.log(
+                `[GameV2][isMyTurn effect] clearing submitting because isMyTurn=${isMyTurn}` +
+                ` turn=${gameState.turn} seat=${gameState.thisPlayer?.seat}`,
+            );
+            gameStateDispatch({
+                type: "clientSetIsSubmitting",
+                payload: [gameState, false],
+            });
+        }
+    }, [isMyTurn]);
 
     return (
         <>
