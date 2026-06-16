@@ -4,10 +4,10 @@ import "./game-v2.css";
 
 export interface TimerBarProps {
 	timer: Countdown;
+	isSubmitting: boolean;
 }
 
-export default function TimerBar({ timer }: TimerBarProps) {
-	// JS "width-transition" bar
+export default function TimerBar({ timer, isSubmitting }: TimerBarProps) {
 	const pct =
 		timer.duration > 0
 			? Math.max(
@@ -20,8 +20,8 @@ export default function TimerBar({ timer }: TimerBarProps) {
 			)
 			: 0;
 
+	// nextjs complains about the 2 css properties being updated. to fix later.
 	const animationCss = pct == 100 ? 'none' : `shrink-width ${timer.duration}s linear forwards`;
-	// console.log(timer.remainingSeconds);
 
 	return (
 		<>
@@ -30,12 +30,12 @@ export default function TimerBar({ timer }: TimerBarProps) {
 				<p> {timer.remainingSeconds}s </p>
 				<div className="g2-timer-bar-track">
 					<div
-						className={`w-full h-2 ${timer.isPaused ? "bg-gray-500" : "bg-blue-500"} origin-left`}
+						className={`w-full h-2 ${isSubmitting ? "bg-gray-500" : "bg-blue-500"} origin-left`}
 						style={{
 							width: "100%",
 							transition: "background-color var(--g2-transition)",
 							animation: animationCss,
-							animationPlayState: `${timer.isPaused ? "paused" : "running"}`,
+							animationPlayState: `${isSubmitting ? "paused" : "running"}`,
 							transformOrigin: "left",
 						}}
 					/>

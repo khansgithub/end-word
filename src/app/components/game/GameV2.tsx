@@ -321,9 +321,11 @@ export default function GameV2({
 
         if (emptyInput) {
             setInputError(true);
+			setIsSubmitting(false);
         } else if (isWordAlreadyUsed(gameState, word)) {
             setInputError(true, gameStrings.wordAlreadyUsed);
             focusInputBox();
+			setIsSubmitting(false);
         } else {
             const response = await submitWordApi(roomId, word, countdown.remainingSeconds);
             submitWordCallback(
@@ -471,7 +473,7 @@ export default function GameV2({
                             />
                         }
                         disabled={isInputDisabled || forceInputDisabled}
-                        timerBar={<TimerBar timer={countdown} />}
+                        timerBar={<TimerBar timer={countdown} isSubmitting={gameState.submitting ?? false} />}
                     />
                 }
                 wordHistory={
