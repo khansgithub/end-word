@@ -72,15 +72,17 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
         (async () => {
             const metaRes = await fetch(`/api/rooms/${roomId}`);
 
-            if (metaRes.status === 401) {
-                const body = await metaRes.json();
-                if (body.siteLocked) {
-                    router.push(
-                        `/site-login?returnTo=${encodeURIComponent(`/room/${roomId}`)}`,
-                    );
-                    return;
-                }
-            }
+            // Dead code: site-lock enforcement is now handled entirely in the proxy
+            // middleware — no route returns { siteLocked: true } anymore.
+            // if (metaRes.status === 401) {
+            //     const body = await metaRes.json();
+            //     if (body.siteLocked) {
+            //         router.push(
+            //             `/site-login?returnTo=${encodeURIComponent(`/room/${roomId}`)}`,
+            //         );
+            //         return;
+            //     }
+            // }
 
             if (metaRes.ok) {
                 const meta = await metaRes.json();

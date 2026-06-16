@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getAdmin } from "@/app/server/auth/session";
 import { fetchRoom, rowToGameState } from "@/app/server/game/roomDb";
 import { toGameStateEmit } from "@/shared/GameState";
-import { checkSiteAccess } from "@/lib/site-lock";
-
 type Params = { params: Promise<{ roomId: string }> };
 
 export async function GET(request: Request, { params }: Params) {
@@ -13,9 +11,6 @@ export async function GET(request: Request, { params }: Params) {
 		const row = await fetchRoom(admin, roomId);
 		if (!row || row.archived_at) {
 			return NextResponse.json({ error: "Room not found" }, { status: 404 });
-		}
-		if (!(await checkSiteAccess(request)) && row.status !== "playing") {
-			return NextResponse.json({ error: "Site locked", siteLocked: true }, { status: 401 });
 		}
 		const state = rowToGameState(row);
 		return NextResponse.json({

@@ -1,5 +1,5 @@
 import { JSX } from "react";
-import { GameStatus, PlayersArray } from "@/shared/types";
+import { GameStatus, PlayersArray, PlayerWithId, PlayerWithoutId } from "@/shared/types";
 import { getWinnerPlayer } from "@/shared/utils";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 
@@ -40,12 +40,36 @@ export default function GameOverlay({
             );
         }
 
+        const activePlayers = players.filter((p): p is NonNullable<typeof p> => p != null) as PlayerWithoutId[];
+
         return (
             <>
                 <div className="app-spinner mb-4" aria-hidden />
                 <p className="text-lg" style={{ color: "var(--b-fg)" }}>
                     {gameStrings.waitingForGameToStart}
                 </p>
+                <div className="mt-4 w-full max-w-xs">
+                    <p className="text-sm font-semibold mb-2" style={{ color: "var(--b-fg)" }}>
+                        Players ({activePlayers.length})
+                    </p>
+                    <ul className="space-y-1">
+                        {activePlayers.map((p, i) => (
+                            <li
+                                key={i}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded"
+                                style={{ backgroundColor: "var(--b-bg)", color: "var(--b-fg)" }}
+                            >
+                                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                <span className="text-sm truncate">{p.name}</span>
+                                {p.left && (
+                                    <span className="text-xs ml-auto" style={{ color: "var(--b-muted)" }}>
+                                        {gameStrings.playerLeft}
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
                 {isHost && onStartGame && (
                     <button
                         type="button"
@@ -108,7 +132,7 @@ export default function GameOverlay({
             className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"
             style={{ backgroundColor: "var(--b-overlay)" }}
         >
-            <div className="panel">
+            <div className="panel min-w-[20rem] min-h-[14rem]">
                 <div className="flex flex-col items-center p-6">{mapping[status]()}</div>
             </div>
         </div>
