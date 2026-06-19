@@ -15,7 +15,7 @@ export type LogEntry = {
 const MAX_LOGS = 1000;
 const MAX_LOG_FILE_BYTES = 5 * 1024 * 1024;
 const logs: LogEntry[] = [];
-let enabled = true;
+let enabled = process.env.NODE_ENV !== "production";
 let logFilePath: string | null = null;
 let fileStreamInitialized = false;
 

@@ -12,7 +12,7 @@ export type LogEntry = {
 
 const MAX_LOGS = 1000;
 const logs: LogEntry[] = [];
-let enabled = true;
+let enabled = process.env.NODE_ENV !== "production";
 
 export function setLoggingEnabled(v: boolean): void {
   enabled = v;
