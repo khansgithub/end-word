@@ -28,6 +28,7 @@ import { assertIsRequiredGameState, assertIsRequiredPlayerWithId } from "@/share
 import { GameState, GameStateClient, GameStateEmit, GameStateFrozen, GameStateServer, GameStatus, Player, PlayersArray, PlayerWithId, ServerPlayers } from "@/shared/types";
 import { addUsedWord } from "@/shared/usedWords";
 import { buildMatchLetterForLanguage, cloneServerPlayersToClientPlayers, turnToPlayerIndex, pp, getCurrentTurnPlayer, getAlivePlayerCount, isActivePlayer } from "@/shared/utils";
+import { resolveGameStatus } from "@/shared/gameStatus";
 
 export type GameStateActionsType = {
 	[K in keyof typeof GameStateActions]:
@@ -157,7 +158,7 @@ export function endGame(_state?: GameState, currentState?: GameState): GameState
 	if (!base) throw new CurrentStateRequiredError();
 	return {
 		...base,
-		status: "finished",
+		status: resolveGameStatus(base.status, { type: "GAME_ENDED" }),
 	};
 }
 
@@ -345,37 +346,17 @@ function countConnectedPlayers(state: GameState): number {
 	return state.players.filter((p) => isActivePlayer(p)).length;
 }
 
-function resolveStatusAfterPlayerCountChange(
-	state: GameState,
-	connectedPlayers: number,
-	previousConnectedPlayers: number
-): GameStatus {
-	if (state.status === "finished") {
-		return "finished";
-	}
-	if (connectedPlayers <= 1) {
-		return "playing";
-	}
-	if (previousConnectedPlayers < 2 && connectedPlayers >= 2) {
-		return "waiting";
-	}
-	if (state.status === "playing") {
-		return "playing";
-	}
-	return "waiting";
-}
-
 function _postPlayerCountUpdateState(
 	state: GameState,
 	previousConnectedPlayers?: number
 ): GameState {
 	const connectedPlayers = countConnectedPlayers(state);
 	const prev = previousConnectedPlayers ?? connectedPlayers;
-	const status = resolveStatusAfterPlayerCountChange(
-		state,
-		connectedPlayers,
-		prev
-	);
+	const status = resolveGameStatus(state.status, {
+		type: "PLAYER_COUNT_CHANGED",
+		prev,
+		next: connectedPlayers,
+	});
 	return {
 		...state,
 		connectedPlayers,

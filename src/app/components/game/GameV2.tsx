@@ -29,6 +29,7 @@ import { submitWordCallback } from "@/lib/client/game/word-submit";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import { ThisPlayerUndefinedError } from "@/shared/errors";
 import { GameStateActionsType, gameStateReducer } from "@/shared/GameState";
+import { resolveGameStatus } from "@/shared/gameStatus";
 import {
     DictionaryEntry,
     GameState,
@@ -231,8 +232,15 @@ export default function GameV2({
                 (pl): pl is NonNullable<typeof pl> => pl !== null && !pl.left,
             ).length;
 
+            const newStatus = resolveGameStatus(state.status, {
+                type: "PLAYER_COUNT_CHANGED",
+                prev: state.connectedPlayers,
+                next: connectedPlayers,
+            });
+
             return {
                 ...state,
+                status: newStatus,
                 players: newPlayers,
                 connectedPlayers,
             } as GameStateEmit;
@@ -393,13 +401,7 @@ export default function GameV2({
 
     useEffect(
         () => {
-            const parentChanged =
-                initialState.status !== gameState.status ||
-                initialState.connectedPlayers !== gameState.connectedPlayers ||
-                initialState.turn !== gameState.turn ||
-                initialState.matchLetter.block !== gameState.matchLetter.block;
-
-            if (parentChanged) {
+            if (initialState.status !== gameState.status) {
                 gameStateDispatch({
                     type: "replaceGameState",
                     payload: [initialState],
@@ -407,14 +409,7 @@ export default function GameV2({
             }
         },
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [
-            // NOTE: causes infinite loop when correct word is submitted
-            // initialState,
-            // gameState.status,
-            // gameState.connectedPlayers,
-            // gameState.turn,
-            // gameState.matchLetter.block,
-        ],
+        [initialState.status],
     );
 
     useEffect(() => {

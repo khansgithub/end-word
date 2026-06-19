@@ -123,10 +123,6 @@ export default function GameOverlay({
         return null;
     }
 
-    if (status === "waiting" && connectedPlayers < 2) {
-        return null;
-    }
-
     return (
         <div
             className="fixed inset-0 flex justify-center items-center z-50 backdrop-blur-sm"

@@ -33,6 +33,7 @@ import {
 	toGameStateEmit
 } from "@/shared/GameState";
 import { isActivePlayer, normalizeEnglishWord, getAlivePlayerCount, shouldEndGameOnPlayerDeath } from "@/shared/utils";
+import { resolveGameStatus } from "@/shared/gameStatus";
 import { DEFAULT_HEALTH, ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { GameLanguage, GameState, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
@@ -195,17 +196,15 @@ export async function startGame(
 	}
 
 	let state: GameState = { ...rowToGameState(row), language: row.language };
-	if (state.connectedPlayers < 2) {
-		logger.info("roomService", "startGame not enough players", { roomId, playerCount: state.connectedPlayers });
-		return { success: false, reason: "Need at least two players to start" };
-	}
 
 	if (state.status === "playing") {
 		logger.info("roomService", "startGame already playing", { roomId });
-		return { success: true, gameState: toGameStateEmit(state) };
+		const emit = toGameStateEmit(state);
+		await broadcastRoomGameState(admin, roomId, emit);
+		return { success: true, gameState: emit };
 	}
 
-	state = { ...state, status: "playing" };
+	state = { ...state, status: resolveGameStatus(state.status, { type: "GAME_STARTED" }) };
 	const startedEmit = toGameStateEmit(state);
 	await persistRoomState(admin, roomId, state);
 	await broadcastRoomGameState(admin, roomId, startedEmit);
@@ -429,7 +428,7 @@ export async function leaveRoom(
 
 	state = { ...state, language: row.language };
 	if (state.connectedPlayers === 0) {
-		state = { ...state, status: "waiting", turn: 0 };
+		state = { ...state, turn: 0 };
 	}
 
 	const emit = toGameStateEmit(state);

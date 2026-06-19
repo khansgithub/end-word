@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { INVITE_CODE_LENGTH } from "@/shared/consts";
 import { buildInitialGameState, toGameStateEmit, type GameState } from "@/shared/GameState";
+import { resolveGameStatus } from "@/shared/gameStatus";
 import type {
 	GameStateEmit,
 	GameStateServer,
@@ -92,20 +93,6 @@ export async function persistRoomState(
 	if (error) throw error;
 }
 
-export async function persistAndArchiveRoom(
-	admin: SupabaseClient,
-	roomId: string,
-	state: GameState
-): Promise<void> {
-	const patch = {
-		...gameStateToRowPatch(state),
-		status: "finished" as const,
-		archived_at: new Date().toISOString(),
-	};
-	const { error } = await admin.from("rooms").update(patch).eq("roomid", roomId);
-	if (error) throw error;
-}
-
 export async function archiveRoom(
 	admin: SupabaseClient,
 	roomId: string,
@@ -126,7 +113,7 @@ export async function archiveRoom(
 export async function dissolveRoom(admin: SupabaseClient, roomId: string): Promise<boolean> {
 	const row = await fetchRoom(admin, roomId);
 	if (!row || row.archived_at) return false;
-	await archiveRoom(admin, roomId, row.status === "playing" ? "finished" : "waiting");
+	await archiveRoom(admin, roomId, resolveGameStatus(row.status, { type: "ROOM_DISSOLVED" }));
 	return true;
 }
 
