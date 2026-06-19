@@ -50,3 +50,4 @@ test-results
 .opencode
 .env*
 stubs/es6-shim/es6-shim-stub-loaded.txt
+logs/server.log

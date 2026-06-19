@@ -210,7 +210,7 @@ function InputBox({
         mirror.style.boxSizing = computed.boxSizing;
 
         const caretIndex = input.selectionStart ?? input.value.length;
-        const textBeforeCaret = input.value.substring(0, caretIndex);
+        const textBeforeCaret = input.value.substring(0, caretIndex).toLowerCase();
         measure.textContent = textBeforeCaret || "\u200b";
 
         const padLeft = Number.parseFloat(computed.paddingLeft) || 0;
@@ -257,7 +257,7 @@ function InputBox({
         // console.log("IME composition ended");
         useInputStore.getState().setIsComposing(false);
 
-        const input = e.currentTarget.value;
+        const input = e.currentTarget.value.toLowerCase();
         const prev = prevInputRef.current;
         const letter = ""; // No letter detail from IME composition end
 
@@ -273,8 +273,8 @@ function InputBox({
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const event = e.nativeEvent as any as InputEvent;
-        const letter = event.data ?? ""; // can be null for delete
-        const input = e.currentTarget.value;
+        const letter = (event.data ?? "").toLowerCase();
+        const input = e.currentTarget.value.toLowerCase();
         const prev = prevInputRef.current;
         const store = useInputStore.getState();
 
@@ -402,7 +402,7 @@ function InputBox({
                         onCompositionEnd={handleCompositionEnd}
                         onBeforeInput={handleBeforeInput}
                         onKeyDown={handleKeyDown}
-                        className={`${sharedInputClasses} background-transparent z-10 border disabled:cursor-not-allowed disabled:opacity-70`}
+                        className={`${sharedInputClasses} background-transparent z-10 border disabled:cursor-not-allowed disabled:opacity-70 lowercase`}
                         style={{
                             borderColor: disabled
                                 ? 'var(--input-border-disabled)'
@@ -483,7 +483,7 @@ function InputBox({
 export const useInputBoxStore = () => useInputStore;
 
 // Export a function to get the current input value (for submission)
-export const getInputValue = () => useInputStore.getState().inputValue;
+export const getInputValue = () => useInputStore.getState().inputValue.toLowerCase();
 
 // Export a function to set error state (for submission validation)
 export const setInputError = (error: boolean, message?: string) => {

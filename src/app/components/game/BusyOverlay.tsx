@@ -15,7 +15,7 @@ export default function BusyOverlay({ message, detail, role = "status" }: BusyOv
 			aria-busy="true"
 			aria-live="polite"
 		>
-			<div className="panel">
+			<div className="panel min-w-[20rem] min-h-[14rem]">
 				<div className="flex flex-col items-center p-6 gap-2">
 					<div className="app-spinner mb-4" aria-hidden />
 					<p className="text-lg text-center" style={{ color: "var(--b-fg)" }}>

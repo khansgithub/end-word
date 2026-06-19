@@ -130,10 +130,11 @@ export function continueInput(
     input: string
 ){
     const store = useInputStore.getState();
-    store.setInputValue(input);
-    prevInputRef.current = input;
-    
-    const highlightText = calculateHighlightText(input, matchLetter);
+    const lowerInput = input.toLowerCase();
+    store.setInputValue(lowerInput);
+    prevInputRef.current = lowerInput;
+
+    const highlightText = calculateHighlightText(lowerInput, matchLetter);
     store.setHighlightValue(highlightText);
 }
 
