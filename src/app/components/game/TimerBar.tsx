@@ -24,7 +24,6 @@ export default function TimerBar({ timer, isSubmitting }: TimerBarProps) {
 			: 0;
 
 	const animationPaused = isSubmitting || timer.isPaused;
-	const animationCss = pct == 100 ? 'none' : `shrink-width ${timer.duration}s linear forwards`;
 
 	logger.debug(L, "render", { isSubmitting, isPaused: timer.isPaused, animationPaused, remaining: timer.remainingSeconds, pct: pct.toFixed(1) });
 
@@ -36,9 +35,9 @@ export default function TimerBar({ timer, isSubmitting }: TimerBarProps) {
 					<div
 						className={`w-full h-2 ${animationPaused ? "bg-gray-500" : "bg-blue-500"} origin-left`}
 						style={{
-							width: "100%",
+							width: pct == 0 ? "0%" : "100%",
 							transition: "background-color var(--g2-transition)",
-							animation: animationCss,
+							animation: pct == 0 || pct == 100 ? "none" : `shrink-width ${timer.duration}s linear forwards`,
 							animationPlayState: animationPaused ? "paused" : "running",
 							transformOrigin: "left",
 						}}
