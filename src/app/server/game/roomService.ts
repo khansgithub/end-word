@@ -65,8 +65,14 @@ export async function createRoom(
 		timerDuration?: number;
 	}
 ): Promise<RoomRow> {
-	const word = await randomWord(options.language);
-	const matchChar = await matchLetterFromWord(word, options.language);
+	let matchChar: string;
+	if (options.language === "en") {
+		const letters = "abcdefghijklmnopqrstuvwxyz";
+		matchChar = letters.charAt(Math.floor(Math.random() * letters.length));
+	} else {
+		const word = await randomWord(options.language);
+		matchChar = await matchLetterFromWord(word, options.language);
+	}
 	const state = buildFreshRoomState(options.language, matchChar, options.timerDuration);
 
 	let inviteCode = generateInviteCode();
