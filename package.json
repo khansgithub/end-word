@@ -14,6 +14,7 @@
 		"prod": "cross-env NODE_ENV=production tsx run.ts",
 		"start": "next start",
 		"startProd": "cross-env NODE_ENV=production npm run build && npm run prod",
+		"cleanup-rooms": "tsx scripts/cleanup-rooms.ts",
 		"test:all": "tsx tests/test-all.ts",
 		"test:dashboard": "tsx scripts/build-test-dashboard.ts",
 		"test:playwright:custom": "tsx tests/e2e/custom-runner.ts",

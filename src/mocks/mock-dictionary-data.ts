@@ -6,7 +6,7 @@ import path from "path";
 import { MockDataNotLoadedError, MockDataParseError } from "@/shared/errors";
 import { DictionaryResponse } from "@/shared/types";
 import fs from "fs";
-import {log} from "@/app/server/logging";
+import { logger } from "@/app/server/logging";
 
 export const o: DictionaryResponse = { key: "", data: [{ word: "", definition: "" }] };
 export const x: DictionaryResponse = {};
@@ -20,15 +20,15 @@ function* dataGenerator(): Generator<DictionaryResponse, void, unknown> {
     if (!data) {
         throw new MockDataNotLoadedError();
     }
-    log("[dataGenerator] data:", JSON.stringify(data, null, 2))();
+    logger.debug("mock-dictionary-data", "dataGenerator", JSON.stringify(data, null, 2));
     yield data.shift() ?? {};
 }
 
 export function writeMockData(_data: DictionaryResponse[]): void {
-    console.log("[writeMockData] writing data to file:", JSON.stringify(_data));
+    logger.info("mock-dictionary-data", "writeMockData", { len: _data.length });
     data = null;
     fs.writeFileSync(MOCK_DATA_FILE, JSON.stringify(_data, null, 2));
-    console.log("[writeMockData] data written to file");
+    logger.info("mock-dictionary-data", "writeMockData done");
 }
 
 export function getMockedData(): Generator<DictionaryResponse, void, unknown> {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdmin } from "@/app/server/auth/session";
 import { fetchRoom, rowToGameState } from "@/app/server/game/roomDb";
 import { toGameStateEmit } from "@/shared/GameState";
+import { logger } from "@/app/server/logging";
 type Params = { params: Promise<{ roomId: string }> };
 
 export async function GET(request: Request, { params }: Params) {
@@ -10,9 +11,11 @@ export async function GET(request: Request, { params }: Params) {
 		const admin = getAdmin();
 		const row = await fetchRoom(admin, roomId);
 		if (!row || row.archived_at) {
+			logger.info("GET /api/rooms/:id", "Room not found", { roomId });
 			return NextResponse.json({ error: "Room not found" }, { status: 404 });
 		}
 		const state = rowToGameState(row);
+		logger.info("GET /api/rooms/:id", "Room fetched", { roomId });
 		return NextResponse.json({
 			room: {
 				roomid: row.roomid,
@@ -26,7 +29,7 @@ export async function GET(request: Request, { params }: Params) {
 			gameState: toGameStateEmit(state),
 		});
 	} catch (e) {
-		console.error("[GET /api/rooms/:id]", e);
+		logger.error("GET /api/rooms/:id", "Failed to load room", { error: String(e) });
 		return NextResponse.json({ error: "Failed to load room" }, { status: 500 });
 	}
 }

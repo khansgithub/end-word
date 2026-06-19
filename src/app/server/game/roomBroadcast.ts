@@ -2,8 +2,9 @@ import { createAdminClient } from "@/app/server/supabase/index";
 import { isMockSupabase } from "@/app/server/supabase/config";
 import { getRealtimeHub } from "@/app/server/supabase/mock/realtimeHub";
 import { fetchRoom } from "@/app/server/game/roomDb";
-import type { DictionaryEntry, GameStateEmit } from "@/shared/types";
+import type { DictionaryEntry, GameStateEmit, Spectator } from "@/shared/types";
 import { WORD_DEFINITION_EVENT } from "@/shared/wordDefinition";
+import { SPECTATORS_UPDATE_EVENT } from "@/shared/spectatorsBroadcast";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function broadcastRoomEvent(
@@ -53,6 +54,14 @@ export async function broadcastRoomGameState(
   }
 
   await broadcastRoomEvent(roomId, "gameStateUpdate", emit);
+}
+
+/** Push the current spectator list to everyone in the room. */
+export async function broadcastRoomSpectators(
+	roomId: string,
+	spectators: Spectator[]
+): Promise<void> {
+	await broadcastRoomEvent(roomId, SPECTATORS_UPDATE_EVENT, spectators);
 }
 
 /** Push a validated word definition to all clients in the room (word-history panel). */

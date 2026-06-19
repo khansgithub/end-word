@@ -9,7 +9,7 @@ import {
 import { AppEnv, envGet } from "@/app/server/env";
 import { isDictionaryEntry, isDictionaryResponse } from "@/shared/guards";
 import { DictionaryResponse } from "@/shared/types";
-import { log } from "@/app/server/logging";
+import { logger } from "@/app/server/logging";
 
 /** Base URL ending at `/api/dictionary` on Vercel, or `http://localhost:8000` locally. */
 function getDictionaryBaseUrl(): string {
@@ -46,12 +46,12 @@ export async function lookUpWordApi(word: string): Promise<DictionaryResponse> {
 export async function lookUpWordMock(word: string): Promise<DictionaryResponse> {
     const isFail = envGet("MOCK_WORD_VALIDATION_FAIL") === "true";
     const loadMockData = envGet("MOCK_DICTIONARY_DATA") === "true";
-    log("[lookUpWordMock] isFail:", isFail, "loadMockData:", loadMockData)();
+    logger.debug("korean-api", "lookUpWordMock", { isFail, loadMockData });
     if (isFail) return {};
 
     if (loadMockData) {
         const data = getMockedData().next().value as DictionaryResponse;
-        log("[lookUpWordMock][getMockedData] data:", JSON.stringify(data))();
+        logger.debug("korean-api", "lookUpWordMock getMockedData", { word: "key" in data ? data.key : undefined });
         return data;
     } else {
         return {

@@ -34,6 +34,7 @@ import {
     GameState,
     GameStateClient,
     GameStateEmit,
+    Spectator,
 } from "@/shared/types";
 import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
@@ -49,6 +50,7 @@ import TimerBar from "./TimerBar";
 // import { useTimer } from "@/app/hooks/useTimer";
 import { useTimer } from "react-timer-hook";
 import { useCountdown } from "@/app/hooks/useCountdown";
+import { logger } from "@/lib/client/logging";
 import { count } from "node:console";
 
 export interface GameV2Props {
@@ -100,6 +102,8 @@ export default function GameV2({
     );
     const timerExpiredRef = useRef(false);
     const timerExpiredTurnRef = useRef(gameState.turn);
+    const timerSyncTurnRef = useRef(-1);
+    const spectatorCountRef = useRef(0);
 
     // =========================================================================
     // ## variables
@@ -129,6 +133,8 @@ export default function GameV2({
     // =========================================================================
     // ## callback hooks
     // =========================================================================
+    const L = "GameV2";
+
     /**
      * handleExit handles the process of leaving the current game room.
      * It first prevents the action if UI interaction is locked, then sets
@@ -136,7 +142,11 @@ export default function GameV2({
      * leave the room and, once complete, navigates the user back to the lobby.
      */
     const handleExit = useCallback(() => {
-        if (interactionLocked) return;
+        if (interactionLocked) {
+            logger.debug(L, "handleExit blocked (interactionLocked)");
+            return;
+        }
+        logger.info(L, "handleExit");
         setIsLeavingLobby(true);
         void leaveRoomApi(roomId).finally(() => {
             countdown.reset();
@@ -171,6 +181,7 @@ export default function GameV2({
      * @param emit - The new state emitted from the server (GameStateEmit).
      */
     const applyRemote = useCallback((emit: GameStateEmit) => {
+        logger.info(L, "applyRemote", { turn: emit.turn, status: emit.status, connectedPlayers: emit.connectedPlayers });
         gameStateDispatch({
             type: "gameStateUpdateClient",
             payload: [emit],
@@ -178,6 +189,7 @@ export default function GameV2({
     }, []);
 
     const appendDefinition = useCallback((definition: DictionaryEntry) => {
+        logger.info(L, "appendDefinition", { key: definition.key });
         setDefinitionHistory((current) =>
             appendDefinitionToHistory(current, definition),
         );
@@ -198,8 +210,12 @@ export default function GameV2({
     const onPlayerLeft = useCallback(
         (leavingPlayers: Array<{ userId: string; seat: number }>) => {
             const state = gameStateRef.current;
-            if (!state) return null;
+            if (!state) {
+                logger.warn(L, "onPlayerLeft: no state");
+                return null;
+            }
 
+            logger.info(L, "onPlayerLeft", { leaving: leavingPlayers });
             const newPlayers = [...state.players] as GameStateEmit["players"];
             let changed = false;
 
@@ -225,43 +241,31 @@ export default function GameV2({
     );
 
     const handleTimerExpire = useCallback(() => {
-        // alert("YOU DIED");
+        logger.warn(L, "handleTimerExpire", { playerCount, seat: gameState.thisPlayer?.seat });
         setForceInputDisabled(true);
-        if (playerCount > 1) {
+        if (gameState.thisPlayer) {
             const seat = gameState.thisPlayer.seat;
             if (seat === undefined) {
-                console.error(`[handleTimerExpire] seat is undefined`);
+                logger.error(L, "handleTimerExpire seat is undefined");
                 return;
-            } else
-                console.log(`[handleTimerExpire] kill player and go next turn`);
+            }
+            logger.info(L, "handleTimerExpire killing player and advancing turn");
             gameStateDispatch({
                 type: "killPlayerAndNextTurn",
-                payload: [gameState, gameState.thisPlayer.seat!],
+                payload: [gameState, seat],
             });
-            void timerExpiryApi(roomId).then((result) => {
-                if (!result.success) {
-                    console.warn(
-                        "[handleTimerExpire] server timer expiry failed:",
-                        result.reason,
-                    );
-                }
-            });
-        } else {
-            
         }
+        void timerExpiryApi(roomId).then((result) => {
+            if (!result.success) {
+                logger.warn(L, "handleTimerExpire server timer expiry failed", { reason: result.reason });
+            }
+        });
     }, [gameStateDispatch, gameState, roomId]);
 
 
     const setIsSubmitting = useCallback(
         (isSubmiting: boolean) => {
-            console.log(
-                `[setIsSubmitting] dispatching clientSetIsSubmitting with:`,
-                {
-                    gameStateSubmitting: gameState.submitting,
-                    isSubmiting,
-                    gameStateStatus: gameState.status,
-                },
-            );
+            logger.info(L, "setIsSubmitting", { submitting: isSubmiting, status: gameState.status });
             gameStateDispatch({
                 type: "clientSetIsSubmitting",
                 payload: [gameState, isSubmiting],
@@ -278,11 +282,28 @@ export default function GameV2({
      * Ref bridge so `useRoomChannel` (called first) can forward incoming typing-draft
      * broadcasts to the `onTypingDraft` callback created by `useTypingDraft` (called second).
      */
-    const { sendTypingDraft } = useRoomChannel(roomId, {
+    const { sendTypingDraft, sendTimerSync, sendTimerSyncRequest } = useRoomChannel(roomId, {
         userId,
         isHost,
         onUpdate: applyRemote,
         onRoomClosed,
+        onTimerSyncRequest: () => {
+            if (isMyTurn && gameState.status === "playing") {
+                logger.info(L, "timerSync requested, sending", { remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+                sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+            }
+        },
+        onSpectatorsUpdate: (spectators: Spectator[]) => {
+            const prev = spectatorCountRef.current;
+            spectatorCountRef.current = spectators.length;
+            if (spectators.length > prev && isMyTurn && gameState.status === "playing") {
+                logger.info(L, "spectator joined, broadcasting timer sync", { remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+                sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+                setTimeout(() => {
+                    sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+                }, 400);
+            }
+        },
         onTypingDraft: (payload) => {
             onTypingDraftRef.current(payload);
         },
@@ -294,7 +315,7 @@ export default function GameV2({
         roomId,
         {
             userId,
-            broadcastEnabled: multiplayer && isMyTurn,
+            broadcastEnabled: isMyTurn,
             turnSeat: gameState.thisPlayer?.seat,
             receiveEnabled: multiplayer && gameState.status === "playing",
             sendTypingDraft,
@@ -315,31 +336,28 @@ export default function GameV2({
         isTimerPaused,
     );
 
-	const submitButton = useCallback(async () => {
-        if (gameState.status === "finished") return;
+    const submitButton = useCallback(async () => {
+        if (gameState.status === "finished") {
+            logger.debug(L, "submitButton: game finished, skipping");
+            return;
+        }
         const word = getInputValue();
         const emptyInput = !word || word.length === 0;
 
         if (emptyInput) {
+            logger.debug(L, "submitButton: empty input");
             setInputError(true);
 			setIsSubmitting(false);
         } else if (isWordAlreadyUsed(gameState, word)) {
+            logger.debug(L, "submitButton: word already used", { word });
             setInputError(true, gameStrings.wordAlreadyUsed);
             focusInputBox();
 			setIsSubmitting(false);
         } else {
-            console.log(
-                `[submitButton] submitting word="${word}"` +
-                ` isMyTurn=${isMyTurn} isSubmitting=${isSubmitting}` +
-                ` remaining=${countdown.remainingSeconds}s` +
-                ` turn=${gameState.turn}`,
-            );
+            logger.info(L, "submitButton submitting", { word, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn });
+            sendTimerSync({ remaining: countdown.remainingSeconds, paused: true });
             const response = await submitWordApi(roomId, word, countdown.remainingSeconds);
-            console.log(
-                `[submitButton] response success=${response.success}` +
-                ` reason=${response.success ? "" : (response as {reason?: string}).reason}` +
-                ` remaining=${countdown.remainingSeconds}s`,
-            );
+            logger.info(L, "submitButton response", { success: response.success, reason: (response as any).reason, remaining: countdown.remainingSeconds });
 			type CustomDispatch = {
 				type: "custom",
 				payload: [GameState, string[], any[][]]
@@ -360,12 +378,11 @@ export default function GameV2({
                 focusInputBox();
 				customDispatch.payload[1].push("clientSetIsSubmitting");
 				customDispatch.payload[2].push([false]);
-				// setIsSubmitting(false);
-                console.log(`[submitButton] wrong word -> timer stays unpaused`);
+                logger.debug(L, "submitButton wrong word, timer stays unpaused");
             }
 			gameStateDispatch(customDispatch)
         }
-    }, [gameState, roomId, appendDefinition, countdown.remainingSeconds, isMyTurn, isSubmitting]);
+    }, [gameState, roomId, appendDefinition, countdown.remainingSeconds, isMyTurn, isSubmitting, sendTimerSync]);
 
     // =========================================================================
     // effects
@@ -416,15 +433,13 @@ export default function GameV2({
     }, [gameState.thisPlayer]);
 
     useEffect(() => {
-        console.log(
-            `[GameV2][turn/timer effect] status=${gameState.status}` +
-            ` isMyTurn=${isMyTurn} remaining=${countdown.remainingSeconds}s` +
-            ` timerExpiredRef=${timerExpiredRef.current}` +
-            ` turn=${gameState.turn}` +
-            ` isTimerPaused=${isTimerPaused}`,
-        );
+        logger.debug(L, "turn/timer effect", { status: gameState.status, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn, isTimerPaused, timerExpired: timerExpiredRef.current });
         if (gameState.status === "playing") {
             void (isMyTurn ? countdown.start() : countdown.pause());
+            if (isMyTurn && timerSyncTurnRef.current !== gameState.turn) {
+                timerSyncTurnRef.current = gameState.turn;
+                sendTimerSync({ remaining: countdown.remainingSeconds, paused: false });
+            }
             if (countdown.remainingSeconds === 0 && !timerExpiredRef.current) {
                 timerExpiredRef.current = true;
                 timerExpiredTurnRef.current = gameState.turn;
@@ -439,10 +454,7 @@ export default function GameV2({
     }, [countdown.remainingSeconds, gameState.status, isMyTurn]);
 
     useEffect(() => {
-        console.log(
-            `[GameV2][status effect] status=${gameState.status} isMyTurn=${isMyTurn}` +
-            ` countdown.isPaused=${countdown.isPaused} remaining=${countdown.remainingSeconds}s`,
-        );
+        logger.debug(L, "status effect", { status: gameState.status, isMyTurn, isPaused: countdown.isPaused, remaining: countdown.remainingSeconds });
         if (gameState.status === "playing" && isMyTurn) {
             countdown.start();
         } else {
@@ -458,10 +470,7 @@ export default function GameV2({
 
     useEffect(() => {
         if (gameState.submitting) {
-            console.log(
-                `[GameV2][isMyTurn effect] clearing submitting because isMyTurn=${isMyTurn}` +
-                ` turn=${gameState.turn} seat=${gameState.thisPlayer?.seat}`,
-            );
+            logger.debug(L, "isMyTurn effect: clearing submitting", { isMyTurn, turn: gameState.turn, seat: gameState.thisPlayer?.seat });
             gameStateDispatch({
                 type: "clientSetIsSubmitting",
                 payload: [gameState, false],

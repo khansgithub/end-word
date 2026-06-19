@@ -5,7 +5,7 @@ import {
 	wordStartsWithMatchLetter,
 } from "@/app/server/dictionary";
 import { resolveKoreanExplanation } from "@/app/server/dictionary/english-korean";
-import { broadcastRoomGameState, broadcastRoomWordDefinition } from "@/app/server/game/roomBroadcast";
+import { broadcastRoomGameState, broadcastRoomWordDefinition, broadcastRoomSpectators } from "@/app/server/game/roomBroadcast";
 import {
 	archiveRoom,
 	buildFreshRoomState,
@@ -14,6 +14,7 @@ import {
 	fetchRoomByInviteCode,
 	generateInviteCode,
 	persistRoomState,
+	removeRoomSpectator,
 	rowToGameState,
 } from "@/app/server/game/roomDb";
 import type { RoomListItem, RoomRow } from "@/shared/roomTypes";
@@ -36,6 +37,7 @@ import { DEFAULT_HEALTH, ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { GameLanguage, GameState, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
 import { isWordAlreadyUsed } from "@/shared/usedWords";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logger } from "@/app/server/logging";
 
 export type JoinResult =
 	| { success: true; roomId: string; gameState: GameStateEmit; player: PlayerWithId }
@@ -89,10 +91,14 @@ export async function createRoom(
 			.select("*")
 			.single();
 
-		if (!error && data) return data as RoomRow;
+		if (!error && data) {
+			logger.info("roomService", "createRoom success", { roomId: data.roomid });
+			return data as RoomRow;
+		}
 		if (error?.code !== "23505") throw error;
 		inviteCode = generateInviteCode();
 	}
+	logger.error("roomService", "createRoom failed to generate unique invite code");
 	throw new Error("Failed to generate unique invite code");
 }
 
@@ -104,6 +110,7 @@ export async function joinRoom(
 ): Promise<JoinResult> {
 	const row = await fetchRoom(admin, roomId);
 	if (!row || row.archived_at) {
+		logger.info("roomService", "joinRoom room not found", { roomId });
 		return { success: false, reason: "Room not found" };
 	}
 
@@ -113,6 +120,7 @@ export async function joinRoom(
 		if (existing.seat !== undefined) {
 			state.socketPlayerMap?.set(userId, existing.seat);
 		}
+		logger.info("roomService", "joinRoom existing player", { roomId, userId });
 		return {
 			success: true,
 			roomId,
@@ -121,7 +129,13 @@ export async function joinRoom(
 		};
 	}
 
+	if (row.status !== "waiting") {
+		logger.info("roomService", "joinRoom game already started", { roomId, status: row.status });
+		return { success: false, reason: "Game already started" };
+	}
+
 	if (state.connectedPlayers >= 4) {
+		logger.info("roomService", "joinRoom room full", { roomId });
 		return { success: false, reason: "Room is full" };
 	}
 
@@ -136,6 +150,7 @@ export async function joinRoom(
 
 	const joined = findPlayerByUserId(state, userId);
 	if (!joined || joined.seat === undefined) {
+		logger.info("roomService", "joinRoom failed to join", { roomId, userId });
 		return { success: false, reason: "Failed to join room" };
 	}
 
@@ -144,6 +159,7 @@ export async function joinRoom(
 	await persistRoomState(admin, roomId, state);
 	await broadcastRoomGameState(admin, roomId, joinedEmit);
 
+	logger.info("roomService", "joinRoom success", { roomId, userId, playerCount: state.connectedPlayers });
 	return {
 		success: true,
 		roomId,
@@ -169,17 +185,23 @@ export async function startGame(
 	hostUserId: string
 ): Promise<{ success: boolean; reason?: string; gameState?: GameStateEmit }> {
 	const row = await fetchRoom(admin, roomId);
-	if (!row) return { success: false, reason: "Room not found" };
+	if (!row) {
+		logger.info("roomService", "startGame room not found", { roomId });
+		return { success: false, reason: "Room not found" };
+	}
 	if (row.host_user_id !== hostUserId) {
+		logger.info("roomService", "startGame not host", { roomId, hostUserId });
 		return { success: false, reason: "Only the host can start the game" };
 	}
 
 	let state: GameState = { ...rowToGameState(row), language: row.language };
 	if (state.connectedPlayers < 2) {
+		logger.info("roomService", "startGame not enough players", { roomId, playerCount: state.connectedPlayers });
 		return { success: false, reason: "Need at least two players to start" };
 	}
 
 	if (state.status === "playing") {
+		logger.info("roomService", "startGame already playing", { roomId });
 		return { success: true, gameState: toGameStateEmit(state) };
 	}
 
@@ -187,6 +209,7 @@ export async function startGame(
 	const startedEmit = toGameStateEmit(state);
 	await persistRoomState(admin, roomId, state);
 	await broadcastRoomGameState(admin, roomId, startedEmit);
+	logger.info("roomService", "startGame success", { roomId });
 	return { success: true, gameState: startedEmit };
 }
 
@@ -197,9 +220,10 @@ export async function submitWord(
 	word: string,
 	timeRemaining?: number
 ): Promise<SubmitResult> {
-	console.log(`[roomService] submirWord POST word=${word} timeRemaining=${timeRemaining}`)
+	logger.info("roomService", "submitWord", { word, timeRemaining });
 	const row = await fetchRoom(admin, roomId);
 	if (!row || row.archived_at) {
+		logger.info("roomService", "submitWord room not found", { roomId, userId });
 		return { success: false, reason: "Room not found" };
 	}
 
@@ -207,11 +231,13 @@ export async function submitWord(
 	const state: GameState = { ...rowToGameState(row), language: row.language };
 
 	if (state.status !== "playing") {
+		logger.info("roomService", "submitWord not playing", { roomId, userId });
 		return { success: false, reason: "Game is not in progress" };
 	}
 
 	const player = getPlayerByClientId(state, userId);
 	if (!player || player.seat === undefined) {
+		logger.info("roomService", "submitWord player not in room", { roomId, userId });
 		return { success: false, reason: "Player not in room" };
 	}
 
@@ -262,6 +288,7 @@ export async function submitWord(
 	const emit = toGameStateEmit(nextState);
 	await broadcastRoomWordDefinition(admin, roomId, definition);
 
+	logger.info("roomService", "submitWord success", { roomId, userId, word });
 	return {
 		success: true,
 		gameState: emit,
@@ -278,6 +305,7 @@ async function invalidWord(
 ): Promise<SubmitResult> {
 	const player = getPlayerByClientId(state, userId);
 	if (!player || player.seat === undefined) {
+		logger.info("roomService", "invalidWord player not found", { roomId, userId, reason });
 		return { success: false, reason };
 	}
 
@@ -293,6 +321,7 @@ async function invalidWord(
 		await persistRoomState(admin, roomId, nextState);
 		await broadcastRoomGameState(admin, roomId, emit);
 		await archiveRoom(admin, roomId, "finished");
+		logger.info("roomService", "invalidWord game ended", { roomId, userId, reason });
 		return {
 			success: false,
 			reason,
@@ -305,6 +334,7 @@ async function invalidWord(
 	}
 
 	await persistRoomState(admin, roomId, nextState);
+	logger.info("roomService", "invalidWord health decreased", { roomId, userId, reason, playerDead });
 	return {
 		success: false,
 		reason,
@@ -328,17 +358,20 @@ export async function timerExpired(
 ): Promise<TimerExpiryResult> {
 	const row = await fetchRoom(admin, roomId);
 	if (!row || row.archived_at) {
+		logger.info("roomService", "timerExpired room not found", { roomId });
 		return { success: false, reason: "Room not found" };
 	}
 
 	const state: GameState = { ...rowToGameState(row), language: row.language };
 
 	if (state.status !== "playing") {
+		logger.info("roomService", "timerExpired not playing", { roomId });
 		return { success: false, reason: "Game is not in progress" };
 	}
 
 	const player = getPlayerByClientId(state, userId);
 	if (!player || player.seat === undefined) {
+		logger.info("roomService", "timerExpired player not in room", { roomId, userId });
 		return { success: false, reason: "Player not in room" };
 	}
 
@@ -350,12 +383,14 @@ export async function timerExpired(
 		await persistRoomState(admin, roomId, nextState);
 		await broadcastRoomGameState(admin, roomId, toGameStateEmit(nextState));
 		await archiveRoom(admin, roomId, "finished");
+		logger.info("roomService", "timerExpired game ended", { roomId, userId, aliveCount });
 		return { success: true, gameState: toGameStateEmit(nextState) };
 	}
 
 	nextState = nextTurn(nextState);
 	await persistRoomState(admin, roomId, nextState);
 	await broadcastRoomGameState(admin, roomId, toGameStateEmit(nextState));
+	logger.info("roomService", "timerExpired turn advanced", { roomId, userId, aliveCount });
 	return { success: true, gameState: toGameStateEmit(nextState) };
 }
 
@@ -365,16 +400,23 @@ export async function leaveRoom(
 	userId: string
 ): Promise<{ dissolved: boolean; gameState: GameStateEmit | null }> {
 	const row = await fetchRoom(admin, roomId);
-	if (!row) return { dissolved: false, gameState: null };
+	if (!row) {
+		logger.info("roomService", "leaveRoom room not found", { roomId });
+		return { dissolved: false, gameState: null };
+	}
 
 	if (row.host_user_id === userId) {
+		logger.info("roomService", "leaveRoom host dissolved", { roomId, userId });
 		await dissolveRoom(admin, roomId);
 		return { dissolved: true, gameState: null };
 	}
 
 	let state: GameState = { ...rowToGameState(row), language: row.language };
 	const player = getPlayerByClientId(state, userId);
-	if (!player) return { dissolved: false, gameState: toGameStateEmit(state) };
+	if (!player) {
+		logger.info("roomService", "leaveRoom player not found", { roomId, userId });
+		return { dissolved: false, gameState: toGameStateEmit(state) };
+	}
 
 	const activeBeforeLeave = state.players.filter((p) => isActivePlayer(p)).length;
 
@@ -393,6 +435,13 @@ export async function leaveRoom(
 	const emit = toGameStateEmit(state);
 	await persistRoomState(admin, roomId, state);
 	await broadcastRoomGameState(admin, roomId, emit);
+
+	const updated = await removeRoomSpectator(admin, roomId, userId);
+	if (updated.length > 0 || row.spectators?.some((s) => s.uid === userId)) {
+		await broadcastRoomSpectators(roomId, updated);
+	}
+
+	logger.info("roomService", "leaveRoom success", { roomId, userId, activeBeforeLeave });
 	return { dissolved: false, gameState: emit };
 }
 
@@ -403,12 +452,22 @@ export async function dissolveRoomAsMember(
 	userId: string
 ): Promise<{ dissolved: boolean }> {
 	const row = await fetchRoom(admin, roomId);
-	if (!row || row.archived_at) return { dissolved: false };
-	if (row.host_user_id === userId) return { dissolved: false };
+	if (!row || row.archived_at) {
+		logger.info("roomService", "dissolveRoomAsMember room not found or archived", { roomId });
+		return { dissolved: false };
+	}
+	if (row.host_user_id === userId) {
+		logger.info("roomService", "dissolveRoomAsMember is host, skip", { roomId, userId });
+		return { dissolved: false };
+	}
 
-	if (row.player_user_map[userId] === undefined) return { dissolved: false };
+	if (row.player_user_map[userId] === undefined) {
+		logger.info("roomService", "dissolveRoomAsMember not a player", { roomId, userId });
+		return { dissolved: false };
+	}
 
 	const dissolved = await dissolveRoom(admin, roomId);
+	logger.info("roomService", "dissolveRoomAsMember success", { roomId, userId });
 	return { dissolved };
 }
 

@@ -4,6 +4,7 @@ import { envGet } from "@/app/server/env";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { Dictionary, DictionaryEntry, EntryDataEng } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
+import { logger } from "@/app/server/logging";
 import words from "an-array-of-english-words";
 import type WordNet from "node-wordnet";
 import type { WordNetResult } from "node-wordnet";
@@ -120,7 +121,7 @@ export class WordNetDictionary implements Dictionary {
 
 	async randomWord(): Promise<string> {
 		if (envGet("MOCK_GET_RANDOM_WORD") === "true") {
-			console.log(`[WordNetDictionary] Using mocked random word: ${envGet("MOCK_RANDOM_WORD")}`);
+			logger.debug("wordnet", "Mocked random word", { word: envGet("MOCK_RANDOM_WORD") });
 			return (envGet("MOCK_RANDOM_WORD") || "foo").toLowerCase();
 		}
 		const eligible = words.filter((w) => w.length >= ENGLISH_MIN_WORD_LENGTH);
@@ -131,7 +132,7 @@ export class WordNetDictionary implements Dictionary {
 async function test(word: string) {
 	const dictionary = new WordNetDictionary();
 	const entry = await dictionary.lookup(word);
-	console.log(JSON.stringify(entry, null, 2));
+	logger.debug("wordnet", "entry", { entry });
 }
 
 // test("nimble");

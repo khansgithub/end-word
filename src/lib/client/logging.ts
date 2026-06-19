@@ -1,6 +1,4 @@
-import fs from "fs";
-import path from "path";
-import os from "os";
+"use client";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -13,11 +11,8 @@ export type LogEntry = {
 };
 
 const MAX_LOGS = 1000;
-const MAX_LOG_FILE_BYTES = 5 * 1024 * 1024;
 const logs: LogEntry[] = [];
 let enabled = true;
-let logFilePath: string | null = null;
-let fileStreamInitialized = false;
 
 export function setLoggingEnabled(v: boolean): void {
   enabled = v;
@@ -31,11 +26,6 @@ export function getLogs(): LogEntry[] {
   return [...logs];
 }
 
-export function setLogFilePath(filePath: string): void {
-  logFilePath = filePath;
-  fileStreamInitialized = false;
-}
-
 const LEVEL_PAD: Record<LogLevel, string> = {
   debug: "DBG",
   info: "INF",
@@ -46,40 +36,6 @@ const LEVEL_PAD: Record<LogLevel, string> = {
 function append(entry: LogEntry): void {
   logs.push(entry);
   if (logs.length > MAX_LOGS) logs.shift();
-}
-
-function formatLine(level: LogLevel, component: string, msg: string, data?: unknown): string {
-  const iso = new Date().toISOString();
-  const padded = LEVEL_PAD[level];
-  const extra = data !== undefined ? ` ${JSON.stringify(data)}` : "";
-  return `[${iso}] [${padded}] [${component}] ${msg}${extra}${os.EOL}`;
-}
-
-function writeToFile(line: string): void {
-  const fp = logFilePath ?? path.join(process.cwd(), "logs", "server.log");
-  logFilePath = fp;
-
-  if (!fileStreamInitialized) {
-    try {
-      const dir = path.dirname(fp);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      if (fs.existsSync(fp) && fs.statSync(fp).size > MAX_LOG_FILE_BYTES) {
-        const truncated = line;
-        fs.writeFileSync(fp, truncated, "utf-8");
-      }
-    } catch {
-      // swallow — can't log a logging failure
-    }
-    fileStreamInitialized = true;
-  }
-
-  try {
-    fs.appendFileSync(fp, line, "utf-8");
-  } catch {
-    // swallow
-  }
 }
 
 function formatLog(level: LogLevel, component: string, msg: string, data?: unknown): void {
@@ -104,9 +60,6 @@ function formatLog(level: LogLevel, component: string, msg: string, data?: unkno
     default:
       console.log(prefix, rest, ...(data !== undefined ? [data] : []));
   }
-
-  const line = formatLine(level, component, msg, data);
-  writeToFile(line);
 }
 
 export const logger = {

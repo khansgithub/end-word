@@ -7,12 +7,20 @@ import { fromEmitToGameStateClient } from "@/shared/GameState";
 import type { GameLanguage, GameStateClient } from "@/shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/client/logging";
 
+const L = "useJoinRoom";
 const CONNECTED = 0;
 const CONNECTING = 1;
 const FAILED = 2;
 
 type ConnectionState = typeof CONNECTED | typeof CONNECTING | typeof FAILED;
+
+const CONN_LABEL: Record<ConnectionState, string> = {
+    [CONNECTED]: "CONNECTED",
+    [CONNECTING]: "CONNECTING",
+    [FAILED]: "FAILED",
+};
 
 export interface JoinRoomResult {
     connection: ConnectionState;
@@ -39,15 +47,23 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
     const isStartingGameRef = useRef(isStartingGame);
     isStartingGameRef.current = isStartingGame;
 
+    logger.debug(L, "mount", { roomId, playerName });
+
     const handleStateChange = useCallback((next: GameStateClient) => {
+        logger.debug(L, "handleStateChange", { status: next.status, turn: next.turn });
         setGameState((prev) => (prev === next ? prev : next));
     }, []);
 
     const handleStartGame = useCallback(async () => {
-        if (isStartingGameRef.current) return;
+        if (isStartingGameRef.current) {
+            logger.warn(L, "handleStartGame already starting, skipping");
+            return;
+        }
+        logger.info(L, "handleStartGame");
         setIsStartingGame(true);
         try {
             const result = await startRoomApi(roomId);
+            logger.info(L, "handleStartGame result", { success: result.success, hasGameState: !!result.gameState });
             if (result.success && result.gameState) {
                 setGameState((prev) => {
                     if (!prev) return prev;
@@ -63,6 +79,7 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
         resetInput();
 
         if (!playerName) {
+            logger.warn(L, "no playerName, redirecting to login");
             router.push(buildLoginUrl(`/room/${roomId}`));
             return;
         }
@@ -70,22 +87,12 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
         let cancelled = false;
 
         (async () => {
+            logger.info(L, "fetching room meta", { roomId });
             const metaRes = await fetch(`/api/rooms/${roomId}`);
-
-            // Dead code: site-lock enforcement is now handled entirely in the proxy
-            // middleware — no route returns { siteLocked: true } anymore.
-            // if (metaRes.status === 401) {
-            //     const body = await metaRes.json();
-            //     if (body.siteLocked) {
-            //         router.push(
-            //             `/site-login?returnTo=${encodeURIComponent(`/room/${roomId}`)}`,
-            //         );
-            //         return;
-            //     }
-            // }
 
             if (metaRes.ok) {
                 const meta = await metaRes.json();
+                logger.info(L, "room meta received", { language: meta.room.language, roomName: meta.room.roomname, hostUserId: meta.room.host_user_id });
                 if (!cancelled) {
                     setLanguage(meta.room.language ?? "ko");
                     setRoomName(meta.room.roomname ?? null);
@@ -97,18 +104,24 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
                     .auth.getUser();
                 if (!cancelled && user) {
                     setUserId(user.id);
-                    setIsHost(meta.room.host_user_id === user.id);
+                    const isHostUser = meta.room.host_user_id === user.id;
+                    logger.info(L, "user identified", { userId: user.id, isHost: isHostUser });
+                    setIsHost(isHostUser);
                 }
+            } else {
+                logger.warn(L, "room meta fetch failed", { status: metaRes.status });
             }
 
             if (cancelled) return;
 
+            logger.info(L, "joining room", { roomId, playerName });
             const response = await joinRoomApi({
                 roomId,
                 displayName: playerName,
             });
 
             if (!cancelled && response.success && response.player) {
+                logger.info(L, "join success", { playerSeat: response.player.seat, playerName: response.player.name });
                 setGameState(
                     fromEmitToGameStateClient(response.gameState, {
                         thisPlayer: response.player,
@@ -116,6 +129,7 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
                 );
                 setConnection(CONNECTED);
             } else if (!cancelled) {
+			logger.error(L, "join failed", { reason: !response.success ? response.reason : undefined });
                 setConnection(FAILED);
             }
         })();
@@ -123,8 +137,11 @@ export function useJoinRoom(roomId: string, playerName: string): JoinRoomResult 
         return () => {
             cancelled = true;
             resetInput();
+            logger.debug(L, "cleanup (cancelled)");
         };
     }, [roomId, playerName, router]);
+
+    logger.debug(L, "render", { connection: CONN_LABEL[connection], hasGameState: !!gameState, isHost });
 
     return {
         connection,

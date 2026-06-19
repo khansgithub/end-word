@@ -3,6 +3,7 @@ import { randomKoreanWord, validateKoreanWord } from "@/app/server/dictionary/ko
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { DictionaryEntry, GameLanguage } from "@/shared/types";
 import { normalizeEnglishWord } from "@/shared/utils";
+import { logger } from "@/app/server/logging";
 
 export async function validateWord(
 	word: string,
@@ -26,7 +27,7 @@ export async function validateWord(
 				entry.data.reverse();
 			}
 		}
-		console.log("validateWord", word, language, entry);
+		logger.debug("dictionary", "validateWord", { word, language, entry });
 		return entry ? [true, entry] : false;
 	}
 	return validateKoreanWord(word);

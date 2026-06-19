@@ -1,14 +1,13 @@
 import { GameStateDispatch } from "@/shared/GameState";
 import { GameStateClient, GameStateEmit } from "@/shared/types";
 import { shouldEndGameOnPlayerDeath } from "@/shared/utils";
+import { logger } from "@/lib/client/logging";
+
+const L = "word-submit";
 
 export type SubmitWordResponse =
 	| { success: true; gameState: GameStateEmit }
 	| { success: false; reason: string; gameState?: GameStateEmit };
-
-const L = `${__filename}: `;
-const log = console.log;
-const error = console.error;
 
 /**
  * This function is ran after the player submits a word to the server, and gets a response.
@@ -22,7 +21,7 @@ export function submitWordCallback(
 	response: SubmitWordResponse,
 	word: string,
 ) {
-	log(L, "submitWord response", response);
+	logger.info(L, "submitWordCallback", { word, success: response.success, reason: !response.success ? response.reason : undefined });
 	if (response.success) {
 		return correctWord(gameState, dispatch, response.gameState, word);
 	} else {

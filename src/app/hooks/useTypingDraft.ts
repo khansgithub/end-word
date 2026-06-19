@@ -3,6 +3,7 @@
 import { useInputBoxStore } from "@/app/components/game/InputBox";
 import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "@/lib/client/logging";
 
 const THROTTLE_MS = 80;
 /** Avoid flicker when the typer pauses briefly between keystrokes. */
@@ -88,8 +89,13 @@ export function useTypingDraft(
 
 	const onTypingDraft = useCallback(
 		(payload: TypingDraftPayload) => {
-			if (!receiveEnabled) return;
+			if (!receiveEnabled) {
+				logger.debug("useTypingDraft", "onTypingDraft skipped (receive disabled)", { userId: payload.userId, seat: payload.seat });
+				return;
+			}
 			if (payload.userId === userId) return;
+
+			logger.debug("useTypingDraft", "onTypingDraft received", { userId: payload.userId, seat: payload.seat, textLength: payload.text?.length });
 
 			if (clearTimerRef.current) {
 				clearTimeout(clearTimerRef.current);
@@ -128,6 +134,7 @@ export function useTypingDraft(
 	}, []);
 
 	useEffect(() => {
+		logger.debug("useTypingDraft", "broadcastEnabled changed", { broadcastEnabled });
 		if (!broadcastEnabled) {
 			sendRef.current("");
 			return;
@@ -135,6 +142,7 @@ export function useTypingDraft(
 
 		const store = useInputBoxStore();
 		let last = store.getState().inputValue;
+		logger.debug("useTypingDraft", "starting broadcast subscription", { initialValue: last });
 		throttledSend.current(last);
 
 		return store.subscribe((state) => {

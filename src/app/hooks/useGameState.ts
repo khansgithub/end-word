@@ -4,7 +4,9 @@ import { GameStateClient } from "@/shared/types";
 import { isPlayerTurn } from "@/shared/utils";
 import { useUserStore } from "../store/userStore";
 import { useState } from "react";
+import { logger } from "@/lib/client/logging";
 
+const L = "useGameState";
 
 export function useGameState(gameState: GameStateClient) {
 	const playerName = useUserStore((s) => s.playerName);
@@ -40,15 +42,18 @@ export function useGameState(gameState: GameStateClient) {
 
 	const [forceInputDisabled, setForceInputDisabled] = useState(false);
 
-	console.log(
-		`[useGameState]` +
-		` submitting=${gameState.submitting} isSubmitting=${isSubmitting}` +
-		` isMyTurn=${isMyTurn} isInputDisabled=${isInputDisabled}` +
-		` isTimerPaused=${isTimerPaused}` +
-		` turn=${gameState.turn} seat=${gameState.thisPlayer?.seat}` +
-		` status=${gameState.status}` +
-		` health=${gameState.thisPlayer?.health}`,
-	);
+	logger.debug(L, "derived state", {
+		submitting: gameState.submitting,
+		isSubmitting,
+		isMyTurn,
+		isInputDisabled,
+		isTimerPaused,
+		turn: gameState.turn,
+		seat: gameState.thisPlayer?.seat,
+		status: gameState.status,
+		health: gameState.thisPlayer?.health,
+		playerCount,
+	});
 	
 	return {
 		isSubmitting,

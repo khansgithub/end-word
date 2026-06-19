@@ -6,6 +6,7 @@ import type {
 	GameStateServer,
 	GameStatus,
 	ServerPlayers,
+	Spectator,
 } from "@/shared/types";
 import type { GameLanguage } from "@/shared/types";
 import type { RoomListItem, RoomRow } from "@/shared/roomTypes";
@@ -143,4 +144,47 @@ export function buildFreshRoomState(
 ): GameState {
 	const state = buildInitialGameState(startingLetter, language, timerDuration);
 	return { ...state, language };
+}
+
+export async function fetchRoomSpectators(
+	admin: SupabaseClient,
+	roomId: string
+): Promise<Spectator[]> {
+	const row = await fetchRoom(admin, roomId);
+	return row?.spectators ?? [];
+}
+
+export async function addRoomSpectator(
+	admin: SupabaseClient,
+	roomId: string,
+	spectator: Spectator
+): Promise<Spectator[]> {
+	const row = await fetchRoom(admin, roomId);
+	if (!row) return [];
+	const current = row.spectators ?? [];
+	if (current.some((s) => s.uid === spectator.uid)) return current;
+	const updated = [...current, spectator];
+	const { error } = await admin
+		.from("rooms")
+		.update({ spectators: updated, updated_at: new Date().toISOString() })
+		.eq("roomid", roomId);
+	if (error) throw error;
+	return updated;
+}
+
+export async function removeRoomSpectator(
+	admin: SupabaseClient,
+	roomId: string,
+	userId: string
+): Promise<Spectator[]> {
+	const row = await fetchRoom(admin, roomId);
+	if (!row) return [];
+	const current = row.spectators ?? [];
+	const updated = current.filter((s) => s.uid !== userId);
+	const { error } = await admin
+		.from("rooms")
+		.update({ spectators: updated, updated_at: new Date().toISOString() })
+		.eq("roomid", roomId);
+	if (error) throw error;
+	return updated;
 }

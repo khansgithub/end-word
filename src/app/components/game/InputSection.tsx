@@ -6,6 +6,7 @@ import SubmitButton from "@/app/components/game/SubmitButton";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { MatchLetter } from "@/shared/types";
 import { useCallback } from "react";
+import { logger } from "@/lib/client/logging";
 import "./game-v2.css";
 
 export interface InputSectionProps {
@@ -34,12 +35,15 @@ export default function InputSection({
 	const opacity = isLocked ? 0.5 : 1;
 
 	const handleSubmit = useCallback(async () => {
-		if (disabled || isSubmitting) return;
+		if (disabled || isSubmitting) {
+			logger.debug("InputSection", "handleSubmit blocked", { disabled, isSubmitting });
+			return;
+		}
+		logger.info("InputSection", "handleSubmit start");
 		setIsSubmitting(true);
         try {
-            console.log(`[handleSubmit] submit word -- start`);
 			await onSubmit();
-			console.log(`[handleSubmit] submit word -- end`);
+			logger.info("InputSection", "handleSubmit end");
 		} finally {
 			// setIsSubmitting(false);
 		}

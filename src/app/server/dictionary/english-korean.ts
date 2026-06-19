@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizeEnglishWord } from "@/shared/utils";
+import { logger } from "@/app/server/logging";
 
 const TRANSLATIONS_TABLE = "english_korean_definitions";
 const NAVER_SEARCH_API = "https://en.dict.naver.com/api3/enko/search";
@@ -99,27 +100,32 @@ export async function resolveKoreanExplanation(
 
 	try {
 		const stored = await readStoredDefinition(admin, normalizedWord);
-		if (stored) return { definition: stored, linkUrl };
+		if (stored) {
+			logger.info("english-korean", "Cache hit", { word: normalizedWord });
+			return { definition: stored, linkUrl };
+		}
 	} catch (error) {
-		console.error("[resolveKoreanExplanation] failed to read cache", error);
+		logger.error("english-korean", "Failed to read cache", { error: String(error), word: normalizedWord });
 	}
 
 	let fetched: string | null = null;
 	try {
 		fetched = await fetchFromNaver(normalizedWord);
 	} catch (error) {
-		console.error("[resolveKoreanExplanation] failed to fetch naver definition", error);
+		logger.error("english-korean", "Failed to fetch naver definition", { error: String(error), word: normalizedWord });
 	}
 
 	if (!fetched) {
+		logger.info("english-korean", "Definition not found", { word: normalizedWord });
 		return { definition: null, linkUrl };
 	}
 
 	try {
 		await saveDefinition(admin, normalizedWord, fetched);
 	} catch (error) {
-		console.error("[resolveKoreanExplanation] failed to persist definition", error);
+		logger.error("english-korean", "Failed to persist definition", { error: String(error), word: normalizedWord });
 	}
 
+	logger.info("english-korean", "Definition resolved", { word: normalizedWord, definition: fetched });
 	return { definition: fetched, linkUrl };
 }

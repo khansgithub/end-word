@@ -1,4 +1,4 @@
-import type { GameLanguage } from "@/shared/types";
+import type { GameLanguage, Spectator } from "@/shared/types";
 import type { GameStatus, MatchLetter, ServerPlayers } from "@/shared/types";
 
 export type RoomRow = {
@@ -16,6 +16,7 @@ export type RoomRow = {
   player_user_map: Record<string, number>;
   connected_players: number;
   used_words: string[];
+  spectators: Spectator[];
   archived_at: string | null;
   created_at?: string;
   updated_at?: string;

@@ -1,6 +1,9 @@
 import { useStopwatch } from "react-timer-hook";
-import { RefObject, useEffect, useRef, useState } from "react"; // BUG 7: unused import useRef
+import { useEffect } from "react";
 import { GameStatus } from "@/shared/types";
+import { logger } from "@/lib/client/logging";
+
+const L = "useCountdown";
 
 export type Countdown = {
 	remainingSeconds: number;
@@ -29,33 +32,20 @@ export function useCountdown(
 	const remainingSeconds = Math.max(0, duration - sw.totalSeconds);
 
 	function reset() {
+		logger.debug(L, "reset");
 		sw.reset(undefined, false);
 	}
 
 	useEffect(() => {
-		console.log(
-			`[useCountdown][isPaused effect] isPaused=${isPaused} isRunning=${sw.isRunning} remaining=${remainingSeconds}s totalMs=${sw.totalMilliseconds}`,
-		);
+		logger.debug(L, "isPaused effect", { isPaused, isRunning: sw.isRunning, remaining: remainingSeconds, totalMs: sw.totalMilliseconds });
 		if (isPaused) {
-			console.log(
-				`[useCountdown][isPaused effect] Pausing stopwatch at ${remainingSeconds}s / ${remainingMilliSeconds}ms.`,
-			);
+			logger.debug(L, "Pausing stopwatch", { remaining: remainingSeconds, remainingMs: remainingMilliSeconds });
 			sw.pause();
 		} else {
-			console.log(
-				`[useCountdown][isPaused effect] Starting stopwatch (unpaused).`,
-			);
+			logger.debug(L, "Starting stopwatch (unpaused)", { remaining: remainingSeconds });
 			sw.start();
 		}
 	}, [isPaused]);
-
-	// useEffect(() => {
-	// 	console.log(`[useCountdown] remainingSeconds=${remainingSeconds}`)
-	// }, [remainingSeconds])
-
-	function foo() {
-		return remainingSeconds;
-	}
 
 	return {
 		remainingSeconds,
