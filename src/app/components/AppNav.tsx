@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/client/ui/return-to";
 import { useUserStore } from "@/app/store/userStore";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 
 function navLinkClass(active: boolean): string {
-	return `text-sm px-3 py-1.5 rounded-lg transition-colors duration-150 ${
+	return `text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors duration-150 ${
 		active ? "font-medium" : "opacity-70 hover:opacity-100"
 	}`;
 }
@@ -34,7 +35,7 @@ export function AppNav() {
 			}}
 			aria-label="Main"
 		>
-			<div className="w-full max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+			<div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center justify-between gap-1 sm:gap-2">
 				<div className="flex items-center gap-1">
 					<Link href="/" className={navLinkClass(false)} style={{ color: "var(--b-fg)" }}>
 						End Word
@@ -51,7 +52,7 @@ export function AppNav() {
 								/
 							</span>
 							<span
-								className="text-sm px-3 py-1.5 font-medium"
+								className="text-sm px-2 sm:px-3 py-1 sm:py-1.5 font-medium"
 								style={{ color: "var(--b-fg)" }}
 								aria-current="page"
 							>
@@ -60,22 +61,23 @@ export function AppNav() {
 						</>
 					)}
 				</div>
-				<div className="flex items-center gap-3">
-					{playerName && (
-						<span className="text-sm truncate`max-w-40" style={{ color: "var(--b-muted)" }}>
-							{playerName}
-						</span>
-					)}
-					{(onLobby || onRoom) && (
-						<Link
-							href={homeHref}
-							className={navLinkClass(false)}
-							style={{ color: "var(--b-muted)" }}
-						>
-							Change name
-						</Link>
-					)}
-				</div>
+			<div className="flex items-center gap-1 sm:gap-3">
+				{playerName && (
+					<span className="hidden sm:inline text-sm truncate max-w-28" style={{ color: "var(--b-muted)" }}>
+						{playerName}
+					</span>
+				)}
+				{(onLobby || onRoom) && (
+					<Link
+						href={homeHref}
+						className={navLinkClass(false)}
+						style={{ color: "var(--b-muted)" }}
+					>
+						Change name
+					</Link>
+				)}
+				<ThemeToggle className="border-transparent shadow-none" style={{ borderColor: "transparent", boxShadow: "none" }} />
+			</div>
 			</div>
 		</nav>
 	);

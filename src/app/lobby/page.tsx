@@ -172,14 +172,14 @@ export default function LobbyPage() {
 					<div className="flex gap-2">
 						<button
 							type="button"
-							className={`btn-fsm btn-fsm--ghost flex-1 ${language === "ko" ? "btn-fsm--active" : ""}`}
+							className={`btn-fsm flex-1 ${language === "ko" ? "btn-fsm--active" : "btn-fsm--ghost"}`}
 							onClick={() => setLanguage("ko")}
 						>
 							Korean
 						</button>
 						<button
 							type="button"
-							className={`btn-fsm btn-fsm--ghost flex-1 ${language === "en" ? "btn-fsm--active" : ""}`}
+							className={`btn-fsm flex-1 ${language === "en" ? "btn-fsm--active" : "btn-fsm--ghost"}`}
 							onClick={() => setLanguage("en")}
 						>
 							English
@@ -194,7 +194,7 @@ export default function LobbyPage() {
 								<button
 									key={t}
 									type="button"
-									className={`btn-fsm btn-fsm--ghost flex-1 ${timerDuration === t ? "btn-fsm--active" : ""}`}
+									className={`btn-fsm flex-1 ${timerDuration === t ? "btn-fsm--active" : "btn-fsm--ghost"}`}
 									onClick={() => setTimerDuration(t)}
 								>
 									{t}s

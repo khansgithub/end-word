@@ -131,8 +131,8 @@
   }
 
   .btn-fsm--ghost:hover:not(:disabled) {
-    background: var(--b-surface-raised);
-    border-color: var(--b-line);
+    background: var(--b-accent-muted);
+    border-color: var(--b-accent-muted);
   }
 
   .btn-fsm--ghost.btn-fsm--active {

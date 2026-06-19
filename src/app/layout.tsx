@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Mono, Fraunces, IBM_Plex_Sans } from "next/font/google";
 import "@/app/globals.css";
-import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { AppShell } from "@/app/components/AppShell";
 import { SupabaseProvider } from "@/app/components/SupabaseProvider";
 
@@ -48,7 +47,6 @@ export default function RootLayout({
             <body className={
                 `${appSans.variable} ${appMono.variable} ${designBDisplay.variable} ${designBSans.variable} antialiased w-full min-h-screen p-0 m-0`
             } style={{ backgroundColor: "var(--b-bg)", color: "var(--b-fg)" }}>
-                <ThemeToggle />
                 <main className="w-full min-h-dvh flex flex-col items-center">
                     <SupabaseProvider>
                         <AppShell>{children}</AppShell>
