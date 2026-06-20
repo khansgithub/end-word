@@ -16,6 +16,7 @@ type LobbyBusy = "create" | "join";
 export default function LobbyPage() {
 	const router = useRouter();
 	const playerName = useUserStore((s) => s.playerName);
+	const [authChecked, setAuthChecked] = useState(false);
 	const [rooms, setRooms] = useState<RoomListItem[]>([]);
 	const [inviteCode, setInviteCode] = useState("");
 	const [roomName, setRoomName] = useState("");
@@ -49,10 +50,34 @@ export default function LobbyPage() {
 			router.push(buildLoginUrl("/lobby"));
 			return;
 		}
-		loadRooms();
+
+		let cancelled = false;
+
+		fetch("/api/auth/check")
+			.then((res) => res.json())
+			.then((data) => {
+				if (cancelled) return;
+				if (!data.authenticated) {
+					router.push(buildLoginUrl("/lobby"));
+					return;
+				}
+				setAuthChecked(true);
+				loadRooms();
+			})
+			.catch(() => {
+				if (!cancelled) router.push(buildLoginUrl("/lobby"));
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [playerName, router, loadRooms]);
+
+	useEffect(() => {
+		if (!authChecked) return;
 		const interval = setInterval(loadRooms, 5000);
 		return () => clearInterval(interval);
-	}, [playerName, router, loadRooms]);
+	}, [authChecked, loadRooms]);
 
 	function handleCreateClick() {
 		if (isLobbyBusy || !createRoomFormRef.current?.reportValidity()) return;
@@ -131,7 +156,7 @@ export default function LobbyPage() {
 		})();
 	}
 
-	if (!playerName) return null;
+	if (!playerName || !authChecked) return null;
 
 	return (
 		<div

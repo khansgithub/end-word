@@ -103,14 +103,14 @@ export default function SpectatorView({
         leaveCtxRef.current = { roomId };
     });
 
-    const removeSpectator = useCallback(() => {
+    const removeSpectator = useCallback(async () => {
         logger.debug("SpectatorView", "removeSpectator");
-        fetch(`/api/rooms/${roomId}/spectate`, { method: "DELETE" }).catch(
-            () => {},
-        );
+        try {
+            await fetch(`/api/rooms/${roomId}/spectate`, { method: "DELETE" });
+        } catch {}
     }, [roomId]);
 
-    // Tab/window close
+    // Tab/window close (fire-and-forget, browser won't await)
     useEffect(() => {
         const leave = () => {
             logger.debug("SpectatorView", "pagehide, removing spectator");
@@ -154,8 +154,9 @@ export default function SpectatorView({
         }
         logger.info("SpectatorView", "handleExit");
         setIsLeavingLobby(true);
-        removeSpectator();
-        router.push("/lobby");
+        removeSpectator().then(() => {
+            router.push("/lobby");
+        });
     }, [router, isLeavingLobby, removeSpectator]);
 
     const handleEmoteReceive = useCallback((payload: EmotePayload) => {
