@@ -10,6 +10,7 @@ import { TIMER_SYNC_EVENT, TIMER_SYNC_REQUEST_EVENT, type TimerSyncPayload } fro
 import { TYPING_DRAFT_EVENT, type TypingDraftPayload } from "@/shared/typingDraft";
 import { WORD_DEFINITION_EVENT, type WordDefinitionPayload } from "@/shared/wordDefinition";
 import { SPECTATORS_UPDATE_EVENT } from "@/shared/spectatorsBroadcast";
+import { EMOTE_EVENT, type EmotePayload } from "@/shared/emote";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef } from "react";
 import { logger } from "@/lib/client/logging";
@@ -44,12 +45,13 @@ export function useRoomChannel(
 		onTypingDraft?: (payload: TypingDraftPayload) => void;
 		onWordDefinition?: (definition: WordDefinitionPayload) => void;
 		onSpectatorsUpdate?: (spectators: Spectator[]) => void;
+		onEmote?: (payload: EmotePayload) => void;
 		onPlayerLeft?: (leavingPlayers: Array<{ userId: string; seat: number }>) => GameStateEmit | null | undefined;
 		presenceSeat?: number;
 	}
 ) {
 	const supabase = useSupabase();
-	const { userId, isHost, onUpdate, onRoomClosed, onTimerSync, onTimerSyncRequest, onTypingDraft, onWordDefinition, onSpectatorsUpdate, onPlayerLeft, presenceSeat } = options;
+	const { userId, isHost, onUpdate, onRoomClosed, onTimerSync, onTimerSyncRequest, onTypingDraft, onWordDefinition, onSpectatorsUpdate, onEmote, onPlayerLeft, presenceSeat } = options;
 	const onUpdateRef = useRef(onUpdate);
 	const onRoomClosedRef = useRef(onRoomClosed);
 	const onTimerSyncRef = useRef(onTimerSync);
@@ -57,6 +59,7 @@ export function useRoomChannel(
 	const onTypingDraftRef = useRef(onTypingDraft);
 	const onWordDefinitionRef = useRef(onWordDefinition);
 	const onSpectatorsUpdateRef = useRef(onSpectatorsUpdate);
+	const onEmoteRef = useRef(onEmote);
 	const onPlayerLeftRef = useRef(onPlayerLeft);
 	const channelRef = useRef<RealtimeChannel | null>(null);
 	const subscribedRef = useRef(false);
@@ -94,6 +97,10 @@ export function useRoomChannel(
 	useEffect(() => {
 		onSpectatorsUpdateRef.current = onSpectatorsUpdate;
 	}, [onSpectatorsUpdate]);
+
+	useEffect(() => {
+		onEmoteRef.current = onEmote;
+	}, [onEmote]);
 
 	/** Re-track presence whenever seat changes so other clients can identify this client by seat. */
 	useEffect(() => {
@@ -147,6 +154,11 @@ export function useRoomChannel(
 				const sp = payload as Spectator[];
 				logger.debug(L, "broadcast spectatorsUpdate", { count: sp.length });
 				onSpectatorsUpdateRef.current?.(sp);
+			})
+			.on("broadcast", { event: EMOTE_EVENT }, ({ payload }) => {
+				const em = payload as EmotePayload;
+				logger.debug(L, "broadcast emote", { seat: em.seat, value: em.value });
+				onEmoteRef.current?.(em);
 			})
 			.on(
 				"postgres_changes",
@@ -274,5 +286,16 @@ export function useRoomChannel(
 		});
 	}, []);
 
-	return { sendTypingDraft, sendTimerSync, sendTimerSyncRequest };
+	const sendEmote = useCallback((payload: EmotePayload) => {
+		const channel = channelRef.current;
+		if (!channel || !subscribedRef.current) return;
+		logger.debug(L, "sendEmote", { seat: payload.seat, value: payload.value });
+		void channel.send({
+			type: "broadcast",
+			event: EMOTE_EVENT,
+			payload,
+		});
+	}, []);
+
+	return { sendTypingDraft, sendTimerSync, sendTimerSyncRequest, sendEmote };
 }

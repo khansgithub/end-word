@@ -29,6 +29,8 @@ import { appendDefinitionToHistory } from "@/shared/wordDefinition";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/client/logging";
+import type { ActiveEmote, EmotePayload } from "@/shared/emote";
+import EmoteBanner from "@/app/components/game/EmoteBanner";
 
 type WordFeedEntry = {
     id: number;
@@ -62,6 +64,7 @@ export default function SpectatorView({
     const [spectatorCount, setSpectatorCount] = useState(0);
     const [wordFeed, setWordFeed] = useState<WordFeedEntry[]>([]);
     const [isLeavingLobby, setIsLeavingLobby] = useState(false);
+    const [activeEmotes, setActiveEmotes] = useState<ActiveEmote[]>([]);
 
     const onTypingDraftRef = useRef<(payload: TypingDraftPayload) => void>(
         () => {},
@@ -155,6 +158,16 @@ export default function SpectatorView({
         router.push("/lobby");
     }, [router, isLeavingLobby, removeSpectator]);
 
+    const handleEmoteReceive = useCallback((payload: EmotePayload) => {
+        logger.debug("SpectatorView", "handleEmoteReceive", { seat: payload.seat, value: payload.value });
+        if (payload.userId === userId) return;
+        setActiveEmotes((prev) => [...prev, { ...payload, id: crypto.randomUUID() }]);
+    }, [userId]);
+
+    const handleEmoteComplete = useCallback((id: string) => {
+        setActiveEmotes((prev) => prev.filter((e) => e.id !== id));
+    }, []);
+
     const applyRemote = useCallback((next: GameStateEmit) => {
         logger.debug("SpectatorView", "applyRemote", { turn: next.turn, status: next.status, connectedPlayers: next.connectedPlayers });
         setEmit(next);
@@ -190,6 +203,7 @@ export default function SpectatorView({
         onSpectatorsUpdate: (spectators: Spectator[]) => {
             setSpectatorCount(spectators.length);
         },
+        onEmote: handleEmoteReceive,
     });
 
     // Request timer sync from active player after channel is subscribed
@@ -346,6 +360,7 @@ export default function SpectatorView({
                 onBackToLobby={handleExit}
                 isStartingGame={false}
                 isLeavingLobby={isLeavingLobby}
+                roomId={roomId}
             />
             <GameBoardLayout
                 topBar={
@@ -424,8 +439,27 @@ export default function SpectatorView({
                         <PlayersRoster
                             gameState={clientState}
                             turnTypingText={turnTypingText}
+                            activeEmotes={activeEmotes}
+                            onEmoteComplete={handleEmoteComplete}
                         />
                     ) : undefined
+                }
+                emoteArea={
+                    <div className="g2-emote-area">
+                        {!multiplayer &&
+                            activeEmotes.map((em, idx) => (
+                                <div
+                                    key={em.id}
+                                    className="g2-emote-banner-wrapper"
+                                    style={{ bottom: `${4 + idx * 36}px` }}
+                                >
+                                    <EmoteBanner
+                                        value={em.value}
+                                        onComplete={() => handleEmoteComplete(em.id)}
+                                    />
+                                </div>
+                            ))}
+                    </div>
                 }
             />
 

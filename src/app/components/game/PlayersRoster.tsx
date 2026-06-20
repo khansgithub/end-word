@@ -1,6 +1,7 @@
 "use client";
 
 import type { GameStateClient } from "@/shared/types";
+import type { ActiveEmote } from "@/shared/emote";
 import { isActivePlayer, isPlayerTurn } from "@/shared/utils";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 import PlayerCard, { EmptySeatCard } from "@/app/components/game/PlayerCard";
@@ -11,6 +12,8 @@ export interface PlayersRosterProps {
 	hideEmptySeats?: boolean;
 	/** Partial word from the player whose turn it is (spectators only). */
 	turnTypingText?: string;
+	activeEmotes?: ActiveEmote[];
+	onEmoteComplete?: (id: string) => void;
 }
 
 /**
@@ -21,6 +24,8 @@ export default function PlayersRoster({
 	gameState,
 	hideEmptySeats = true,
 	turnTypingText,
+	activeEmotes,
+	onEmoteComplete,
 }: PlayersRosterProps) {
 	const { players, turn, connectedPlayers, thisPlayer, timerDuration } = gameState;
 	const activeCount = players.filter((p) => isActivePlayer(p)).length;
@@ -61,6 +66,8 @@ export default function PlayersRoster({
 							compact
 							timeRemaining={p.timeRemaining}
 							timerDuration={timerDuration}
+							activeEmotes={activeEmotes}
+							onEmoteComplete={onEmoteComplete}
 						/>
 					);
 				})}

@@ -9,6 +9,7 @@ export interface GameBoardLayoutProps {
 	wordHistory: ReactNode;
 	/** Omitted when solo — your status is already in the play grid. */
 	playersBar?: ReactNode;
+	emoteArea?: ReactNode;
 }
 
 /**
@@ -20,6 +21,7 @@ export default function GameBoardLayout({
 	playFocus,
 	wordHistory,
 	playersBar,
+	emoteArea,
 }: GameBoardLayoutProps) {
 	return (
 		<div
@@ -28,7 +30,6 @@ export default function GameBoardLayout({
 		>
 			<div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3 p-4 md:gap-4 md:p-5 min-h-0">
 				{topBar}
-
 				<div className="flex flex-col gap-3 min-h-0">
 					<div className="shrink-0">{playFocus}</div>
 					{playersBar != null && (
@@ -36,7 +37,11 @@ export default function GameBoardLayout({
 					)}
 					<div className="order-3 flex min-h-0 shrink-0 flex-col md:order-2">
 						{wordHistory}
+						{emoteArea != null && (
+						<div className="shrink-0">{emoteArea}</div>
+					)}
 					</div>
+
 				</div>
 			</div>
 		</div>

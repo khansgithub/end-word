@@ -1,4 +1,4 @@
-import { JSX } from "react";
+import { JSX, useCallback, useState } from "react";
 import { GameStatus, PlayersArray, PlayerWithId, PlayerWithoutId } from "@/shared/types";
 import { getWinnerPlayer } from "@/shared/utils";
 import { gameStrings } from "@/lib/client/ui/game-strings";
@@ -12,6 +12,7 @@ interface GameOverlayProps {
     onBackToLobby?: () => void;
     isStartingGame?: boolean;
     isLeavingLobby?: boolean;
+    roomId?: string;
 }
 
 export default function GameOverlay({
@@ -23,7 +24,21 @@ export default function GameOverlay({
     onBackToLobby,
     isStartingGame = false,
     isLeavingLobby = false,
+    roomId,
 }: GameOverlayProps) {
+    const inviteUrl = roomId && typeof window !== "undefined" ? `${window.location.origin}/room/${roomId}` : null;
+
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyLink = useCallback(() => {
+        if (inviteUrl) {
+            navigator.clipboard.writeText(inviteUrl).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }).catch(() => {});
+        }
+    }, [inviteUrl]);
+
     function winnerName() {
         return getWinnerPlayer(players)?.name ?? gameStrings.noWinner;
     }
@@ -48,6 +63,31 @@ export default function GameOverlay({
                 <p className="text-lg" style={{ color: "var(--b-fg)" }}>
                     {gameStrings.waitingForGameToStart}
                 </p>
+                {inviteUrl && (
+                    <div className="mt-4 w-full max-w-xs">
+                        <p className="text-sm font-semibold mb-2" style={{ color: "var(--b-fg)" }}>
+                            Invite link
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleCopyLink}
+                            className="w-full text-left px-3 py-1.5 rounded text-sm truncate cursor-pointer flex items-center gap-2"
+                            style={{ backgroundColor: "var(--b-bg)", color: "var(--b-muted)" }}
+                            title="Click to copy invite link"
+                        >
+                            <span className="truncate">{inviteUrl}</span>
+                            <span
+                                className="shrink-0 text-xs font-medium transition-opacity duration-200"
+                                style={{
+                                    color: copied ? "var(--b-accent, #22c55e)" : "var(--b-muted)",
+                                    opacity: copied ? 1 : 0.6,
+                                }}
+                            >
+                                {copied ? "Copied!" : "Copy"}
+                            </span>
+                        </button>
+                    </div>
+                )}
                 <div className="mt-4 w-full max-w-xs">
                     <p className="text-sm font-semibold mb-2" style={{ color: "var(--b-fg)" }}>
                         Players ({activePlayers.length})

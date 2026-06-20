@@ -244,3 +244,137 @@
         width: 0%;
     }
 }
+
+/* ------------------------------------------------------------------
+ * Emote banner — floating pill near player cards (Design B)
+ * ------------------------------------------------------------------ */
+
+.g2-emote-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.65rem;
+    border-radius: 1rem;
+	background: transparent;
+	border: none;
+    /* background: var(--b-surface); */
+    /* border: 1px solid var(--b-surface-border); */
+    /* box-shadow: var(--b-shadow-card); */
+    white-space: nowrap;
+    pointer-events: none;
+    position: relative;
+}
+
+.g2-emote-banner-emoji {
+    width: 12rem;
+    height: auto;
+    display: block;
+}
+
+/* ------------------------------------------------------------------
+ * Emote banner wrapper — solo mode absolute positioning
+ * ------------------------------------------------------------------ */
+
+.g2-emote-banner-wrapper {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+ * Emote button — toggle at bottom of play area (Design B)
+ * ------------------------------------------------------------------ */
+
+.g2-emote-area {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+.g2-emote-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--b-line);
+    background: var(--b-surface);
+    cursor: pointer;
+    transition:
+        background 150ms ease,
+        border-color 150ms ease,
+        transform 150ms ease;
+}
+
+.g2-emote-toggle:hover:not(:disabled) {
+    background: var(--b-accent-muted);
+    border-color: var(--b-accent);
+}
+
+.g2-emote-toggle:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.g2-emote-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.g2-emote-toggle-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* ------------------------------------------------------------------
+ * Emote picker — floating grid above button (Design B)
+ * ------------------------------------------------------------------ */
+
+.g2-emote-picker {
+    background: var(--b-surface);
+    border: 1px solid var(--b-surface-border);
+    border-radius: 1rem;
+    box-shadow: var(--b-shadow-elevated);
+    padding: 0.5rem;
+}
+
+.g2-emote-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.25rem;
+}
+
+.g2-emote-picker-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 0.35rem;
+    transition:
+        background 120ms ease,
+        transform 120ms ease;
+}
+
+.g2-emote-picker-btn:hover {
+    background: var(--b-accent-muted);
+    transform: scale(1.08);
+}
+
+.g2-emote-picker-btn:active {
+    transform: scale(0.95);
+}
+
+.g2-emote-picker-emoji {
+    width: 12rem;
+    height: auto;
+    user-select: none;
+    pointer-events: none;
+}
