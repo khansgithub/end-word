@@ -1,17 +1,21 @@
-import { spawn } from "child_process";
-import { roomFlowTestNames, roomFlowTestNames as t, type RoomFlowTestName } from "@tests/e2e/test-names";
-import { writeMockData, o, x } from "@/mocks/mock-dictionary-data";
-import { envSet, envGet } from "@/app/server/env";
+import { envSet } from "@/app/server/env";
+import { o, writeMockData, x } from "@/mocks/mock-dictionary-data";
+import playwrightConfig from "@root/playwright.config";
 import {
     buildPlaywrightJsonReport,
     parseReportPath,
-    type TestResult,
     writeReport,
+    type TestResult,
 } from "@tests/e2e/report";
-import playwrightConfig from "@root/playwright.config";
+import {
+    roomFlowTestNames,
+    roomFlowTestNames as t,
+    type RoomFlowTestName,
+} from "@tests/e2e/test-names";
+import { spawn } from "child_process";
 // Playwright internal APIs - not officially documented, may change between versions
-import { runAllTestsWithConfig } from "playwright/lib/runner/testRunner";
 import { loadConfigFromFile } from "playwright/lib/common/configLoader";
+import { runAllTestsWithConfig } from "playwright/lib/runner/testRunner";
 
 /**
  * Custom Playwright Test Runner
@@ -20,7 +24,7 @@ import { loadConfigFromFile } from "playwright/lib/common/configLoader";
  * Supports per-test env overrides and custom report output.
  */
 
-var enableUi = (process.argv.includes("--ui")) ? true : false;
+const enableUi = process.argv.includes("--ui") ? true : false;
 
 type RunTestConfig = {
     envVars: Partial<typeof process.env>;
@@ -29,7 +33,10 @@ type RunTestConfig = {
 };
 
 /** Spawn-based runner: runs Playwright in a subprocess. Supports --ui. */
-function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: RunTestConfig) {
+function runTestSpawn(
+    testName: RoomFlowTestName,
+    { envVars, enableUi, cb }: RunTestConfig,
+) {
     const envVarsString = Object.entries(envVars)
         .map(([key, value]) => `${key}=${value}`)
         .join(" ");
@@ -40,7 +47,8 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
         "-g",
         // "--quiet",
         testName,
-        enableUi ? "--ui" : ""
+        enableUi ? "--ui" : "",
+        // "--debug",
     ];
     if (cb) cb();
     const command = `npx ${args.join(" ")}`;
@@ -48,7 +56,10 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
     console.log("Environment variables: ", envVars);
     console.log("Command: ", command);
 
-    const child = spawn(command, { stdio: "inherit", shell: process.platform === "win32" });
+    const child = spawn(command, {
+        stdio: "inherit",
+        shell: process.platform === "win32",
+    });
 
     child.on("exit", (code) => {
         process.exit(code ?? 1);
@@ -58,13 +69,18 @@ function runTestSpawn(testName: RoomFlowTestName, { envVars, enableUi, cb }: Run
 /** In-process runner: uses Playwright internal APIs. Does not support --ui. */
 async function runTestInProcess(
     testName: RoomFlowTestName,
-    { envVars, cb }: RunTestConfig
-): Promise<{ status: string; duration: number; error?: { message: string; stack?: string } }> {
+    { envVars, cb }: RunTestConfig,
+): Promise<{
+    status: string;
+    duration: number;
+    error?: { message: string; stack?: string };
+}> {
     if (cb) cb();
 
     envSet("CUSTOM_PLAYWRIGHT_RUNNER", "true");
     for (const [key, value] of Object.entries(envVars)) {
-        if (value !== undefined) envSet(key as keyof typeof process.env, String(value));
+        if (value !== undefined)
+            envSet(key as keyof typeof process.env, String(value));
     }
 
     console.log("Running test: ", testName);
@@ -74,7 +90,14 @@ async function runTestInProcess(
         ...playwrightConfig,
         quiet: true,
         outputDir: `test-results/playwright/custom-runner/${testName}/`,
-        reporter: [["json", { outputFile: `test-results/playwright/custom-runner/${testName}/out.json` }]],
+        reporter: [
+            [
+                "json",
+                {
+                    outputFile: `test-results/playwright/custom-runner/${testName}/out.json`,
+                },
+            ],
+        ],
     });
     config.cliArgs = ["tests/e2e/room-flow.spec.ts"];
     config.cliGrep = testName;
@@ -96,8 +119,12 @@ async function runTestInProcess(
 
 async function runTest(
     testName: RoomFlowTestName,
-    config: RunTestConfig
-): Promise<{ status: string; duration: number; error?: { message: string; stack?: string } }> {
+    config: RunTestConfig,
+): Promise<{
+    status: string;
+    duration: number;
+    error?: { message: string; stack?: string };
+}> {
     return runTestInProcess(testName, config);
 }
 
@@ -117,7 +144,9 @@ const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
             MOCK_DICTIONARY_DATA: "true",
         },
         enableUi: true,
-        cb: setupMockDictionaryData,
+        cb: () => {
+            writeMockData([o, x, x, x, x, x, o, o, o]);
+        },
     },
     [t.endGameWith2Players]: {
         envVars: {
@@ -135,23 +164,25 @@ const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
         },
         enableUi: true,
     },
-	[t.customTest]: {
-		envVars: {
-			MOCK_GET_RANDOM_WORD: "true",
-			MOCK_LOOKUP_WORD: "true",
-			MOCK_RANDOM_WORD: "boss",
-		},
-		enableUi: true,
-	},
+    [t.progressRoundsWith4Players]: {
+        envVars: {
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
+            MOCK_WORD_VALIDATION_FAIL: "true",
+            MOCK_SUPABASE: "true",
+            NEXT_PUBLIC_MOCK_SUPABASE: "true",
+            SITE_PASSWORD: ""
+        },
+    },
+    [t.customTest]: {
+        envVars: {
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
+            MOCK_RANDOM_WORD: "boss",
+        },
+        enableUi: true,
+    },
 };
-
-function setupMockDictionaryData() {
-    writeMockData([
-        o,
-        x, x, x, x, x,
-        o, o, o,
-    ]);
-}
 
 async function main(testName?: RoomFlowTestName) {
     const results: TestResult[] = [];
@@ -175,10 +206,13 @@ async function main(testName?: RoomFlowTestName) {
 
     for (const [testName, testConfig] of Object.entries(testConfigs)) {
         try {
-            const { status, duration, error } = await runTest(testName as RoomFlowTestName, {
-                ...testConfig,
-                enableUi: enableUi,
-            });
+            const { status, duration, error } = await runTest(
+                testName as RoomFlowTestName,
+                {
+                    ...testConfig,
+                    enableUi: enableUi,
+                },
+            );
             results.push({ name: testName, status, duration, error });
         } catch (err) {
             console.error(`[Error] ${testName}:`, err);
@@ -196,7 +230,11 @@ async function main(testName?: RoomFlowTestName) {
     // Write Playwright-compatible JSON report only when --report="path" is passed
     const reportPath = parseReportPath();
     if (reportPath) {
-        const report = buildPlaywrightJsonReport(results, startTime, totalDuration);
+        const report = buildPlaywrightJsonReport(
+            results,
+            startTime,
+            totalDuration,
+        );
         writeReport(reportPath, report);
         console.log(`\nJSON report written to ${reportPath}`);
     }
@@ -204,7 +242,9 @@ async function main(testName?: RoomFlowTestName) {
     // Summary
     console.log("\n--- Summary ---");
     const passed = results.filter((r) => r.status === "passed");
-    const failed = results.filter((r) => r.status !== "passed" && r.status !== "skipped");
+    const failed = results.filter(
+        (r) => r.status !== "passed" && r.status !== "skipped",
+    );
     for (const { name, status, duration } of results) {
         const icon = status === "passed" ? "✓" : "✗";
         console.log(`  ${icon} ${name}: ${status} (${Math.round(duration)}ms)`);
@@ -216,24 +256,24 @@ async function main(testName?: RoomFlowTestName) {
 
 // ((testName) => runTestSpawn(testName, testConfigs[testName]!))(t.customTest)
 
-const testNamesFromArgs = process.argv.slice(2).filter(arg => !arg.startsWith("--"));
-const testName = testNamesFromArgs.length > 0 ? testNamesFromArgs[0] : undefined;
+const testNamesFromArgs = process.argv
+    .slice(2)
+    .filter((arg) => !arg.startsWith("--"));
+const testName =
+    testNamesFromArgs.length > 0 ? testNamesFromArgs[0] : undefined;
 if (testName) {
     // Validate that testName is in roomFlowTestNames (the object with test names as keys)
     const allowedNames = Object.values(roomFlowTestNames) as RoomFlowTestName[];
     if (!allowedNames.includes(testName as RoomFlowTestName)) {
         console.error(
-            `Unknown test name: ${testName}. Must be one of: ${allowedNames.join(", ")}`
+            `Unknown test name: ${testName}. Must be one of: ${allowedNames.join(", ")}`,
         );
         process.exit(1);
     }
-    runTestSpawn(
-        testName as RoomFlowTestName,
-        {
-            ...testConfigs[testName as RoomFlowTestName]!,
-            enableUi
-        }
-    );
+    runTestSpawn(testName as RoomFlowTestName, {
+        ...testConfigs[testName as RoomFlowTestName]!,
+        enableUi,
+    });
 } else {
     main();
 }

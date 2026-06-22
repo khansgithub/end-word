@@ -1,4 +1,11 @@
-import type { APIRequestContext, Browser, BrowserContext, CDPSession, Locator, Page } from "@playwright/test";
+import type {
+    APIRequestContext,
+    Browser,
+    BrowserContext,
+    CDPSession,
+    Locator,
+    Page,
+} from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { decomposeSyllable } from "@/app/hangul-decomposer";
 import { envGet } from "@/app/server/env";
@@ -7,10 +14,18 @@ import { MAX_PLAYERS } from "@/shared/consts";
 import { roomFlowTestNames } from "@tests/e2e/test-names";
 import { gameStrings } from "@/lib/client/ui/game-strings";
 
-type LogEntry = { ts: number; msg: string; source: "client" | "browser" | "server" };
+const E2E_TIMEOUT = 10_000;
+
+type LogEntry = {
+    ts: number;
+    msg: string;
+    source: "client" | "browser" | "server";
+};
 
 /** Builds a tuple type of length N filled with T */
-type BuildTuple<T, N extends number, R extends T[] = []> = R["length"] extends N ? R : BuildTuple<T, N, [...R, T]>;
+type BuildTuple<T, N extends number, R extends T[] = []> = R["length"] extends N
+    ? R
+    : BuildTuple<T, N, [...R, T]>;
 
 type DomEntry = {
     homepageInput: Locator;
@@ -30,20 +45,29 @@ function assertEnvVarEquals(vars: Record<string, string>, testTitle: string) {
     for (const [varName, expectedValue] of Object.entries(vars)) {
         if (envGet(varName as keyof typeof process.env) != expectedValue) {
             errors.push(
-                `${varName} must be ${expectedValue === "true" ? "enabled" : "disabled"} for the ${testTitle} e2e tests`
+                `${varName} must be ${expectedValue === "true" ? "enabled" : "disabled"} for the ${testTitle} e2e tests`,
             );
         }
     }
     if (errors.length > 0) {
         throw new TestEnvError(
-            errors.join('\n') +
-            "\nActual: " + JSON.stringify(Object.fromEntries(Object.entries(vars).map(([k]) => [k, envGet(k as keyof typeof process.env)])), null, 2) +
-            "\nExpected: " + JSON.stringify(vars, null, 2)
+            errors.join("\n") +
+                "\nActual: " +
+                JSON.stringify(
+                    Object.fromEntries(
+                        Object.entries(vars).map(([k]) => [
+                            k,
+                            envGet(k as keyof typeof process.env),
+                        ]),
+                    ),
+                    null,
+                    2,
+                ) +
+                "\nExpected: " +
+                JSON.stringify(vars, null, 2),
         );
     }
 }
-
-const E2E_TIMEOUT = 30_000;
 
 async function pause(seconds: number) {
     await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
@@ -51,13 +75,14 @@ async function pause(seconds: number) {
 
 function roomIdFromUrl(url: string): string {
     const match = url.match(/\/room\/([^/?#]+)/);
-    if (!match) throw new E2ETestAssertionError(`Expected /room/:id URL, got ${url}`);
+    if (!match)
+        throw new E2ETestAssertionError(`Expected /room/:id URL, got ${url}`);
     return match[1];
 }
 
 async function collectAndPrintMergedLogs(
     clientLogs: LogEntry[],
-    request: APIRequestContext
+    request: APIRequestContext,
 ): Promise<void> {
     try {
         const logsRes = await request.get("/__test/server-logs");
@@ -68,34 +93,58 @@ async function collectAndPrintMergedLogs(
                 if (Array.isArray(logs.logs)) {
                     serverLogs = logs.logs.map((l: any) => ({
                         ts: typeof l.ts === "number" ? l.ts : Date.now(),
-                        msg: typeof l.msg === "string" ? l.msg : JSON.stringify(l),
+                        msg:
+                            typeof l.msg === "string"
+                                ? l.msg
+                                : JSON.stringify(l),
                         source: "server" as const,
                     }));
                 }
             } catch (parseError) {
-                console.warn("[collectAndPrintMergedLogs] Failed to parse server logs:", parseError);
+                console.warn(
+                    "[collectAndPrintMergedLogs] Failed to parse server logs:",
+                    parseError,
+                );
             }
         } else {
-            console.warn(`[collectAndPrintMergedLogs] Failed to fetch server logs: ${logsRes.status()} ${logsRes.statusText()}`);
+            console.warn(
+                `[collectAndPrintMergedLogs] Failed to fetch server logs: ${logsRes.status()} ${logsRes.statusText()}`,
+            );
         }
 
         const merged = [
-            ...clientLogs.map((l) => ({ ...l, source: l.source ?? "client" as const })),
+            ...clientLogs.map((l) => ({
+                ...l,
+                source: l.source ?? ("client" as const),
+            })),
             ...serverLogs,
         ].sort((a, b) => a.ts - b.ts);
 
         console.log("----- merged logs (chronological) -----");
         for (const entry of merged) {
-            console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
+            console.log(
+                new Date(entry.ts).toISOString(),
+                `[${entry.source}]`,
+                entry.msg,
+            );
         }
         console.log("----- end merged logs -----");
     } catch (error) {
-        console.error("[collectAndPrintMergedLogs] Error collecting logs:", error);
+        console.error(
+            "[collectAndPrintMergedLogs] Error collecting logs:",
+            error,
+        );
         // Still print client logs even if server logs fail
         if (clientLogs.length > 0) {
-            console.log("----- client logs only (server logs unavailable) -----");
+            console.log(
+                "----- client logs only (server logs unavailable) -----",
+            );
             for (const entry of clientLogs) {
-                console.log(new Date(entry.ts).toISOString(), `[${entry.source}]`, entry.msg);
+                console.log(
+                    new Date(entry.ts).toISOString(),
+                    `[${entry.source}]`,
+                    entry.msg,
+                );
             }
             console.log("----- end client logs -----");
         }
@@ -104,7 +153,7 @@ async function collectAndPrintMergedLogs(
 
 async function setupPages<N extends number>(
     browser: Browser,
-    count: N
+    count: N,
 ): Promise<{
     pages: BuildTuple<Page, N>;
     contexts: BuildTuple<BrowserContext, N>;
@@ -116,7 +165,11 @@ async function setupPages<N extends number>(
     const clientLogs: LogEntry[] = [];
     const log = (message: string) => {
         const ts = Date.now();
-        const entry: LogEntry = { ts, msg: `[client] ${message}`, source: "client" };
+        const entry: LogEntry = {
+            ts,
+            msg: `[client] ${message}`,
+            source: "client",
+        };
         clientLogs.push(entry);
         console.log(new Date(ts).toISOString(), entry.msg);
     };
@@ -133,18 +186,29 @@ async function setupPages<N extends number>(
     const playerPanelHearts = (page: Page, playerName: string) =>
         page
             .locator("#players > *")
-            .filter({ has: page.getByRole("heading", { name: new RegExp(`^${playerName}`) }) })
+            .filter({
+                has: page.getByRole("heading", {
+                    name: new RegExp(`^${playerName}`),
+                }),
+            })
             .locator("span > svg");
 
     const locators = (page: Page): Omit<DomEntry, "page"> => ({
         homepageInput: page.getByRole("textbox", { name: /your name/i }),
         highlightInput: page.locator('input[aria-hidden="true"]').first(),
-        wordInput: page.locator('input[type="text"]:not([readonly]):not([aria-hidden="true"])'),
-        submitButton: page.getByRole("button", { name: /submit word/i }),
+        wordInput: page.locator(
+            'input[type="text"]:not([readonly]):not([aria-hidden="true"])',
+        ),
+        submitButton: page.getByRole("button", {
+            name: gameStrings.submitButtonText,
+        }),
         loadingBlur: page.locator("div.backdrop-blur-sm"),
         matchLetterDisplay: page
-            .getByRole("heading", { name: gameStrings.matchLetter })
-            .locator('xpath=following-sibling::span')
+            .getByRole("heading", {
+                name: gameStrings.matchLetter,
+                exact: false,
+            })
+            .locator("xpath=following-sibling::span")
             .first(),
         player1PanelHeartDisplay: playerPanelHearts(page, "Player1"),
         player2PanelHeartDisplay: playerPanelHearts(page, "Player2"),
@@ -166,7 +230,10 @@ async function setupPages<N extends number>(
         pages.push(page);
     }
 
-    const dom = pages.map((p) => ({ ...locators(p), page: p })) as BuildTuple<DomEntry, N>;
+    const dom = pages.map((p) => ({ ...locators(p), page: p })) as BuildTuple<
+        DomEntry,
+        N
+    >;
 
     return {
         pages: pages as BuildTuple<Page, N>,
@@ -177,10 +244,16 @@ async function setupPages<N extends number>(
     };
 }
 
-async function enterNameAndOpenLobby(page: Page, name: string, log: (message: string) => void) {
+async function enterNameAndOpenLobby(
+    page: Page,
+    name: string,
+    log: (message: string) => void,
+) {
     log(`goto / and enter lobby as ${name}`);
     await page.goto("/", { timeout: E2E_TIMEOUT });
-    await page.getByRole("textbox", { name: /your name/i }).waitFor({ state: "visible", timeout: E2E_TIMEOUT });
+    await page
+        .getByRole("textbox", { name: /your name/i })
+        .waitFor({ state: "visible", timeout: E2E_TIMEOUT });
     await page.getByRole("textbox", { name: /your name/i }).fill(name);
     await page.getByRole("button", { name: /go to lobby/i }).click();
     await page.waitForURL("**/lobby", { timeout: E2E_TIMEOUT });
@@ -190,7 +263,8 @@ async function hostCreateRoom(
     page: Page,
     log: (message: string) => void,
     roomName = `E2E Room ${Date.now()}`,
-    language: "en" | "ko" = "ko"
+    language: "en" | "ko" = "ko",
+    solo: boolean = false,
 ): Promise<{ roomId: string; roomName: string }> {
     log(`host: create & join room "${roomName}" with language ${language}`);
     await page.getByPlaceholder(/room name/i).fill(roomName);
@@ -201,8 +275,11 @@ async function hostCreateRoom(
     }
     await page.getByRole("button", { name: /create & join/i }).click();
     try {
-        await page.waitForURL("**/room/**", { timeout: E2E_TIMEOUT, waitUntil: "commit" });
-        await waitForSoloRoomPageReady(page);
+        await page.waitForURL("**/room/**", {
+            timeout: E2E_TIMEOUT,
+            waitUntil: "commit",
+        });
+        if (solo) await waitForSoloRoomPageReady(page);
     } catch {
         const errorText = await page
             .locator("p")
@@ -211,7 +288,7 @@ async function hostCreateRoom(
             .textContent()
             .catch(() => null);
         throw new E2ETestAssertionError(
-            `Host failed to create room${errorText ? `: ${errorText}` : ""} (url: ${page.url()})`
+            `Host failed to create room${errorText ? `: ${errorText}` : ""} (url: ${page.url()})`,
         );
     }
     const roomId = roomIdFromUrl(page.url());
@@ -219,41 +296,66 @@ async function hostCreateRoom(
     return { roomId, roomName };
 }
 
-
 async function waitForSoloRoomPageReady(page: Page) {
     await page.waitForURL("**/room/**", { timeout: E2E_TIMEOUT });
-    await expect(page.locator("input:not(:disabled)")).toHaveCount(1, { timeout: E2E_TIMEOUT });
+    await expect(page.locator("input:not(:disabled)")).toHaveCount(1, {
+        timeout: E2E_TIMEOUT,
+    });
 }
 
 async function waitForRoomPageReady(page: Page) {
     await page.waitForURL("**/room/**", { timeout: E2E_TIMEOUT });
-    await expect(page.getByText(/could not join this room/i)).not.toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(/joining room/i)).not.toBeVisible({ timeout: E2E_TIMEOUT });
-    await expect(
-        page.getByText(/Waiting for game to start.../i)
-    ).toBeVisible({ timeout: E2E_TIMEOUT });
+
+    await expect(page.getByText(/could not join this room/i)).not.toBeVisible({
+        timeout: E2E_TIMEOUT,
+    });
+    await expect(page.getByText(/joining room/i)).not.toBeVisible({
+        timeout: E2E_TIMEOUT,
+    });
+
+    const joinButton = page.getByRole("button", {
+        name: gameStrings.joinAsPlayer,
+    });
+
+    await joinButton.isVisible({ timeout: E2E_TIMEOUT });
+    await joinButton.click();
+
+    await expect(page.getByText(/Waiting for game to start.../i)).toBeVisible({
+        timeout: E2E_TIMEOUT,
+    });
 }
 
-async function joinRoomPage(page: Page, roomId: string, log: (message: string) => void) {
-    log(`join room ${roomId}`);
+async function joinRoomPage(
+    page: Page,
+    roomId: string,
+    log: (message: string) => void,
+) {
+    log(`[${page}] join room ${roomId}`);
     await page.goto(`/room/${roomId}`, { timeout: E2E_TIMEOUT });
     await waitForRoomPageReady(page);
 }
 
 async function waitForHostCanStart(hostPage: Page) {
+    const startButton = hostPage.getByRole("button", {
+        name: gameStrings.startGame,
+    });
     await expect
-        .poll(
-            async () => hostPage.getByRole("button", { name: /^start game$/i }).isVisible(),
-            { timeout: 30_000, intervals: [250, 500, 1000] }
-        )
+        .poll(async () => startButton.isVisible(), {
+            timeout: E2E_TIMEOUT,
+        })
         .toBe(true);
+    await startButton.click();
 }
 
 async function navigateToGameStart(
     pages: Page[],
     dom: DomEntry[],
     log: (message: string) => void,
-    options: { startGame?: boolean, language?: "en" | "ko", solo?: boolean } = {}
+    options: {
+        startGame?: boolean;
+        language?: "en" | "ko";
+        solo?: boolean;
+    } = {},
 ) {
     const { startGame = true, language = "ko", solo = false } = options;
     const [hostPage, ...guestPages] = pages;
@@ -262,7 +364,13 @@ async function navigateToGameStart(
         await enterNameAndOpenLobby(pages[i], `Player${i + 1}`, log);
     }
 
-    const { roomId } = await hostCreateRoom(hostPage, log, undefined, language);
+    const { roomId } = await hostCreateRoom(
+        hostPage,
+        log,
+        undefined,
+        language,
+        solo,
+    );
 
     for (const guestPage of guestPages) {
         await joinRoomPage(guestPage, roomId, log);
@@ -283,11 +391,10 @@ async function navigateToGameStart(
     }
 
     if (!solo) {
-		log("host: start game");
-        await hostPage.getByRole("button", { name: /^start game$/i }).click();
-		await hostPage.evaluate(async (id) => {
-			await fetch(`/api/rooms/${id}/start`, { method: "POST" });
-		}, roomId);
+        // log("host: start game (API call)");
+        // await hostPage.evaluate(async (id) => {
+        //     await fetch(`/api/rooms/${id}/start`, { method: "POST" });
+        // }, roomId);
     }
 
     // log("reload clients after game start");
@@ -295,7 +402,7 @@ async function navigateToGameStart(
     //     await page.reload();
     //     await waitForRoomPageReady(page);
     // }
-
+    await hostPage.pause();
     log("wait until at least one client can submit");
     await expect
         .poll(
@@ -305,489 +412,801 @@ async function navigateToGameStart(
                 }
                 return false;
             },
-            { timeout: E2E_TIMEOUT, intervals: [250, 500, 1000] }
+            { timeout: E2E_TIMEOUT },
         )
         .toBe(true);
 }
 
 async function expectWinner(page: Page, winnerName: string) {
-    await expect(page.getByText("Winner is:")).toBeVisible({ timeout: E2E_TIMEOUT });
+    await expect(page.getByText("Winner is:")).toBeVisible({
+        timeout: E2E_TIMEOUT,
+    });
     await expect(
-        page.locator(".stat-value").filter({ hasText: winnerName })
+        page.locator(".stat-value").filter({ hasText: winnerName }),
     ).toBeVisible({ timeout: E2E_TIMEOUT });
 }
 
-async function testCleanUp(contexts: BrowserContext[], clientLogs: LogEntry[], request: APIRequestContext, log: (message: string) => void) {
+async function testCleanUp(
+    contexts: BrowserContext[],
+    clientLogs: LogEntry[],
+    request: APIRequestContext,
+    log: (message: string) => void,
+) {
     // Always close contexts, even on failure
     await Promise.all(
         contexts.map((ctx, i) =>
             ctx.close().catch((err: unknown) => {
                 log(`Failed to close context${i}: ${err}`);
-            })
-        )
+            }),
+        ),
     );
     await collectAndPrintMergedLogs(clientLogs, request);
 }
 
 test.beforeEach(async () => {
-    if (envGet("MOCK_GET_RANDOM_WORD") != "true" || envGet("MOCK_LOOKUP_WORD") != "true" || envGet("MOCK_WORD_VALIDATION_FAIL") == "true") {
+    if (
+        envGet("MOCK_GET_RANDOM_WORD") != "true" ||
+        envGet("MOCK_LOOKUP_WORD") != "true" ||
+        envGet("MOCK_WORD_VALIDATION_FAIL") == "true"
+    ) {
         console.warn(
             `[e2e WARNING] It is recommended to run e2e tests with MOCK_GET_RANDOM_WORD=true, MOCK_LOOKUP_WORD=true and MOCK_WORD_VALIDATION_FAIL!=true. Current: MOCK_GET_RANDOM_WORD=${envGet("MOCK_GET_RANDOM_WORD")}, MOCK_LOOKUP_WORD=${envGet("MOCK_LOOKUP_WORD")}, MOCK_WORD_VALIDATION_FAIL=${envGet("MOCK_WORD_VALIDATION_FAIL")}`,
         );
     }
 });
 
-test(roomFlowTestNames.resetAfterReload, async ({ browser, request }, testInfo) => {
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "false" },
-        testInfo.title
-    );
+test(
+    roomFlowTestNames.resetAfterReload,
+    async ({ browser, request }, testInfo) => {
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "false",
+            },
+            testInfo.title,
+        );
 
-    const { pages, contexts, clientLogs, log } = await setupPages(browser, 1);
-    const [pageA] = pages;
+        const { pages, contexts, clientLogs, log } = await setupPages(
+            browser,
+            1,
+        );
+        const [pageA] = pages;
 
-    let cdp: CDPSession | null = null;
+        let cdp: CDPSession | null = null;
 
-    try {
-        await enterNameAndOpenLobby(pageA, "Foo", log);
-        const { roomId } = await hostCreateRoom(pageA, log, `E2E Reset ${Date.now()}`);
-        await waitForSoloRoomPageReady(pageA);
-        void roomId;
+        try {
+            await enterNameAndOpenLobby(pageA, "Foo", log);
+            const { roomId } = await hostCreateRoom(
+                pageA,
+                log,
+                `E2E Reset ${Date.now()}`,
+            );
+            await waitForSoloRoomPageReady(pageA);
+            void roomId;
 
-        log("hard reload with cleared site data");
-        cdp = await pageA.context().newCDPSession(pageA);
-        await cdp.send("Network.clearBrowserCache");
-        await cdp.send("Network.clearBrowserCookies");
-        await pageA.evaluate(() => {
-            localStorage.clear();
-            sessionStorage.clear();
-        });
-        await cdp.send("Page.reload", { ignoreCache: true });
+            log("hard reload with cleared site data");
+            cdp = await pageA.context().newCDPSession(pageA);
+            await cdp.send("Network.clearBrowserCache");
+            await cdp.send("Network.clearBrowserCookies");
+            await pageA.evaluate(() => {
+                localStorage.clear();
+                sessionStorage.clear();
+            });
+            await cdp.send("Page.reload", { ignoreCache: true });
 
-        log("expect redirect to home after reload without persisted session");
-        await expect(pageA).not.toHaveURL(/\/room\//, { timeout: E2E_TIMEOUT });
-        await expect(pageA.getByRole("textbox", { name: /your name/i })).toBeVisible({ timeout: E2E_TIMEOUT });
-    } catch (error) {
-        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
-        if (error instanceof Error && error.stack) {
-            log(`Stack trace: ${error.stack}`);
-        }
-        throw error;
-    } finally {
-        if (cdp) {
-            try {
-                await cdp.detach();
-            } catch (cleanupError) {
-                log(`Failed to detach CDP session: ${cleanupError}`);
+            log(
+                "expect redirect to home after reload without persisted session",
+            );
+            await expect(pageA).not.toHaveURL(/\/room\//, {
+                timeout: E2E_TIMEOUT,
+            });
+            await expect(
+                pageA.getByRole("textbox", { name: /your name/i }),
+            ).toBeVisible({ timeout: E2E_TIMEOUT });
+        } catch (error) {
+            log(
+                `TEST ERROR: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            if (error instanceof Error && error.stack) {
+                log(`Stack trace: ${error.stack}`);
             }
-        }
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
-
-test(roomFlowTestNames.dualBrowserJoin, async ({ browser, request }, testInfo) => {
-    // Assert appropriate env
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "false" },
-        testInfo.title
-    );
-
-    /**
-     * Regression guard: verify two isolated browsers can both join a room and render all player slots.
-     */
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 2);
-    const [pageA, pageB] = pages;
-
-    try {
-        await navigateToGameStart(pages, dom, log);
-        const playersA = pageA.locator("#players");
-
-        log("assert #players visible");
-        await expect(playersA).toBeVisible({ timeout: 5_000 });
-
-        log(`assert #players has ${pages.length} children`);
-        await expect(playersA.locator("> *")).toHaveCount(pages.length, { timeout: E2E_TIMEOUT });
-    } catch (error) {
-        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
-        if (error instanceof Error && error.stack) {
-            log(`Stack trace: ${error.stack}`);
-        }
-        throw error; // Re-throw after logging
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
-
-test(roomFlowTestNames.turnChangeUpdatesHighlight, async ({ browser, request }, testInfo) => {
-    // Assert appropriate env
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "false" },
-        testInfo.title
-    );
-
-    async function assertHighlightValue(dom: { matchLetterDisplay: Locator }, highlightInputLocator: Locator) {
-        const currentMatchLetterDisplay = await dom.matchLetterDisplay.textContent();
-        if (!currentMatchLetterDisplay) throw new E2ETestAssertionError("Match letter display not found");
-        const highlightInputValue = await highlightInputLocator.inputValue();
-        const highlightExpectValue = decomposeSyllable(currentMatchLetterDisplay)[0];
-        log(`assertHighlightValue: highlightInputValue: ${highlightInputValue}, highlightExpectValue: ${highlightExpectValue}`);
-        expect(highlightInputValue).toBe(highlightExpectValue);
-        return highlightExpectValue;
-    }
-
-    function randomHangulBlock() {
-        // Hangul syllables range: U+AC00 (44032) to U+D7A3 (55203)
-        const start = 0xac00;
-        const end = 0xd7a3;
-        const code = Math.floor(Math.random() * (end - start + 1)) + start;
-        return String.fromCharCode(code);
-    }
-
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 2);
-    const [pageA, pageB] = pages;
-
-    try {
-        await navigateToGameStart(pages, dom, log);
-
-        log("find which client has the opening turn");
-        let activeDom = dom[0];
-        let inactiveDom = dom[1];
-        if (!(await dom[0].wordInput.isEnabled({ timeout: E2E_TIMEOUT }))) {
-            if (await dom[1].wordInput.isEnabled({ timeout: E2E_TIMEOUT })) {
-                activeDom = dom[1];
-                inactiveDom = dom[0];
-            } else {
-                throw new E2ETestAssertionError("No enabled word input after game start");
+            throw error;
+        } finally {
+            if (cdp) {
+                try {
+                    await cdp.detach();
+                } catch (cleanupError) {
+                    log(`Failed to detach CDP session: ${cleanupError}`);
+                }
             }
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
+
+test(
+    roomFlowTestNames.dualBrowserJoin,
+    async ({ browser, request }, testInfo) => {
+        // Assert appropriate env
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "false",
+            },
+            testInfo.title,
+        );
+
+        /**
+         * Regression guard: verify two isolated browsers can both join a room and render all player slots.
+         */
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
+        const [pageA, pageB] = pages;
+
+        try {
+            await navigateToGameStart(pages, dom, log);
+            const playersA = pageA.locator("#players");
+
+            log("assert #players visible");
+            await expect(playersA).toBeVisible({ timeout: 5_000 });
+
+            log(`assert #players has ${pages.length} children`);
+            await expect(playersA.locator("> *")).toHaveCount(pages.length, {
+                timeout: E2E_TIMEOUT,
+            });
+        } catch (error) {
+            log(
+                `TEST ERROR: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            if (error instanceof Error && error.stack) {
+                log(`Stack trace: ${error.stack}`);
+            }
+            throw error; // Re-throw after logging
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
+
+test(
+    roomFlowTestNames.turnChangeUpdatesHighlight,
+    async ({ browser, request }, testInfo) => {
+        // Assert appropriate env
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "false",
+            },
+            testInfo.title,
+        );
+
+        async function assertHighlightValue(
+            dom: { matchLetterDisplay: Locator },
+            highlightInputLocator: Locator,
+        ) {
+            const currentMatchLetterDisplay =
+                await dom.matchLetterDisplay.textContent();
+            if (!currentMatchLetterDisplay)
+                throw new E2ETestAssertionError(
+                    "Match letter display not found",
+                );
+            const highlightInputValue =
+                await highlightInputLocator.inputValue();
+            const highlightExpectValue = decomposeSyllable(
+                currentMatchLetterDisplay,
+            )[0];
+            log(
+                `assertHighlightValue: highlightInputValue: ${highlightInputValue}, highlightExpectValue: ${highlightExpectValue}`,
+            );
+            expect(highlightInputValue).toBe(highlightExpectValue);
+            return highlightExpectValue;
         }
 
-        log("get initial highlight value from active player");
-        const highlightValueActive = await assertHighlightValue(activeDom, activeDom.highlightInput);
-        log(`initial highlight value: ${highlightValueActive}`);
-
-        const matchLetter = await activeDom.matchLetterDisplay.textContent();
-        if (!matchLetter) throw new E2ETestAssertionError("Match letter display not found");
-        const wordToSubmit = matchLetter + randomHangulBlock();
-        log(`typing word: ${wordToSubmit}`);
-        await activeDom.wordInput.fill(wordToSubmit, { timeout: E2E_TIMEOUT });
-
-        log("submitting word");
-        await activeDom.submitButton.click();
-
-        log("waiting for turn to change");
-        await expect(activeDom.wordInput).toBeDisabled({ timeout: E2E_TIMEOUT });
-
-        const expectedNewMatchLetter = wordToSubmit.slice(-1);
-        log(`waiting for new matchLetter to be: ${expectedNewMatchLetter}`);
-        await expect(activeDom.matchLetterDisplay).toHaveText(expectedNewMatchLetter, { timeout: E2E_TIMEOUT });
-        await expect(inactiveDom.matchLetterDisplay).toHaveText(expectedNewMatchLetter, { timeout: E2E_TIMEOUT });
-
-        log("verifying turn moved to the other player");
-        await expect(inactiveDom.wordInput).toBeEnabled({ timeout: E2E_TIMEOUT });
-        await expect(activeDom.wordInput).toBeDisabled({ timeout: E2E_TIMEOUT });
-
-        log("assert highlight value on the new active player");
-        const highlightValueNext = await assertHighlightValue(inactiveDom, inactiveDom.highlightInput);
-        log(`highlight value after turn change: ${highlightValueNext}`);
-    } catch (error) {
-        log(`TEST ERROR: ${error instanceof Error ? error.message : String(error)}`);
-        if (error instanceof Error && error.stack) {
-            log(`Stack trace: ${error.stack}`);
+        function randomHangulBlock() {
+            // Hangul syllables range: U+AC00 (44032) to U+D7A3 (55203)
+            const start = 0xac00;
+            const end = 0xd7a3;
+            const code = Math.floor(Math.random() * (end - start + 1)) + start;
+            return String.fromCharCode(code);
         }
-        throw error; // Re-throw after logging
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
 
-test(roomFlowTestNames.gameStartsAfterBothPlayersJoin, async ({ browser, request }, testInfo) => {
-    // Assert appropriate env
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "false" },
-        testInfo.title
-    );
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
+        const [pageA, pageB] = pages;
 
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 2);
-    const [pageA] = pages;
-    try {
-        await navigateToGameStart(pages, dom, log, { startGame: false });
+        try {
+            await navigateToGameStart(pages, dom, log);
 
-        log("both players see waiting overlay");
-        await expect(pageA.getByText(/waiting for game to start/i)).toBeVisible({ timeout: E2E_TIMEOUT });
-        await expect(pages[1].getByText(/waiting for game to start/i)).toBeVisible({ timeout: E2E_TIMEOUT });
+            log("find which client has the opening turn");
+            let activeDom = dom[0];
+            let inactiveDom = dom[1];
+            if (!(await dom[0].wordInput.isEnabled({ timeout: E2E_TIMEOUT }))) {
+                if (
+                    await dom[1].wordInput.isEnabled({ timeout: E2E_TIMEOUT })
+                ) {
+                    activeDom = dom[1];
+                    inactiveDom = dom[0];
+                } else {
+                    throw new E2ETestAssertionError(
+                        "No enabled word input after game start",
+                    );
+                }
+            }
 
-        log("host starts the game");
-        await pageA.getByRole("button", { name: /^start game$/i }).click();
+            log("get initial highlight value from active player");
+            const highlightValueActive = await assertHighlightValue(
+                activeDom,
+                activeDom.highlightInput,
+            );
+            log(`initial highlight value: ${highlightValueActive}`);
 
-        log("playing UI appears on both clients");
-        await expect(dom[0].submitButton).toBeVisible({ timeout: E2E_TIMEOUT });
-        await expect(dom[1].submitButton).toBeVisible({ timeout: E2E_TIMEOUT });
-    } catch (err) {
-        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-        throw err;
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
+            const matchLetter =
+                await activeDom.matchLetterDisplay.textContent();
+            if (!matchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display not found",
+                );
+            const wordToSubmit = matchLetter + randomHangulBlock();
+            log(`typing word: ${wordToSubmit}`);
+            await activeDom.wordInput.fill(wordToSubmit, {
+                timeout: E2E_TIMEOUT,
+            });
+
+            log("submitting word");
+            await activeDom.submitButton.click();
+
+            log("waiting for turn to change");
+            await expect(activeDom.wordInput).toBeDisabled({
+                timeout: E2E_TIMEOUT,
+            });
+
+            const expectedNewMatchLetter = wordToSubmit.slice(-1);
+            log(`waiting for new matchLetter to be: ${expectedNewMatchLetter}`);
+            await expect(activeDom.matchLetterDisplay).toHaveText(
+                expectedNewMatchLetter,
+                { timeout: E2E_TIMEOUT },
+            );
+            await expect(inactiveDom.matchLetterDisplay).toHaveText(
+                expectedNewMatchLetter,
+                { timeout: E2E_TIMEOUT },
+            );
+
+            log("verifying turn moved to the other player");
+            await expect(inactiveDom.wordInput).toBeEnabled({
+                timeout: E2E_TIMEOUT,
+            });
+            await expect(activeDom.wordInput).toBeDisabled({
+                timeout: E2E_TIMEOUT,
+            });
+
+            log("assert highlight value on the new active player");
+            const highlightValueNext = await assertHighlightValue(
+                inactiveDom,
+                inactiveDom.highlightInput,
+            );
+            log(`highlight value after turn change: ${highlightValueNext}`);
+        } catch (error) {
+            log(
+                `TEST ERROR: ${error instanceof Error ? error.message : String(error)}`,
+            );
+            if (error instanceof Error && error.stack) {
+                log(`Stack trace: ${error.stack}`);
+            }
+            throw error; // Re-throw after logging
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
+
+test(
+    roomFlowTestNames.gameStartsAfterBothPlayersJoin,
+    async ({ browser, request }, testInfo) => {
+        // Assert appropriate env
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "false",
+            },
+            testInfo.title,
+        );
+
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
+        const [pageA] = pages;
+        try {
+            await navigateToGameStart(pages, dom, log, { startGame: false });
+
+            log("both players see waiting overlay");
+            await expect(
+                pageA.getByText(/waiting for game to start/i),
+            ).toBeVisible({ timeout: E2E_TIMEOUT });
+            await expect(
+                pages[1].getByText(/waiting for game to start/i),
+            ).toBeVisible({ timeout: E2E_TIMEOUT });
+
+            log("host starts the game");
+            await pageA
+                .getByRole("button", {
+                    name: gameStrings.startGame,
+                })
+                .click();
+
+            log("playing UI appears on both clients");
+            await expect(dom[0].submitButton).toBeVisible({
+                timeout: E2E_TIMEOUT,
+            });
+            await expect(dom[1].submitButton).toBeVisible({
+                timeout: E2E_TIMEOUT,
+            });
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
 
 // ========================================
 // ============ CUSTOM RUNNER =============
 // ========================================
 
-test(roomFlowTestNames.playerHealthDecreases, async ({ request, browser }, testInfo) => {
-    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
-        testInfo.title
-    );
+test(
+    roomFlowTestNames.playerHealthDecreases,
+    async ({ request, browser }, testInfo) => {
+        if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "true",
+            },
+            testInfo.title,
+        );
 
-    const TIMEOUT = E2E_TIMEOUT;
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 2);
+        const TIMEOUT = E2E_TIMEOUT;
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
 
-    try {
-        await navigateToGameStart(pages, dom, log);
+        try {
+            await navigateToGameStart(pages, dom, log);
 
-        // type an invalid word on page A
-        log('type an invalid word on A');
-        const currentMatchLetter = (await dom[0].matchLetterDisplay.textContent());
-        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
-        await dom[0].wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            // type an invalid word on page A
+            log("type an invalid word on A");
+            const currentMatchLetter =
+                await dom[0].matchLetterDisplay.textContent();
+            if (!currentMatchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display for pageA did not resolve",
+                );
+            await dom[0].wordInput.fill(currentMatchLetter, {
+                timeout: TIMEOUT,
+            });
 
-        // submit the word on page A
-        log('submit the word on A');
-        await dom[0].submitButton.click();
+            // submit the word on page A
+            log("submit the word on A");
+            await dom[0].submitButton.click();
 
-        // assert the input is error
-        
-        log('make sure the main hearts display for PlayerA decreases by one');
-        await expect(dom[0].thisPlayerHeartDisplay.locator('span')).toHaveCount(4, { timeout: TIMEOUT });
+            // assert the input is error
 
-        log('make sure the main hearts display for PlayerB does NOT decrease');
-        await expect(dom[1].thisPlayerHeartDisplay.locator('span')).toHaveCount(5, { timeout: TIMEOUT });
+            log(
+                "make sure the main hearts display for PlayerA decreases by one",
+            );
+            await expect(
+                dom[0].thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(4, { timeout: TIMEOUT });
 
-        log('make sure the PlayerA heart display also decreases on PageA');
-        await expect(dom[0].player1PanelHeartDisplay).toHaveCount(4, { timeout: TIMEOUT });
+            log(
+                "make sure the main hearts display for PlayerB does NOT decrease",
+            );
+            await expect(
+                dom[1].thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(5, { timeout: TIMEOUT });
 
-        log("make sure the Player2's heart doesn't change on PageA");
-        await expect(dom[0].player2PanelHeartDisplay).toHaveCount(5, { timeout: TIMEOUT });
+            log("make sure the PlayerA heart display also decreases on PageA");
+            await expect(dom[0].player1PanelHeartDisplay).toHaveCount(4, {
+                timeout: TIMEOUT,
+            });
 
-        log("make sure PlayerA's heart display has decreased on PageB");
-        await expect(dom[1].player1PanelHeartDisplay).toHaveCount(4, { timeout: TIMEOUT });
+            log("make sure the Player2's heart doesn't change on PageA");
+            await expect(dom[0].player2PanelHeartDisplay).toHaveCount(5, {
+                timeout: TIMEOUT,
+            });
 
-    } catch (err) {
-        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-        throw err;
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
+            log("make sure PlayerA's heart display has decreased on PageB");
+            await expect(dom[1].player1PanelHeartDisplay).toHaveCount(4, {
+                timeout: TIMEOUT,
+            });
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
 
-});
+test(
+    roomFlowTestNames.playerDiesIn3PlayerGame,
+    async ({ browser, request }, testInfo) => {
+        if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+        assertEnvVarEquals({ MOCK_DICTIONARY_DATA: "true" }, testInfo.title);
 
-test(roomFlowTestNames.playerDiesIn3PlayerGame, async ({ browser, request }, testInfo) => {
-    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
-    assertEnvVarEquals({ MOCK_DICTIONARY_DATA: "true" }, testInfo.title);
+        const TIMEOUT = E2E_TIMEOUT;
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            3,
+        );
+        const [domA, domB, domC] = dom;
 
-    const TIMEOUT = E2E_TIMEOUT;
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 3);
-    const [domA, domB, domC] = dom;
+        try {
+            await navigateToGameStart(pages, dom, log);
 
-    try {
-        await navigateToGameStart(pages, dom, log);
+            log("get the current match letter for pageA");
+            const currentMatchLetter =
+                await domA.matchLetterDisplay.textContent();
+            if (!currentMatchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display for pageA did not resolve",
+                );
 
-        log('get the current match letter for pageA');
-        const currentMatchLetter = await domA.matchLetterDisplay.textContent();
-        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
+            log("fill the current match letter on pageA");
+            await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domA.submitButton.click();
 
-        log('fill the current match letter on pageA');
-        await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domA.submitButton.click();
+            log("expect the turn to change from pageA to pageB");
+            await expect(domA.page.getByText("Not your turn")).toBeVisible({
+                timeout: TIMEOUT,
+            });
+            await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
+            await expect(domC.wordInput).toBeDisabled({ timeout: TIMEOUT });
 
-        log('expect the turn to change from pageA to pageB');
-        await expect(domA.page.getByText("Not your turn")).toBeVisible({ timeout: TIMEOUT });
-        await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
-        await expect(domC.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            log(
+                "fill the current match letter on pageB - expect invalid word (current health should be 5)",
+            );
+            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domB.submitButton.click();
 
-        log('fill the current match letter on pageB - expect invalid word (current health should be 5)');
-        await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click();
+            log("expect the input is error on pageB");
+            await expect(
+                domB.thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(4, { timeout: TIMEOUT });
 
-        log('expect the input is error on pageB');
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(4, { timeout: TIMEOUT });
+            log(
+                "fill the current match letter on pageB - expect invalid word (current health should be 4)",
+            );
+            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domB.submitButton.click();
 
-        log('fill the current match letter on pageB - expect invalid word (current health should be 4)');
-        await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click();
+            log("expect the input is error on pageB");
+            await expect(
+                domB.thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(3, { timeout: TIMEOUT });
 
-        log('expect the input is error on pageB');
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(3, { timeout: TIMEOUT });
+            log(
+                "fill the current match letter on pageB - expect invalid word (current health should be 3)",
+            );
+            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domB.submitButton.click();
 
-        log('fill the current match letter on pageB - expect invalid word (current health should be 3)');
-        await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click();
+            log("expect the input is error on pageB");
+            await expect(
+                domB.thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(2, { timeout: TIMEOUT });
 
-        log('expect the input is error on pageB');
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(2, { timeout: TIMEOUT });
+            log(
+                "fill the current match letter on pageB - expect invalid word (current health should be 2)",
+            );
+            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domB.submitButton.click();
 
-        log('fill the current match letter on pageB - expect invalid word (current health should be 2)');
-        await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click();
+            log("expect the input is error on pageB");
+            await expect(
+                domB.thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(1, { timeout: TIMEOUT });
 
-        log('expect the input is error on pageB');
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(1, { timeout: TIMEOUT });
+            log(
+                "fill the current match letter on pageB - expect invalid word (current health should be 1)",
+            );
+            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domB.submitButton.click({ timeout: TIMEOUT });
 
-        log('fill the current match letter on pageB - expect invalid word (current health should be 1)');
-        await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domB.submitButton.click({ timeout: TIMEOUT });
+            log("expect there to be an svg icon (X instead of a heart)");
+            await expect(
+                domB.thisPlayerHeartDisplay.locator("span"),
+            ).toHaveCount(1, { timeout: TIMEOUT });
 
-        log('expect there to be an svg icon (X instead of a heart)');
-        await expect(domB.thisPlayerHeartDisplay.locator('span')).toHaveCount(1, { timeout: TIMEOUT });
+            log("expect the turn to be on Player3");
+            await expect(domB.page.getByText("Not your turn")).toBeVisible({
+                timeout: TIMEOUT,
+            });
+            await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });
+            await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
 
-        log('expect the turn to be on Player3');
-        await expect(domB.page.getByText("Not your turn")).toBeVisible({ timeout: TIMEOUT });
-        await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });
-        await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            log("fill Player3 and go to next turn");
+            await domC.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domC.submitButton.click();
 
-        log('fill Player3 and go to next turn');
-        await domC.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domC.submitButton.click();
+            log("expect Player3 to be disabled");
+            await expect(domC.wordInput).toBeDisabled({ timeout: TIMEOUT });
 
-        log('expect Player3 to be disabled')
-        await expect(domC.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            log("expect Player1 to be enabled");
+            await expect(domA.wordInput).toBeEnabled({ timeout: TIMEOUT });
 
-        log('expect Player1 to be enabled')
-        await expect(domA.wordInput).toBeEnabled({ timeout: TIMEOUT });
+            log("fill Player1 and go to next turn");
+            await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
+            await domA.submitButton.click();
 
-        log('fill Player1 and go to next turn');
-        await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domA.submitButton.click();
+            log("expect Player1 to be disabled");
+            await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
 
-        log('expect Player1 to be disabled')
-        await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            log("expect Player2 to be disabled (skipped)");
+            await expect(domB.wordInput).toBeDisabled({ timeout: TIMEOUT });
 
-        log('expect Player2 to be disabled (skipped)')
-        await expect(domB.wordInput).toBeDisabled({ timeout: TIMEOUT });
-
-        log('expect Player3 to be enabled')
-        await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });
-
-
-    } catch (err) {
-        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-        throw err;
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
+            log("expect Player3 to be enabled");
+            await expect(domC.wordInput).toBeEnabled({ timeout: TIMEOUT });
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
+        }
+    },
+);
 
 // End Screen Releated
 
-test(roomFlowTestNames.endGameWith2Players, async ({ browser, request }, testInfo) => {
-    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
-        testInfo.title
-    );
+test(
+    roomFlowTestNames.endGameWith2Players,
+    async ({ browser, request }, testInfo) => {
+        if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "true",
+            },
+            testInfo.title,
+        );
 
-    const TIMEOUT = E2E_TIMEOUT;
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 2);
-    const [domA, domB] = dom;
+        const TIMEOUT = E2E_TIMEOUT;
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
+        const [domA, domB] = dom;
 
-    try {
-        await navigateToGameStart(pages, dom, log);
-        const currentMatchLetter = await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
-        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
+        try {
+            await navigateToGameStart(pages, dom, log);
+            const currentMatchLetter =
+                await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
+            if (!currentMatchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display for pageA did not resolve",
+                );
 
-        for (let i = 0, max = 4; i < max; i++) {
-            log(`type an invalid word on A (${i + 1}/${max})`);
+            for (let i = 0, max = 4; i < max; i++) {
+                log(`type an invalid word on A (${i + 1}/${max})`);
+                await domA.wordInput.fill(currentMatchLetter, {
+                    timeout: TIMEOUT,
+                });
+
+                log(`submit the word on A (${i + 1}/${max})`);
+                await domA.submitButton.click();
+
+                log(
+                    `make sure the main hearts display for PlayerA decreases by one (${i + 1}/${max})`,
+                );
+                await expect(
+                    domA.thisPlayerHeartDisplay.locator("span"),
+                ).toHaveCount(5 - (i + 1), {
+                    timeout: TIMEOUT,
+                });
+            }
+
+            log("type an invalid word on A (5/5) to end the game");
             await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-
-            log(`submit the word on A (${i + 1}/${max})`);
             await domA.submitButton.click();
 
-            log(`make sure the main hearts display for PlayerA decreases by one (${i + 1}/${max})`);
-            await expect(domA.thisPlayerHeartDisplay.locator("span")).toHaveCount(5 - (i + 1), {
-                timeout: TIMEOUT,
-            });
+            log("expect Player2 to win on both clients");
+            await expectWinner(domA.page, "Player2");
+            await expectWinner(domB.page, "Player2");
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
         }
+    },
+);
 
-        log("type an invalid word on A (5/5) to end the game");
-        await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-        await domA.submitButton.click();
+test(
+    roomFlowTestNames.endGameWith3Players,
+    async ({ browser, request }, testInfo) => {
+        if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "true",
+                MOCK_SUPABASE: "true",
+                NEXT_PUBLIC_MOCK_SUPABASE: "true",
+                SITE_PASSWORD: "",
+            },
+            testInfo.title,
+        );
 
-        log("expect Player2 to win on both clients");
-        await expectWinner(domA.page, "Player2");
-        await expectWinner(domB.page, "Player2");
-    } catch (err) {
-        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-        throw err;
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
+        const TIMEOUT = E2E_TIMEOUT;
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            3,
+        );
+        const [domA, domB, domC] = dom;
 
-test(roomFlowTestNames.endGameWith3Players, async ({ browser, request }, testInfo) => {
-    if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
-    assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_WORD_VALIDATION_FAIL: "true" },
-        testInfo.title
-    );
+        try {
+            await navigateToGameStart(pages, dom, log);
+            const currentMatchLetter =
+                await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
+            if (!currentMatchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display for pageA did not resolve",
+                );
 
-    const TIMEOUT = E2E_TIMEOUT;
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 3);
-    const [domA, domB, domC] = dom;
+            for (let i = 0, max = 5; i < max; i++) {
+                log(`type an invalid word on A (${i + 1}/${max})`);
+                await domA.wordInput.fill(currentMatchLetter, {
+                    timeout: TIMEOUT,
+                });
+                log(`submit the word on A (${i + 1}/${max})`);
+                await domA.submitButton.click();
+                await pause(0.5);
+            }
 
-    try {
-        await navigateToGameStart(pages, dom, log);
-        const currentMatchLetter = await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
-        if (!currentMatchLetter) throw new E2ETestAssertionError("Match letter display for pageA did not resolve");
+            log("expect Player1 to be out and Player2 to have the turn");
+            await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
 
-        for (let i = 0, max = 5; i < max; i++) {
-            log(`type an invalid word on A (${i + 1}/${max})`);
-            await domA.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-            log(`submit the word on A (${i + 1}/${max})`);
-            await domA.submitButton.click();
-            await pause(0.5);
+            for (let i = 0, max = 5; i < max; i++) {
+                log(`type an invalid word on B (${i + 1}/${max})`);
+                await domB.wordInput.fill(currentMatchLetter, {
+                    timeout: TIMEOUT,
+                });
+                log(`submit the word on B (${i + 1}/${max})`);
+                await domB.submitButton.click();
+                await pause(0.5);
+            }
+
+            log("expect Player3 to win on all clients");
+            await expectWinner(domA.page, "Player3");
+            await expectWinner(domB.page, "Player3");
+            await expectWinner(domC.page, "Player3");
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
         }
+    },
+);
 
-        log("expect Player1 to be out and Player2 to have the turn");
-        await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
-        await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
+test(
+    roomFlowTestNames.progressRoundsWith4Players,
+    async ({ browser, request }, testInfo) => {
+        if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
+        assertEnvVarEquals(
+            {
+                MOCK_GET_RANDOM_WORD: "true",
+                MOCK_LOOKUP_WORD: "true",
+                MOCK_WORD_VALIDATION_FAIL: "true",
+            },
+            testInfo.title,
+        );
 
-        for (let i = 0, max = 5; i < max; i++) {
-            log(`type an invalid word on B (${i + 1}/${max})`);
-            await domB.wordInput.fill(currentMatchLetter, { timeout: TIMEOUT });
-            log(`submit the word on B (${i + 1}/${max})`);
-            await domB.submitButton.click();
-            await pause(0.5);
+        const TIMEOUT = E2E_TIMEOUT;
+        const { pages, contexts, clientLogs, log, dom } = await setupPages(
+            browser,
+            2,
+        );
+        const [domA, domB] = dom;
+
+        try {
+            await navigateToGameStart(pages, dom, log);
+            const currentMatchLetter =
+                await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
+            if (!currentMatchLetter)
+                throw new E2ETestAssertionError(
+                    "Match letter display for pageA did not resolve",
+                );
+
+            // for (let i = 0, max = 5; i < max; i++) {
+            //     log(`type an invalid word on A (${i + 1}/${max})`);
+            //     await domA.wordInput.fill(currentMatchLetter, {
+            //         timeout: TIMEOUT,
+            //     });
+            //     log(`submit the word on A (${i + 1}/${max})`);
+            //     await domA.submitButton.click();
+            //     await pause(0.5);
+            // }
+
+            // log("expect Player1 to be out and Player2 to have the turn");
+            // await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
+            // await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
+
+            // for (let i = 0, max = 5; i < max; i++) {
+            //     log(`type an invalid word on B (${i + 1}/${max})`);
+            //     await domB.wordInput.fill(currentMatchLetter, {
+            //         timeout: TIMEOUT,
+            //     });
+            //     log(`submit the word on B (${i + 1}/${max})`);
+            //     await domB.submitButton.click();
+            //     await pause(0.5);
+            // }
+
+            // log("expect Player3 to win on all clients");
+            // await expectWinner(domA.page, "Player3");
+            // await expectWinner(domB.page, "Player3");
+            // await expectWinner(domC.page, "Player3");
+        } catch (err) {
+            log(
+                `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            throw err;
+        } finally {
+            await testCleanUp(contexts, clientLogs, request, log);
         }
-
-        log("expect Player3 to win on all clients");
-        await expectWinner(domA.page, "Player3");
-        await expectWinner(domB.page, "Player3");
-        await expectWinner(domC.page, "Player3");
-    } catch (err) {
-        log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
-        throw err;
-    } finally {
-        await testCleanUp(contexts, clientLogs, request, log);
-    }
-});
+    },
+);
 
 test(roomFlowTestNames.customTest, async ({ browser, request }, testInfo) => {
     if (envGet("CUSTOM_PLAYWRIGHT_RUNNER") !== "true") test.skip();
     assertEnvVarEquals(
-        { MOCK_GET_RANDOM_WORD: "true", MOCK_LOOKUP_WORD: "true", MOCK_RANDOM_WORD: "boss"},
-        testInfo.title
+        {
+            MOCK_GET_RANDOM_WORD: "true",
+            MOCK_LOOKUP_WORD: "true",
+            MOCK_RANDOM_WORD: "boss",
+        },
+        testInfo.title,
     );
 
     const TIMEOUT = E2E_TIMEOUT;
-    const { pages, contexts, clientLogs, log, dom } = await setupPages(browser, 1);
+    const { pages, contexts, clientLogs, log, dom } = await setupPages(
+        browser,
+        1,
+    );
     const [domA] = dom;
 
     try {
-        await navigateToGameStart(pages, dom, log, { language: "en", solo: true });
+        await navigateToGameStart(pages, dom, log, {
+            language: "en",
+            solo: true,
+        });
 
-        const highlightValue = await domA.highlightInput.inputValue({ timeout: TIMEOUT });
+        const highlightValue = await domA.highlightInput.inputValue({
+            timeout: TIMEOUT,
+        });
         expect(highlightValue?.trim()).toBe("s");
 
         // Example word starting with S for English.
@@ -799,9 +1218,11 @@ test(roomFlowTestNames.customTest, async ({ browser, request }, testInfo) => {
         // Wait for the submission to go through by waiting for wordInput to be enabled again
         await expect(domA.wordInput).toBeEnabled({ timeout: TIMEOUT });
         // Check highlightInput value is still "s"
-        const afterSubmitHighlightValue = await domA.highlightInput.inputValue({ timeout: TIMEOUT });
+        const afterSubmitHighlightValue = await domA.highlightInput.inputValue({
+            timeout: TIMEOUT,
+        });
         expect(afterSubmitHighlightValue?.trim()).toBe("s");
-	} catch (err) {
+    } catch (err) {
         log(`TEST ERROR: ${err instanceof Error ? err.message : String(err)}`);
         throw err;
     } finally {
