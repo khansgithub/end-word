@@ -13,7 +13,7 @@ import { assertIsGameStateClient } from "@/shared/guards";
 import type { GameStateEmit } from "@/shared/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const CONNECTED = 0;
 const CONNECTING = 1;
@@ -40,6 +40,13 @@ type RoomMeta = {
 };
 
 const L = "GameContainer";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 function GameV2Flow({
     roomId,
@@ -55,7 +62,7 @@ function GameV2Flow({
     );
     const joinedRef = useRef(false);
 
-    logger.info(L, "GameV2Flow mount", { roomId, playerName });
+    logger.withMetadata({ roomId, playerName }).info("GameV2Flow mount");
 
     const {
         connection,
@@ -74,13 +81,13 @@ function GameV2Flow({
     useEffect(() => {
         if (connection === CONNECTED && userId && !joinedRef.current) {
             joinedRef.current = true;
-            logger.info(L, "join complete", { userId });
+            logger.withMetadata({ userId }).info("join complete");
             onJoinComplete(userId);
         }
     }, [connection, userId, onJoinComplete]);
 
     const handleRoomClosed = useCallback(() => {
-        logger.info(L, "handleRoomClosed", { isHost });
+        logger.withMetadata({ isHost }).info("handleRoomClosed");
         if (isHost) {
             router.push("/lobby");
             return;
@@ -90,13 +97,13 @@ function GameV2Flow({
 
     useEffect(() => {
         if (!roomClosedMessage) return;
-        logger.info(L, "room closed, redirecting to lobby");
+        logger.info("room closed, redirecting to lobby");
         const timeout = setTimeout(() => router.push("/lobby"), 2500);
         return () => clearTimeout(timeout);
     }, [roomClosedMessage, router]);
 
     if (!playerName) {
-        logger.warn(L, "no playerName, redirecting to login");
+        logger.warn("no playerName, redirecting to login");
         router.push(buildLoginUrl(`/room/${roomId}`));
         return null;
     }
@@ -105,7 +112,7 @@ function GameV2Flow({
         case CONNECTED:
             assertIsGameStateClient(gameState!);
             if (!userId) return null;
-            logger.debug(L, "rendering GameV2 (CONNECTED)");
+            logger.debug("rendering GameV2 (CONNECTED)");
             return (
                 <>
                     <GameV2
@@ -131,7 +138,7 @@ function GameV2Flow({
                 </>
             );
         case CONNECTING:
-            logger.debug(L, "rendering BusyOverlay (CONNECTING)");
+            logger.debug("rendering BusyOverlay (CONNECTING)");
             return <BusyOverlay message={gameStrings.joiningRoomPage} />;
         case FAILED:
             logger.error(L, "rendering FAILED state");
@@ -179,11 +186,11 @@ export default function GameContainer({ roomId }: { roomId: string }) {
         null,
     );
 
-    logger.info(L, "GameContainer mount", { roomId, playerName, mode });
+    logger.withMetadata({ roomId, playerName, mode }).info("GameContainer mount");
 
     useEffect(() => {
         if (!playerName) {
-            logger.warn(L, "no playerName, redirecting to login");
+            logger.warn("no playerName, redirecting to login");
             router.push(buildLoginUrl(`/room/${roomId}`));
             return;
         }
@@ -192,7 +199,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
         (async () => {
             try {
-                logger.info(L, "fetching room meta for GameContainer", { roomId });
+                logger.withMetadata({ roomId }).info("fetching room meta for GameContainer");
                 const { createClient } = await import("@/lib/supabase/client");
                 const {
                     data: { user },
@@ -200,7 +207,7 @@ export default function GameContainer({ roomId }: { roomId: string }) {
 
                 const res = await fetch(`/api/rooms/${roomId}`);
                 if (!res.ok) {
-                    logger.warn(L, "room meta fetch failed", { status: res.status });
+                    logger.withMetadata({ status: res.status }).warn("room meta fetch failed");
                     setMode("failed");
                     return;
                 }
@@ -214,36 +221,36 @@ export default function GameContainer({ roomId }: { roomId: string }) {
                     host_user_id: data.room.host_user_id,
                 };
                 setRoomMeta(meta);
-                logger.info(L, "room meta fetched", { meta, userId: user?.id, isHost: user && meta.host_user_id === user.id });
+                logger.withMetadata({ meta, userId: user?.id, isHost: user && meta.host_user_id === user.id }).info("room meta fetched");
 
                 if (user && meta.host_user_id === user.id) {
-                    logger.info(L, "mode -> joining (host auto-join)");
+                    logger.info("mode -> joining (host auto-join)");
                     setMode("joining");
                 } else if (meta.connectedPlayers >= 4) {
-                    logger.info(L, "mode -> full");
+                    logger.info("mode -> full");
                     setMode("full");
                 } else {
-                    logger.info(L, "mode -> choose");
+                    logger.info("mode -> choose");
                     setMode("choose");
                 }
             } catch (err) {
-                logger.error(L, "room meta fetch exception", { err });
+                logger.withMetadata({ err }).error("room meta fetch exception");
                 setMode("failed");
             }
         })();
     }, [roomId, playerName, router]);
 
     const handleJoin = useCallback(() => {
-        logger.info(L, "handleJoin -> joining");
+        logger.info("handleJoin -> joining");
         setMode("joining");
     }, []);
 
     const handleJoinComplete = useCallback((_userId: string) => {
-        logger.info(L, "handleJoinComplete (staying in joining mode)", { userId: _userId });
+        logger.withMetadata({ userId: _userId }).info("handleJoinComplete (staying in joining mode)");
     }, []);
 
     const handleSpectate = useCallback(async () => {
-        logger.info(L, "handleSpectate");
+        logger.info("handleSpectate");
         try {
             const { createClient } = await import("@/lib/supabase/client");
             const {
@@ -260,17 +267,17 @@ export default function GameContainer({ roomId }: { roomId: string }) {
                 method: "POST",
             });
             if (!res.ok) {
-                logger.warn(L, "spectate fetch failed", { status: res.status });
+                logger.withMetadata({ status: res.status }).warn("spectate fetch failed");
                 setMode("failed");
                 return;
             }
             const data = await res.json();
             if (data.dissolved) {
-                logger.info(L, "spectate: room dissolved");
+                logger.info("spectate: room dissolved");
                 setMode("dissolved");
                 return;
             }
-            logger.info(L, "spectate: joined as spectator");
+            logger.info("spectate: joined as spectator");
             setSpectatorEmit(data.gameState);
             setMode("spectating");
         } catch {
@@ -280,18 +287,18 @@ export default function GameContainer({ roomId }: { roomId: string }) {
     }, [roomId]);
 
     const handleBackToLobby = useCallback(() => {
-        logger.info(L, "handleBackToLobby");
+        logger.info("handleBackToLobby");
         router.push("/lobby");
     }, [router]);
 
     const handleRoomClosed = useCallback(() => {
-        logger.info(L, "handleRoomClosed (spectator)");
+        logger.info("handleRoomClosed (spectator)");
         setRoomClosedMessage(gameStrings.hostLeftTheRoom);
     }, []);
 
     useEffect(() => {
         if (!roomClosedMessage) return;
-        logger.info(L, "roomClosedMessage set, redirecting to lobby");
+        logger.info("roomClosedMessage set, redirecting to lobby");
         const timeout = setTimeout(() => router.push("/lobby"), 2500);
         return () => clearTimeout(timeout);
     }, [roomClosedMessage, router]);

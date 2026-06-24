@@ -1,16 +1,22 @@
-import type { GameLanguage, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
-import type { DictionaryEntry } from "@/shared/types";
 import type { RoomListItem } from "@/shared/roomTypes";
-import { logger } from "@/lib/client/logging";
+import type { DictionaryEntry, GameLanguage, GameStateEmit, PlayerWithId, SubmitResult } from "@/shared/types";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const L = "RoomAPI";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export async function fetchLobbyRooms(): Promise<RoomListItem[]> {
-	logger.debug(L, "fetchLobbyRooms");
+	// logger.debug("fetchLobbyRooms");
 	const res = await fetch("/api/rooms");
 	if (!res.ok) throw new Error("Failed to load lobby");
 	const data = await res.json();
-	logger.info(L, "fetchLobbyRooms success", { count: data.rooms?.length });
+	// logger.withMetadata({ count: data.rooms?.length }).info("fetchLobbyRooms success");
 	return data.rooms as RoomListItem[];
 }
 
@@ -20,7 +26,7 @@ export async function createRoomApi(options: {
 	isPrivate: boolean;
 	timerDuration?: number;
 }) {
-	logger.info(L, "createRoomApi", options);
+	logger.withMetadata(options).info("createRoomApi");
 	const res = await fetch("/api/rooms", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -38,22 +44,22 @@ export async function joinRoomApi(body: {
 	| { success: true; roomId: string; gameState: GameStateEmit; player: PlayerWithId }
 	| { success: false; reason: string }
 > {
-	logger.info(L, "joinRoomApi", { roomId: body.roomId, displayName: body.displayName });
+	logger.withMetadata({ roomId: body.roomId, displayName: body.displayName }).info("joinRoomApi");
 	const res = await fetch("/api/rooms/join", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),
 	});
 	const data = await res.json();
-	logger.info(L, "joinRoomApi result", { success: data.success, reason: data.reason });
+	logger.withMetadata({ success: data.success, reason: data.reason }).info("joinRoomApi result");
 	return data;
 }
 
 export async function startRoomApi(roomId: string) {
-	logger.info(L, "startRoomApi", { roomId });
+	logger.withMetadata({ roomId }).info("startRoomApi");
 	const res = await fetch(`/api/rooms/${roomId}/start`, { method: "POST" });
 	const data = await res.json();
-	logger.info(L, "startRoomApi result", { success: data.success });
+	logger.withMetadata({ success: data.success }).info("startRoomApi result");
 	return data;
 }
 
@@ -83,7 +89,7 @@ export async function submitWordApi(
 	word: string,
 	timeRemaining?: number
 ): Promise<SubmitWordApiResult> {
-	logger.info(L, "submitWordApi", { word, timeRemaining });
+	logger.withMetadata({ word, timeRemaining }).info("submitWordApi");
 	const res = await fetch(`/api/rooms/${roomId}/submit`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -91,7 +97,7 @@ export async function submitWordApi(
 	});
 
 	if (res.status !== 200) {
-		logger.warn(L, "submitWordApi non-200", { status: res.status });
+		logger.withMetadata({ status: res.status }).warn("submitWordApi non-200");
 		return {
 			success: false,
 			reason: "Submit failed",
@@ -103,11 +109,11 @@ export async function submitWordApi(
 		const text = await res.clone().text();
 		data = JSON.parse(text) as SubmitResult;
 	} catch (error) {
-		logger.error(L, "submitWordApi JSON parse failed", { error });
+		logger.withMetadata({ error }).error("submitWordApi JSON parse failed");
 		data = { success: false, reason: "Invalid server response" } as SubmitResult;
 	}
 	const parsed = parseSubmitWordResponse(res, data);
-	logger.info(L, "submitWordApi result", { success: parsed.success, reason: !parsed.success ? parsed.reason : undefined });
+	logger.withMetadata({ success: parsed.success, reason: !parsed.success ? parsed.reason : undefined }).info("submitWordApi result");
 	return parsed;
 }
 
@@ -116,37 +122,37 @@ export type TimerExpiryApiResult =
 	| { success: false; reason: string };
 
 export async function timerExpiryApi(roomId: string): Promise<TimerExpiryApiResult> {
-	logger.info(L, "timerExpiryApi", { roomId });
+	logger.withMetadata({ roomId }).info("timerExpiryApi");
 	const res = await fetch(`/api/rooms/${roomId}/timer-expiry`, {
 		method: "POST",
 	});
 	if (res.status !== 200) {
-		logger.warn(L, "timerExpiryApi non-200", { status: res.status });
+		logger.withMetadata({ status: res.status }).warn("timerExpiryApi non-200");
 		return { success: false, reason: "Timer expiry request failed" };
 	}
 	const data = await res.json();
-	logger.info(L, "timerExpiryApi result", { success: data.success });
+	logger.withMetadata({ success: data.success }).info("timerExpiryApi result");
 	return data;
 }
 
 export async function leaveRoomApi(roomId: string) {
-	logger.info(L, "leaveRoomApi", { roomId });
+	logger.withMetadata({ roomId }).info("leaveRoomApi");
 	const res = await fetch(`/api/rooms/${roomId}/leave`, {
 		method: "POST",
 		keepalive: true,
 	});
 	const data = await res.json() as Promise<{ dissolved: boolean; gameState: GameStateEmit | null }>;
-	logger.info(L, "leaveRoomApi result", data);
+	logger.withMetadata(data).info("leaveRoomApi result");
 	return data;
 }
 
 export async function dissolveRoomApi(roomId: string) {
-	logger.info(L, "dissolveRoomApi", { roomId });
+	logger.withMetadata({ roomId }).info("dissolveRoomApi");
 	const res = await fetch(`/api/rooms/${roomId}/dissolve`, {
 		method: "POST",
 		keepalive: true,
 	});
 	const data = await res.json() as Promise<{ dissolved: boolean }>;
-	logger.info(L, "dissolveRoomApi result", data);
+	logger.withMetadata(data).info("dissolveRoomApi result");
 	return data;
 }

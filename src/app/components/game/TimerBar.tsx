@@ -1,9 +1,6 @@
 "use client";
 import { Countdown } from "@/app/hooks/useCountdown";
-import { logger } from "@/lib/client/logging";
 import "./game-v2.css";
-
-const L = "TimerBar";
 
 export interface TimerBarProps {
 	timer: Countdown;
@@ -24,8 +21,6 @@ export default function TimerBar({ timer, isSubmitting }: TimerBarProps) {
 			: 0;
 
 	const animationPaused = isSubmitting || timer.isPaused;
-
-	logger.debug(L, "render", { isSubmitting, isPaused: timer.isPaused, animationPaused, remaining: timer.remainingSeconds, pct: pct.toFixed(1) });
 
 	return (
 		<>

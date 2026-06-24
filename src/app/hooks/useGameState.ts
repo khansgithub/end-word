@@ -4,9 +4,16 @@ import { GameStateClient } from "@/shared/types";
 import { isPlayerTurn } from "@/shared/utils";
 import { useUserStore } from "../store/userStore";
 import { useState } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const L = "useGameState";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export function useGameState(gameState: GameStateClient) {
 	const playerName = useUserStore((s) => s.playerName);
@@ -42,19 +49,19 @@ export function useGameState(gameState: GameStateClient) {
 
 	const [forceInputDisabled, setForceInputDisabled] = useState(false);
 
-	logger.debug(L, "derived state", {
-		submitting: gameState.submitting,
-		isSubmitting,
-		isMyTurn,
-		isInputDisabled,
-		isTimerPaused,
-		turn: gameState.turn,
-		seat: gameState.thisPlayer?.seat,
-		status: gameState.status,
-		health: gameState.thisPlayer?.health,
-		playerCount,
-	});
-	
+	// logger.withMetadata({
+	// 	submitting: gameState.submitting,
+	// 	isSubmitting,
+	// 	isMyTurn,
+	// 	isInputDisabled,
+	// 	isTimerPaused,
+	// 	turn: gameState.turn,
+	// 	seat: gameState.thisPlayer?.seat,
+	// 	status: gameState.status,
+	// 	health: gameState.thisPlayer?.health,
+	// 	playerCount,
+	// }).debug("derived state");
+
 	return {
 		isSubmitting,
 		isGamePlaying,
@@ -63,8 +70,8 @@ export function useGameState(gameState: GameStateClient) {
 		isInputDisabled,
 		isTimerPaused,
 		isSoloGame,
-        playerCount,
-        forceInputDisabled,
-        setForceInputDisabled,
+		playerCount,
+		forceInputDisabled,
+		setForceInputDisabled,
 	};
 }

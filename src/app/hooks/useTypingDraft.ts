@@ -3,7 +3,7 @@
 import { useInputBoxStore } from "@/app/components/game/InputBox";
 import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const THROTTLE_MS = 80;
 /** Avoid flicker when the typer pauses briefly between keystrokes. */
@@ -80,6 +80,14 @@ export function useTypingDraft(
 		sendTypingDraft: (text: string, seat: number) => void;
 	}
 ) {
+	const L = "useTypingDraft";
+	const logger = new LogLayer({
+		transport: new ConsoleTransport({
+			logger: console,
+			enabled: process.env.NODE_ENV !== "production",
+			appendObjectData: true
+		})
+	}).withPrefix(L)
 	const { userId, broadcastEnabled, turnSeat, receiveEnabled, sendTypingDraft } = options;
 	const [remoteDraft, setRemoteDraft] = useState<TypingDraftPayload | null>(null);
 	const sendRef = useRef<(text: string) => void>(() => { });
@@ -90,12 +98,12 @@ export function useTypingDraft(
 	const onTypingDraft = useCallback(
 		(payload: TypingDraftPayload) => {
 			if (!receiveEnabled) {
-				logger.debug("useTypingDraft", "onTypingDraft skipped (receive disabled)", { userId: payload.userId, seat: payload.seat });
+				logger.withMetadata({ userId: payload.userId, seat: payload.seat }).debug("onTypingDraft skipped (receive disabled)");
 				return;
 			}
 			if (payload.userId === userId) return;
 
-			logger.debug("useTypingDraft", "onTypingDraft received", { userId: payload.userId, seat: payload.seat, textLength: payload.text?.length });
+			logger.withMetadata({ userId: payload.userId, seat: payload.seat, textLength: payload.text?.length }).debug("onTypingDraft received");
 
 			if (clearTimerRef.current) {
 				clearTimeout(clearTimerRef.current);
@@ -134,7 +142,7 @@ export function useTypingDraft(
 	}, []);
 
 	useEffect(() => {
-		logger.debug("useTypingDraft", "broadcastEnabled changed", { broadcastEnabled });
+		logger.withMetadata({ broadcastEnabled }).debug("broadcastEnabled changed");
 		if (!broadcastEnabled) {
 			sendRef.current("");
 			return;
@@ -142,7 +150,7 @@ export function useTypingDraft(
 
 		const store = useInputBoxStore();
 		let last = store.getState().inputValue;
-		logger.debug("useTypingDraft", "starting broadcast subscription", { initialValue: last });
+		logger.withMetadata({ initialValue: last }).debug("starting broadcast subscription");
 		throttledSend.current(last);
 
 		return store.subscribe((state) => {

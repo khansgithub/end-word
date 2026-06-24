@@ -1,9 +1,16 @@
 import { GameStateDispatch } from "@/shared/GameState";
 import { GameStateClient, GameStateEmit } from "@/shared/types";
 import { shouldEndGameOnPlayerDeath } from "@/shared/utils";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const L = "word-submit";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export type SubmitWordResponse =
 	| { success: true; gameState: GameStateEmit }
@@ -21,7 +28,7 @@ export function submitWordCallback(
 	response: SubmitWordResponse,
 	word: string,
 ) {
-	logger.info(L, "submitWordCallback", { word, success: response.success, reason: !response.success ? response.reason : undefined });
+	logger.withMetadata({ word, success: response.success, reason: !response.success ? response.reason : undefined }).info("submitWordCallback");
 	if (response.success) {
 		return correctWord(gameState, dispatch, response.gameState, word);
 	} else {

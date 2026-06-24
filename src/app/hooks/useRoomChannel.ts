@@ -13,9 +13,16 @@ import { SPECTATORS_UPDATE_EVENT } from "@/shared/spectatorsBroadcast";
 import { EMOTE_EVENT, type EmotePayload } from "@/shared/emote";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const L = "useRoomChannel";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 type RoomPresenceMeta = {
 	user_id: string;
@@ -106,7 +113,7 @@ export function useRoomChannel(
 	useEffect(() => {
 		const channel = channelRef.current;
 		if (!channel || !subscribedRef.current) return;
-		logger.debug(L, "re-tracking presence", { userId, isHost, presenceSeat });
+		logger.withMetadata({ userId, isHost, presenceSeat }).debug("re-tracking presence");
 		void channel.track({
 			user_id: userId,
 			is_host: isHost,
@@ -119,7 +126,7 @@ export function useRoomChannel(
 		hostWasOnlineRef.current = false;
 		subscribedRef.current = false;
 
-		logger.info(L, "creating channel", { roomId, userId, isHost });
+		logger.withMetadata({ roomId, userId, isHost }).info("creating channel");
 		const channel = supabase.channel(`room:${roomId}`, {
 			config: { presence: { key: userId } },
 		});
@@ -128,36 +135,36 @@ export function useRoomChannel(
 
 		channel
 			.on("broadcast", { event: "gameStateUpdate" }, ({ payload }) => {
-				logger.debug(L, "broadcast gameStateUpdate", { turn: (payload as GameStateEmit).turn, status: (payload as GameStateEmit).status });
+				logger.withMetadata({ turn: (payload as GameStateEmit).turn, status: (payload as GameStateEmit).status }).debug("broadcast gameStateUpdate");
 				onUpdateRef.current(payload);
 			})
 			.on("broadcast", { event: TIMER_SYNC_EVENT }, ({ payload }) => {
 				const ts = payload as TimerSyncPayload;
-				logger.debug(L, "broadcast timerSync", ts);
+				logger.withMetadata(ts).debug("broadcast timerSync");
 				onTimerSyncRef.current?.(ts);
 			})
 			.on("broadcast", { event: TIMER_SYNC_REQUEST_EVENT }, () => {
-				logger.debug(L, "broadcast timerSyncRequest");
+				logger.debug("broadcast timerSyncRequest");
 				onTimerSyncRequestRef.current?.();
 			})
 			.on("broadcast", { event: TYPING_DRAFT_EVENT }, ({ payload }) => {
 				const td = payload as TypingDraftPayload;
-				logger.debug(L, "broadcast typingDraft", { userId: td.userId, seat: td.seat, textLength: td.text?.length });
+				logger.withMetadata({ userId: td.userId, seat: td.seat, textLength: td.text?.length }).debug("broadcast typingDraft");
 				onTypingDraftRef.current?.(td);
 			})
 			.on("broadcast", { event: WORD_DEFINITION_EVENT }, ({ payload }) => {
 				const wd = payload as WordDefinitionPayload;
-				logger.debug(L, "broadcast wordDefinition", { key: wd.key });
+				logger.withMetadata({ key: wd.key }).debug("broadcast wordDefinition");
 				onWordDefinitionRef.current?.(wd);
 			})
 			.on("broadcast", { event: SPECTATORS_UPDATE_EVENT }, ({ payload }) => {
 				const sp = payload as Spectator[];
-				logger.debug(L, "broadcast spectatorsUpdate", { count: sp.length });
+				logger.withMetadata({ count: sp.length }).debug("broadcast spectatorsUpdate");
 				onSpectatorsUpdateRef.current?.(sp);
 			})
 			.on("broadcast", { event: EMOTE_EVENT }, ({ payload }) => {
 				const em = payload as EmotePayload;
-				logger.debug(L, "broadcast emote", { seat: em.seat, value: em.value });
+				logger.withMetadata({ seat: em.seat, value: em.value }).debug("broadcast emote");
 				onEmoteRef.current?.(em);
 			})
 			.on(
@@ -173,17 +180,17 @@ export function useRoomChannel(
 					const serverState = rowToGameState(row);
 					const emit = toGameStateEmit(serverState);
 
-					logger.debug(L, "postgres_changes UPDATE", { status: row.status, turn: row.turn, archived: !!row.archived_at });
+					logger.withMetadata({ status: row.status, turn: row.turn, archived: !!row.archived_at }).debug("postgres_changes UPDATE");
 
 					if (row.archived_at) {
 						if (isCompletedGameRow(row)) {
-							logger.info(L, "game completed (archived)");
+							logger.info("game completed (archived)");
 							onUpdateRef.current(emit);
 							return;
 						}
 						if (!dissolvedRef.current) {
 							dissolvedRef.current = true;
-							logger.info(L, "room dissolved (archived)");
+							logger.info("room dissolved (archived)");
 							onRoomClosedRef.current?.();
 						}
 						return;
@@ -195,21 +202,21 @@ export function useRoomChannel(
 			.on("presence", { event: "sync" }, () => {
 				const presences = flattenPresence(channel.presenceState());
 				const hostOnline = presenceIncludesHost(presences);
-				logger.debug(L, "presence sync", { total: presences.length, hostOnline });
+				logger.withMetadata({ total: presences.length, hostOnline }).debug("presence sync");
 				if (hostOnline) {
 					hostWasOnlineRef.current = true;
 				}
 			})
 			.on("presence", { event: "leave" }, ({ leftPresences }) => {
 				const left = leftPresences as unknown as RoomPresenceMeta[];
-				logger.debug(L, "presence leave", { count: left.length, leftIds: left.map(p => p.user_id) });
+				logger.withMetadata({ count: left.length, leftIds: left.map(p => p.user_id) }).debug("presence leave");
 
 				if (isHost) {
 					const leaving = left
 						.filter((p): p is RoomPresenceMeta & { seat: number } => !p.is_host && p.seat !== undefined);
 					if (leaving.length === 0) return;
 
-					logger.info(L, "players left, updating state as host", { leaving: leaving.map(p => ({ userId: p.user_id, seat: p.seat })) });
+					logger.withMetadata({ leaving: leaving.map(p => ({ userId: p.user_id, seat: p.seat })) }).info("players left, updating state as host");
 					const newState = onPlayerLeftRef.current?.(leaving.map((p) => ({ userId: p.user_id, seat: p.seat })));
 					if (newState) {
 						onUpdateRef.current(newState);
@@ -225,17 +232,17 @@ export function useRoomChannel(
 				if (dissolvedRef.current || !hostWasOnlineRef.current) return;
 				if (!presenceIncludesHost(left)) return;
 
-				logger.info(L, "host left, dissolving room as non-host");
+				logger.info("host left, dissolving room as non-host");
 				dissolvedRef.current = true;
 				void dissolveRoomApi(roomId).finally(() => {
 					onRoomClosedRef.current?.();
 				});
 			})
 			.subscribe(async (status) => {
-				logger.info(L, "channel subscribe status", { status });
+				logger.withMetadata({ status }).info("channel subscribe status");
 				if (status === "SUBSCRIBED") {
 					subscribedRef.current = true;
-					logger.info(L, "channel subscribed, tracking presence", { userId, isHost, presenceSeat });
+					logger.withMetadata({ userId, isHost, presenceSeat }).info("channel subscribed, tracking presence");
 					await channel.track({
 						user_id: userId,
 						is_host: isHost,
@@ -247,7 +254,7 @@ export function useRoomChannel(
 		return () => {
 			subscribedRef.current = false;
 			channelRef.current = null;
-			logger.info(L, "channel cleanup (unsubscribe)");
+			logger.info("channel cleanup (unsubscribe)");
 			void channel.untrack();
 			supabase.removeChannel(channel);
 		};
@@ -256,7 +263,7 @@ export function useRoomChannel(
 	const sendTypingDraft = useCallback((text: string, seat: number) => {
 		const channel = channelRef.current;
 		if (!channel || !subscribedRef.current) return;
-		logger.debug(L, "sendTypingDraft", { textLength: text.length, seat });
+		logger.withMetadata({ textLength: text.length, seat }).debug("sendTypingDraft");
 		void channel.send({
 			type: "broadcast",
 			event: TYPING_DRAFT_EVENT,
@@ -267,7 +274,7 @@ export function useRoomChannel(
 	const sendTimerSync = useCallback((payload: TimerSyncPayload) => {
 		const channel = channelRef.current;
 		if (!channel || !subscribedRef.current) return;
-		logger.debug(L, "sendTimerSync", payload);
+		logger.withMetadata(payload).debug("sendTimerSync");
 		void channel.send({
 			type: "broadcast",
 			event: TIMER_SYNC_EVENT,
@@ -278,7 +285,7 @@ export function useRoomChannel(
 	const sendTimerSyncRequest = useCallback(() => {
 		const channel = channelRef.current;
 		if (!channel || !subscribedRef.current) return;
-		logger.debug(L, "sendTimerSyncRequest");
+		logger.debug("sendTimerSyncRequest");
 		void channel.send({
 			type: "broadcast",
 			event: TIMER_SYNC_REQUEST_EVENT,
@@ -289,7 +296,7 @@ export function useRoomChannel(
 	const sendEmote = useCallback((payload: EmotePayload) => {
 		const channel = channelRef.current;
 		if (!channel || !subscribedRef.current) return;
-		logger.debug(L, "sendEmote", { seat: payload.seat, value: payload.value });
+		logger.withMetadata({ seat: payload.seat, value: payload.value }).debug("sendEmote");
 		void channel.send({
 			type: "broadcast",
 			event: EMOTE_EVENT,

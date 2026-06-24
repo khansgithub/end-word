@@ -204,12 +204,8 @@ async function setupPages<N extends number>(
         }),
         loadingBlur: page.locator("div.backdrop-blur-sm"),
         matchLetterDisplay: page
-            .getByRole("heading", {
-                name: gameStrings.matchLetter,
-                exact: false,
-            })
-            .locator("xpath=following-sibling::span")
-            .first(),
+            .locator(`section[aria-label="${gameStrings.matchLetter}"]`)
+            .locator("span.font-mono"),
         player1PanelHeartDisplay: playerPanelHearts(page, "Player1"),
         player2PanelHeartDisplay: playerPanelHearts(page, "Player2"),
         thisPlayerHeartDisplay: page.locator("div.panel.rounded-lg").filter({
@@ -402,7 +398,6 @@ async function navigateToGameStart(
     //     await page.reload();
     //     await waitForRoomPageReady(page);
     // }
-    await hostPage.pause();
     log("wait until at least one client can submit");
     await expect
         .poll(
@@ -1120,7 +1115,7 @@ test(
             {
                 MOCK_GET_RANDOM_WORD: "true",
                 MOCK_LOOKUP_WORD: "true",
-                MOCK_WORD_VALIDATION_FAIL: "true",
+                MOCK_WORD_VALIDATION_FAIL: "false",
             },
             testInfo.title,
         );
@@ -1128,47 +1123,54 @@ test(
         const TIMEOUT = E2E_TIMEOUT;
         const { pages, contexts, clientLogs, log, dom } = await setupPages(
             browser,
-            2,
+            4,
         );
-        const [domA, domB] = dom;
+        const [domA, domB, domC, domD] = dom;
 
         try {
             await navigateToGameStart(pages, dom, log);
-            const currentMatchLetter =
-                await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT });
-            if (!currentMatchLetter)
-                throw new E2ETestAssertionError(
-                    "Match letter display for pageA did not resolve",
-                );
 
-            // for (let i = 0, max = 5; i < max; i++) {
-            //     log(`type an invalid word on A (${i + 1}/${max})`);
-            //     await domA.wordInput.fill(currentMatchLetter, {
-            //         timeout: TIMEOUT,
-            //     });
-            //     log(`submit the word on A (${i + 1}/${max})`);
-            //     await domA.submitButton.click();
-            //     await pause(0.5);
-            // }
+            const ml0 = (await domA.matchLetterDisplay.textContent({ timeout: TIMEOUT }))!;
+            if (!ml0) throw new E2ETestAssertionError("Match letter not found");
+            log(`Initial match letter: "${ml0}"`);
 
-            // log("expect Player1 to be out and Player2 to have the turn");
-            // await expect(domA.wordInput).toBeDisabled({ timeout: TIMEOUT });
-            // await expect(domB.wordInput).toBeEnabled({ timeout: TIMEOUT });
+            // Suffixes that avoid validateKoreanWord rejections (no "다" or "요" endings)
+            const SUFFIXES = ["가", "거", "고", "구", "그", "기", "너", "노", "누", "느", "니", "더"];
 
-            // for (let i = 0, max = 5; i < max; i++) {
-            //     log(`type an invalid word on B (${i + 1}/${max})`);
-            //     await domB.wordInput.fill(currentMatchLetter, {
-            //         timeout: TIMEOUT,
-            //     });
-            //     log(`submit the word on B (${i + 1}/${max})`);
-            //     await domB.submitButton.click();
-            //     await pause(0.5);
-            // }
+            for (let round = 0; round < 12; round++) {
+                const player = [domA, domB, domC, domD][round % 4];
+                const name = `Player${(round % 4) + 1}`;
+                log(`round ${round}: ${name} submits`);
 
-            // log("expect Player3 to win on all clients");
-            // await expectWinner(domA.page, "Player3");
-            // await expectWinner(domB.page, "Player3");
-            // await expectWinner(domC.page, "Player3");
+                // Read fresh match letter from the current player's page
+                const ml = await player.matchLetterDisplay.textContent({ timeout: TIMEOUT });
+                if (!ml) throw new E2ETestAssertionError(`Match letter not found at round ${round}`);
+                const word = ml + SUFFIXES[round];
+                log(`  word="${word}" ml="${ml}"`);
+
+                // Interact with the UI: type via fill and click submit
+                await player.wordInput.fill(word, { timeout: TIMEOUT });
+                await pause(0.5);
+                await player.submitButton.click();
+
+                // Wait for turn to advance — the round counter on domA reflects all submissions
+                const expectedRound = String(round + 1);
+                log(`waiting for round to advance to ${expectedRound}`);
+                await expect(
+                    domA.page
+                        .locator("div.g2.inline-flex")
+                        .filter({ hasText: /Round/ })
+                        .locator("span.font-semibold"),
+                ).toHaveText(expectedRound, { timeout: TIMEOUT });
+            }
+
+            log("assert round counter shows 12 after 12 submissions");
+            await expect(
+                domA.page
+                    .locator("div.g2.inline-flex")
+                    .filter({ hasText: /Round/ })
+                    .locator("span.font-semibold"),
+            ).toHaveText("12", { timeout: TIMEOUT });
         } catch (err) {
             log(
                 `TEST ERROR: ${err instanceof Error ? err.message : String(err)}`,

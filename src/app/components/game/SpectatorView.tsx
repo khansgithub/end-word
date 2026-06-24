@@ -28,9 +28,18 @@ import type { TypingDraftPayload } from "@/shared/typingDraft";
 import { appendDefinitionToHistory } from "@/shared/wordDefinition";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 import type { ActiveEmote, EmotePayload } from "@/shared/emote";
 import EmoteBanner from "@/app/components/game/EmoteBanner";
+
+const L = "SpectatorView";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 type WordFeedEntry = {
     id: number;
@@ -104,7 +113,7 @@ export default function SpectatorView({
     });
 
     const removeSpectator = useCallback(async () => {
-        logger.debug("SpectatorView", "removeSpectator");
+        logger.debug("removeSpectator");
         try {
             await fetch(`/api/rooms/${roomId}/spectate`, { method: "DELETE" });
         } catch {}
@@ -113,7 +122,7 @@ export default function SpectatorView({
     // Tab/window close (fire-and-forget, browser won't await)
     useEffect(() => {
         const leave = () => {
-            logger.debug("SpectatorView", "pagehide, removing spectator");
+            logger.debug("pagehide, removing spectator");
             removeSpectator();
         };
         window.addEventListener("pagehide", leave);
@@ -124,9 +133,9 @@ export default function SpectatorView({
     useEffect(() => {
         return () => {
             const { roomId: id } = leaveCtxRef.current;
-            logger.debug("SpectatorView", "navigation away, scheduling remove");
+            logger.debug("navigation away, scheduling remove");
             leaveTimeoutRef.current = setTimeout(() => {
-                logger.debug("SpectatorView", "executing delayed remove");
+                logger.debug("executing delayed remove");
                 fetch(`/api/rooms/${id}/spectate`, {
                     method: "DELETE",
                     keepalive: true,
@@ -138,7 +147,7 @@ export default function SpectatorView({
     // Cancel pending leave on Strict Mode re-mount
     useEffect(() => {
         if (leaveTimeoutRef.current) {
-            logger.debug("SpectatorView", "cancelling pending leave (strict mode remount)");
+            logger.debug("cancelling pending leave (strict mode remount)");
             clearTimeout(leaveTimeoutRef.current);
             leaveTimeoutRef.current = null;
         }
@@ -149,10 +158,10 @@ export default function SpectatorView({
     // =========================================================================
     const handleExit = useCallback(() => {
         if (isLeavingLobby) {
-            logger.debug("SpectatorView", "handleExit blocked (already leaving)");
+            logger.debug("handleExit blocked (already leaving)");
             return;
         }
-        logger.info("SpectatorView", "handleExit");
+        logger.info("handleExit");
         setIsLeavingLobby(true);
         removeSpectator().then(() => {
             router.push("/lobby");
@@ -160,7 +169,7 @@ export default function SpectatorView({
     }, [router, isLeavingLobby, removeSpectator]);
 
     const handleEmoteReceive = useCallback((payload: EmotePayload) => {
-        logger.debug("SpectatorView", "handleEmoteReceive", { seat: payload.seat, value: payload.value });
+        logger.withMetadata({ seat: payload.seat, value: payload.value }).debug("handleEmoteReceive");
         if (payload.userId === userId) return;
         setActiveEmotes((prev) => [...prev, { ...payload, id: crypto.randomUUID() }]);
     }, [userId]);
@@ -170,13 +179,13 @@ export default function SpectatorView({
     }, []);
 
     const applyRemote = useCallback((next: GameStateEmit) => {
-        logger.debug("SpectatorView", "applyRemote", { turn: next.turn, status: next.status, connectedPlayers: next.connectedPlayers });
+        logger.withMetadata({ turn: next.turn, status: next.status, connectedPlayers: next.connectedPlayers }).debug("applyRemote");
         setEmit(next);
     }, []);
 
     const appendDefinition = useCallback(
         (definition: DictionaryEntry) => {
-            logger.info("SpectatorView", "appendDefinition", { key: definition.key });
+            logger.withMetadata({ key: definition.key }).info("appendDefinition");
             setDefinitionHistory((current) =>
                 appendDefinitionToHistory(current, definition),
             );
@@ -193,7 +202,7 @@ export default function SpectatorView({
         onUpdate: applyRemote,
         onRoomClosed,
         onTimerSync: (payload) => {
-            logger.debug("SpectatorView", "onTimerSync", payload);
+            logger.withMetadata(payload).debug("onTimerSync");
             lastServerRef.current = { at: Date.now(), remaining: payload.remaining };
             setTimerPaused(payload.paused);
         },
@@ -210,11 +219,11 @@ export default function SpectatorView({
     // Request timer sync from active player after channel is subscribed
     useEffect(() => {
         const t1 = setTimeout(() => {
-            logger.debug("SpectatorView", "sending timerSyncRequest (first attempt)");
+            logger.debug("sending timerSyncRequest (first attempt)");
             sendTimerSyncRequest();
         }, 500);
         const t2 = setTimeout(() => {
-            logger.debug("SpectatorView", "sending timerSyncRequest (retry)");
+            logger.debug("sending timerSyncRequest (retry)");
             sendTimerSyncRequest();
         }, 1200);
         return () => {
@@ -227,7 +236,7 @@ export default function SpectatorView({
     useEffect(() => {
         const handle = () => {
             if (document.visibilityState === "visible") {
-                logger.debug("SpectatorView", "tab re-focused, requesting timer sync");
+                logger.debug("tab re-focused, requesting timer sync");
                 sendTimerSyncRequest();
             }
         };
@@ -259,14 +268,14 @@ export default function SpectatorView({
     }, [emit.turn, clearRemoteDraft]);
 
     // Debug: log every render so we can see what the spectator sees
-    logger.debug("SpectatorView", "typing render", {
+    logger.withMetadata({
         hasRemoteDraft: !!remoteDraft,
         remoteSeat: remoteDraft?.seat,
         turnSeat,
         turnTypingText: turnTypingText ?? null,
         emitTurn: emit.turn,
         connectedPlayers: emit.connectedPlayers,
-    });
+    }).debug("typing render");
 
     // =========================================================================
     // timer – derived from last server broadcast, no local countdown drift

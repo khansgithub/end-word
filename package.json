@@ -38,6 +38,7 @@
 		"framer-motion": "^12.23.26",
 		"hangulx": "^0.6.5",
 		"lodash": "^4.17.21",
+		"loglayer": "^9.3.0",
 		"next": "^16.0.7",
 		"node-wordnet": "^0.1.12",
 		"prom-client": "^15.1.3",

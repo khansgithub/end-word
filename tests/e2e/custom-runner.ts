@@ -168,7 +168,7 @@ const testConfigs: Partial<Record<RoomFlowTestName, RunTestConfig>> = {
         envVars: {
             MOCK_GET_RANDOM_WORD: "true",
             MOCK_LOOKUP_WORD: "true",
-            MOCK_WORD_VALIDATION_FAIL: "true",
+            MOCK_WORD_VALIDATION_FAIL: "false",
             MOCK_SUPABASE: "true",
             NEXT_PUBLIC_MOCK_SUPABASE: "true",
             SITE_PASSWORD: ""

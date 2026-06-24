@@ -1,9 +1,16 @@
 import { useStopwatch } from "react-timer-hook";
 import { useEffect } from "react";
 import { GameStatus } from "@/shared/types";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 
 const L = "useCountdown";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export type Countdown = {
 	remainingSeconds: number;
@@ -32,17 +39,17 @@ export function useCountdown(
 	const remainingSeconds = Math.max(0, duration - sw.totalSeconds);
 
 	function reset() {
-		logger.debug(L, "reset");
+		// logger.debug(L, "reset");
 		sw.reset(undefined, false);
 	}
 
 	useEffect(() => {
-		logger.debug(L, "isPaused effect", { isPaused, isRunning: sw.isRunning, remaining: remainingSeconds, totalMs: sw.totalMilliseconds });
+		logger.withMetadata({ isPaused, isRunning: sw.isRunning, remaining: remainingSeconds, totalMs: sw.totalMilliseconds }).debug("isPaused effect");
 		if (isPaused) {
-			logger.debug(L, "Pausing stopwatch", { remaining: remainingSeconds, remainingMs: remainingMilliSeconds });
+			// logger.debug(L, "Pausing stopwatch", { remaining: remainingSeconds, remainingMs: remainingMilliSeconds });
 			sw.pause();
 		} else {
-			logger.debug(L, "Starting stopwatch (unpaused)", { remaining: remainingSeconds });
+			// logger.debug(L, "Starting stopwatch (unpaused)", { remaining: remainingSeconds });
 			sw.start();
 		}
 	}, [isPaused]);

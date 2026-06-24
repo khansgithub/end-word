@@ -6,8 +6,17 @@ import SubmitButton from "@/app/components/game/SubmitButton";
 import { ENGLISH_MIN_WORD_LENGTH } from "@/shared/consts";
 import type { MatchLetter } from "@/shared/types";
 import { useCallback } from "react";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 import "./game-v2.css";
+
+const L = "InputSection";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export interface InputSectionProps {
 	matchLetter: MatchLetter;
@@ -36,14 +45,14 @@ export default function InputSection({
 
 	const handleSubmit = useCallback(async () => {
 		if (disabled || isSubmitting) {
-			logger.debug("InputSection", "handleSubmit blocked", { disabled, isSubmitting });
+			logger.withMetadata({ disabled, isSubmitting }).debug("handleSubmit blocked");
 			return;
 		}
-		logger.info("InputSection", "handleSubmit start");
+		logger.info("handleSubmit start");
 		setIsSubmitting(true);
         try {
 			await onSubmit();
-			logger.info("InputSection", "handleSubmit end");
+			logger.info("handleSubmit end");
 		} finally {
 			// setIsSubmitting(false);
 		}

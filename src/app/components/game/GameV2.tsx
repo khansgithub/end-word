@@ -51,11 +51,20 @@ import TimerBar from "./TimerBar";
 // import { useTimer } from "@/app/hooks/useTimer";
 import { useTimer } from "react-timer-hook";
 import { useCountdown } from "@/app/hooks/useCountdown";
-import { logger } from "@/lib/client/logging";
+import { ConsoleTransport, LogLayer } from 'loglayer';
 import { ActiveEmote, EmotePayload, EMOTE_THROTTLE_MS } from "@/shared/emote";
 import EmoteButton from "@/app/components/game/EmoteButton";
 import EmotePicker from "@/app/components/game/EmotePicker";
 import EmoteBanner from "@/app/components/game/EmoteBanner";
+
+const L = "GameV2";
+const logger = new LogLayer({
+	transport: new ConsoleTransport({
+		logger: console,
+		enabled: process.env.NODE_ENV !== "production",
+		appendObjectData: true
+	})
+}).withPrefix(L)
 
 export interface GameV2Props {
 	roomId: string;
@@ -143,8 +152,6 @@ export default function GameV2({
 	// =========================================================================
 	// ## callback hooks
 	// =========================================================================
-	const L = "GameV2";
-
 	/**
 	 * handleExit handles the process of leaving the current game room.
 	 * It first prevents the action if UI interaction is locked, then sets
@@ -153,10 +160,10 @@ export default function GameV2({
 	 */
 	const handleExit = useCallback(() => {
 		if (interactionLocked) {
-			logger.debug(L, "handleExit blocked (interactionLocked)");
+			logger.debug("handleExit blocked (interactionLocked)");
 			return;
 		}
-		logger.info(L, "handleExit");
+		logger.info("handleExit");
 		setIsLeavingLobby(true);
 		void leaveRoomApi(roomId).finally(() => {
 			countdown.reset();
@@ -165,7 +172,7 @@ export default function GameV2({
 	}, [router, interactionLocked, roomId]);
 
 	const handleEmoteReceive = useCallback((payload: EmotePayload) => {
-		logger.debug(L, "handleEmoteReceive", { seat: payload.seat, value: payload.value });
+		logger.withMetadata({ seat: payload.seat, value: payload.value }).debug("handleEmoteReceive");
 		if (payload.userId === userId) return;
 		setActiveEmotes((prev) => [...prev, { ...payload, id: crypto.randomUUID() }]);
 	}, [userId]);
@@ -227,7 +234,7 @@ export default function GameV2({
 	 * @param emit - The new state emitted from the server (GameStateEmit).
 	 */
 	const applyRemote = useCallback((emit: GameStateEmit) => {
-		logger.info(L, "applyRemote", { turn: emit.turn, status: emit.status, connectedPlayers: emit.connectedPlayers });
+		logger.withMetadata({ turn: emit.turn, status: emit.status, connectedPlayers: emit.connectedPlayers }).info("applyRemote");
 		gameStateDispatch({
 			type: "gameStateUpdateClient",
 			payload: [emit],
@@ -235,7 +242,7 @@ export default function GameV2({
 	}, []);
 
 	const appendDefinition = useCallback((definition: DictionaryEntry) => {
-		logger.info(L, "appendDefinition", { key: definition.key });
+		logger.withMetadata({ key: definition.key }).info("appendDefinition");
 		setDefinitionHistory((current) =>
 			appendDefinitionToHistory(current, definition),
 		);
@@ -257,11 +264,11 @@ export default function GameV2({
 		(leavingPlayers: Array<{ userId: string; seat: number }>) => {
 			const state = gameStateRef.current;
 			if (!state) {
-				logger.warn(L, "onPlayerLeft: no state");
+				logger.warn("onPlayerLeft: no state");
 				return null;
 			}
 
-			logger.info(L, "onPlayerLeft", { leaving: leavingPlayers });
+			logger.withMetadata({ leaving: leavingPlayers }).info("onPlayerLeft");
 			const newPlayers = [...state.players] as GameStateEmit["players"];
 			let changed = false;
 
@@ -294,15 +301,15 @@ export default function GameV2({
 	);
 
 	const handleTimerExpire = useCallback(() => {
-		logger.warn(L, "handleTimerExpire", { playerCount, seat: gameState.thisPlayer?.seat });
+		logger.withMetadata({ playerCount, seat: gameState.thisPlayer?.seat }).warn("handleTimerExpire");
 		setForceInputDisabled(true);
 		if (gameState.thisPlayer) {
 			const seat = gameState.thisPlayer.seat;
 			if (seat === undefined) {
-				logger.error(L, "handleTimerExpire seat is undefined");
+				logger.error("handleTimerExpire seat is undefined");
 				return;
 			}
-			logger.info(L, "handleTimerExpire killing player and advancing turn");
+			logger.info("handleTimerExpire killing player and advancing turn");
 			gameStateDispatch({
 				type: "killPlayerAndNextTurn",
 				payload: [gameState, seat],
@@ -310,7 +317,7 @@ export default function GameV2({
 		}
 		void timerExpiryApi(roomId).then((result) => {
 			if (!result.success) {
-				logger.warn(L, "handleTimerExpire server timer expiry failed", { reason: result.reason });
+				logger.withMetadata({ reason: result.reason }).warn("handleTimerExpire server timer expiry failed");
 			}
 		});
 	}, [gameStateDispatch, gameState, roomId]);
@@ -318,7 +325,7 @@ export default function GameV2({
 
 	const setIsSubmitting = useCallback(
 		(isSubmiting: boolean) => {
-			logger.info(L, "setIsSubmitting", { submitting: isSubmiting, status: gameState.status });
+			logger.withMetadata({ submitting: isSubmiting, status: gameState.status }).info("setIsSubmitting");
 			gameStateDispatch({
 				type: "clientSetIsSubmitting",
 				payload: [gameState, isSubmiting],
@@ -342,7 +349,7 @@ export default function GameV2({
 		onRoomClosed,
 		onTimerSyncRequest: () => {
 			if (isMyTurn && gameState.status === "playing") {
-				logger.info(L, "timerSync requested, sending", { remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+				logger.withMetadata({ remaining: countdown.remainingSeconds, paused: countdown.isPaused }).info("timerSync requested, sending");
 				sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
 			}
 		},
@@ -350,7 +357,7 @@ export default function GameV2({
 			const prev = spectatorCountRef.current;
 			spectatorCountRef.current = spectators.length;
 			if (spectators.length > prev && isMyTurn && gameState.status === "playing") {
-				logger.info(L, "spectator joined, broadcasting timer sync", { remaining: countdown.remainingSeconds, paused: countdown.isPaused });
+				logger.withMetadata({ remaining: countdown.remainingSeconds, paused: countdown.isPaused }).info("spectator joined, broadcasting timer sync");
 				sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
 				setTimeout(() => {
 					sendTimerSync({ remaining: countdown.remainingSeconds, paused: countdown.isPaused });
@@ -393,26 +400,26 @@ export default function GameV2({
 
 	const submitButton = useCallback(async () => {
 		if (gameState.status === "finished") {
-			logger.debug(L, "submitButton: game finished, skipping");
+			logger.debug("submitButton: game finished, skipping");
 			return;
 		}
 		const word = getInputValue();
 		const emptyInput = !word || word.length === 0;
 
 		if (emptyInput) {
-			logger.debug(L, "submitButton: empty input");
+			logger.debug("submitButton: empty input");
 			setInputError(true);
 			setIsSubmitting(false);
 		} else if (isWordAlreadyUsed(gameState, word)) {
-			logger.debug(L, "submitButton: word already used", { word });
+			logger.withMetadata({ word }).debug("submitButton: word already used");
 			setInputError(true, gameStrings.wordAlreadyUsed);
 			focusInputBox();
 			setIsSubmitting(false);
 		} else {
-			logger.info(L, "submitButton submitting", { word, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn });
+			logger.withMetadata({ word, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn }).info("submitButton submitting");
 			sendTimerSync({ remaining: countdown.remainingSeconds, paused: true });
 			const response = await submitWordApi(roomId, word, countdown.remainingSeconds);
-			logger.info(L, "submitButton response", { success: response.success, reason: (response as any).reason, remaining: countdown.remainingSeconds });
+			logger.withMetadata({ success: response.success, reason: (response as any).reason, remaining: countdown.remainingSeconds }).info("submitButton response");
 			type CustomDispatch = {
 				type: "custom",
 				payload: [GameState, string[], any[][]]
@@ -433,7 +440,7 @@ export default function GameV2({
 				focusInputBox();
 				customDispatch.payload[1].push("clientSetIsSubmitting");
 				customDispatch.payload[2].push([false]);
-				logger.debug(L, "submitButton wrong word, timer stays unpaused");
+				logger.debug("submitButton wrong word, timer stays unpaused");
 			}
 			gameStateDispatch(customDispatch)
 		}
@@ -475,7 +482,7 @@ export default function GameV2({
 	}, [gameState.thisPlayer]);
 
 	useEffect(() => {
-		logger.debug(L, "turn/timer effect", { status: gameState.status, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn, isTimerPaused, timerExpired: timerExpiredRef.current });
+		// logger.withMetadata({ status: gameState.status, isMyTurn, remaining: countdown.remainingSeconds, turn: gameState.turn, isTimerPaused, timerExpired: timerExpiredRef.current }).debug("turn/timer effect");
 		if (gameState.status === "playing") {
 			void (isMyTurn ? countdown.start() : countdown.pause());
 			if (isMyTurn && timerSyncTurnRef.current !== gameState.turn) {
@@ -496,7 +503,7 @@ export default function GameV2({
 	}, [countdown.remainingSeconds, gameState.status, isMyTurn]);
 
 	useEffect(() => {
-		logger.debug(L, "status effect", { status: gameState.status, isMyTurn, isPaused: countdown.isPaused, remaining: countdown.remainingSeconds });
+		logger.withMetadata({ status: gameState.status, isMyTurn, isPaused: countdown.isPaused, remaining: countdown.remainingSeconds }).debug("status effect");
 		if (gameState.status === "playing" && isMyTurn) {
 			countdown.start();
 		} else {
@@ -512,7 +519,7 @@ export default function GameV2({
 
 	useEffect(() => {
 		if (gameState.submitting) {
-			logger.debug(L, "isMyTurn effect: clearing submitting", { isMyTurn, turn: gameState.turn, seat: gameState.thisPlayer?.seat });
+			logger.withMetadata({ isMyTurn, turn: gameState.turn, seat: gameState.thisPlayer?.seat }).debug("isMyTurn effect: clearing submitting");
 			gameStateDispatch({
 				type: "clientSetIsSubmitting",
 				payload: [gameState, false],
